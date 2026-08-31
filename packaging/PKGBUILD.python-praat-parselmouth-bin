@@ -1,0 +1,30 @@
+# Maintainer: Yakuda <yakuda-stack@users.noreply.github.com>
+#
+# Rückfallvariante: installiert das offizielle Wheel von PyPI, ohne Praat zu
+# kompilieren. Nützlich, wenn der Bau aus dem Quelltext nach einem
+# Python-Sprung in Arch nicht mehr durchläuft.
+#
+# ACHTUNG: Das Wheel ist an eine Python-Nebenversion gebunden (hier cp314).
+# Nach einem Python-Update in Arch muss die URL auf die passende
+# cpXYZ-Fassung gewechselt und die Prüfsumme mit updpkgsums erneuert werden.
+pkgname=python-praat-parselmouth-bin
+_dist=praat_parselmouth
+pkgver=0.4.7
+pkgrel=1
+_pytag=cp314
+pkgdesc="Praat in Python, the Pythonic way (official wheel, no compilation)"
+arch=('x86_64')
+url="https://github.com/YannickJadoul/Parselmouth"
+license=('GPL-3.0-or-later')
+depends=('python' 'python-numpy' 'gcc-libs' 'glibc')
+makedepends=('python-installer')
+provides=("python-praat-parselmouth=$pkgver")
+conflicts=('python-praat-parselmouth')
+_whl="${_dist}-${pkgver}-${_pytag}-${_pytag}-manylinux2014_x86_64.manylinux_2_17_x86_64.whl"
+source=("https://files.pythonhosted.org/packages/bf/fa/a9a2bb835c3c13e8212093f060831323c0cb1172223ba3af93f66212e4e0/${_whl}")
+sha256sums=('528cec1f4d2bbe02ed58fc6575071e9ccbf0d7ece815613c05d516e076b58a68')
+noextract=("${_whl}")
+
+package() {
+  python -m installer --destdir="$pkgdir" "$srcdir/${_whl}"
+}

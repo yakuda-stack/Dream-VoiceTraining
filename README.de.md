@@ -240,6 +240,10 @@ makepkg -si -p PKGBUILD.python-praat-parselmouth
 makepkg -si
 ```
 
+Scheitert der Praat-Bau nach einem Python-Sprung in Arch, nimm stattdessen
+`PKGBUILD.python-praat-parselmouth-bin` — das installiert das offizielle Wheel
+und braucht keinen Compiler.
+
 ### AppImage
 
 Aus den

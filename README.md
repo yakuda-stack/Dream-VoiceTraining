@@ -227,6 +227,10 @@ makepkg -si -p PKGBUILD.python-praat-parselmouth
 makepkg -si
 ```
 
+If building Praat fails after a Python version bump in Arch, use
+`PKGBUILD.python-praat-parselmouth-bin` instead — it installs the official
+wheel and needs no compiler.
+
 ### AppImage
 
 Download from

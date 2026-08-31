@@ -58,7 +58,7 @@ git commit -m "Update to v1.0.1"
 git push origin master               # AUR nutzt master!
 
 
-## Die 7 häufigsten Fehler
+## Die 8 häufigsten Fehler
 1. updpkgsums gibt 404    -> GitHub-Tag existiert noch nicht. Erst Schritt 2 fertig machen.
 2. .SRCINFO vergessen     -> AUR lehnt Push ab. Nach JEDER PKGBUILD-Änderung neu erzeugen.
 3. Falscher Ordner        -> AUR-Push NUR aus ~/aur/dream-voicetraining. Projekt-PKGBUILD ist nur Kopie.
@@ -72,6 +72,19 @@ git push origin master               # AUR nutzt master!
                              jemand anderem - das ist dein eigenes Paket.
 7. venv verschoben        -> überlebt kein Umbenennen des Ordners. rm -rf .venv,
                              python -m venv .venv, pip install -r requirements-dev.txt
+8. Bau von python-praat-parselmouth schlägt fehl
+   "No module named skbuild"   -> makedepends unvollständig. Nötig sind cmake,
+                                  ninja, pybind11, python-scikit-build,
+                                  python-build, python-installer,
+                                  python-setuptools, python-wheel.
+   "Missing dependencies: cmake>=3.18"
+                               -> pyproject.toml will cmake als PYTHON-Paket.
+                                  Arch liefert es als Systemprogramm, das der
+                                  Prüfer nicht sieht. Deshalb steht im PKGBUILD
+                                  python -m build ... --skip-dependency-check
+   Läuft es nach einem Python-Sprung gar nicht mehr:
+                               -> PKGBUILD.python-praat-parselmouth-bin nehmen,
+                                  installiert das fertige Wheel ohne Compiler.
 
 
 ## Wenn ein Nutzer einen Absturz meldet
