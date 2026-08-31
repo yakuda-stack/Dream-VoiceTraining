@@ -22,59 +22,46 @@ Sessions hinweg dokumentiert.
 
 ## Wie es aussieht
 
-<div align="center">
-<img src="assets/dashboard.png" alt="Live-Ansicht mit Kennzahlen, Spektrogramm und Verlauf" width="820">
-</div>
+<table>
+  <tr>
+    <td><b>Live-Ansicht</b><br><img src="assets/dashboard.png" alt="Live-Ansicht" width="300"/></td>
+    <td><b>Geführter Ablauf</b><br><img src="assets/dashboard-guided.png" alt="Geführter Ablauf" width="300"/></td>
+    <td><b>Sessionliste</b><br><img src="assets/sessions.png" alt="Sessionliste" width="300"/></td>
+  </tr>
+  <tr>
+    <td><b>Spaltenmenü</b><br><img src="assets/sessions-columns.png" alt="Spaltenmenü" width="300"/></td>
+    <td><b>Aufnahme im Detail</b><br><img src="assets/details.png" alt="Detailansicht" width="300"/></td>
+    <td><b>Einstellungen · Analyse</b><br><img src="assets/settings-analysis.png" alt="Analyse" width="300"/></td>
+  </tr>
+  <tr>
+    <td><b>Einstellungen · Zielprofile</b><br><img src="assets/settings-profiles.png" alt="Zielprofile" width="300"/></td>
+    <td></td>
+    <td></td>
+  </tr>
+</table>
 
-Der Live-Reiter vor dem Start des Mikrofons. Sprachumschalter, Geräteauswahl,
-Aufnahmetyp, Zielstimme und der geführte Ablauf liegen in einer Leiste,
-darunter die Kacheln, der Zonenbalken, das Spektrogramm, der Tonhöhenverlauf
-und der Übungstext.
+**Live-Ansicht** — alles in einer Leiste: Sprache, Mikrofon, Aufnahmetyp,
+Zielstimme, geführter Ablauf. Darunter die Kacheln, der Zonenbalken, das
+Spektrogramm mit markiertem F1 und F2, der Tonhöhenverlauf und der Übungstext.
 
-<div align="center">
-<img src="assets/dashboard-guided.png" alt="Live-Ansicht mit eingeschaltetem geführten Ablauf" width="820">
-</div>
+**Geführter Ablauf** — ein Bereich im Live-Reiter statt eines Fensters, damit
+das Spektrogramm weiterläuft, während du einen Laut hältst.
 
-Der geführte Ablauf, eingeschaltet: ein Bereich im Live-Reiter statt eines
-Fensters, damit das Spektrogramm weiterläuft, während du einen Laut hältst. Die
-Statuszeile unten zeigt, wie sich eine zu leise Aufnahme meldet.
+**Sessionliste** — Rechtsklick auf eine Zeile für Details, Wiedergabe,
+Umbenennen, Löschen oder nachträgliches Ändern des Aufnahmetyps. Aufnahmen ohne
+verwertbare Stimme sind ausgegraut und sagen das auch, statt erfundene Zahlen
+zu zeigen. Rechtsklick auf eine Überschrift bietet Sortieren, Verschieben,
+Ausblenden und alle 23 Spalten zum Anhaken.
 
-<div align="center">
-<img src="assets/sessions.png" alt="Sessionliste" width="820">
-</div>
-
-Jede Aufnahme mit ihren Kennwerten. Rechtsklick auf eine Zeile bietet Details,
-Wiedergabe, Umbenennen, Löschen und nachträgliches Ändern des Aufnahmetyps.
-Aufnahmen ohne verwertbare Stimme sind ausgegraut und sagen das auch, statt
-irreführende Zahlen zu zeigen.
-
-<div align="center">
-<img src="assets/sessions-columns.png" alt="Sessionliste mit geöffnetem Kopfzeilenmenü" width="820">
-</div>
-
-Rechtsklick auf eine Überschrift bietet Sortieren, Verschieben, Ausblenden und
-alle 23 Spalten zum Anhaken. Der Ansichtsdialog hinter „Spalten verwalten …“
-ergänzt Sortierung und einen optionalen Zeitraum.
-
-<div align="center">
-<img src="assets/details.png" alt="Detailansicht einer einzelnen Aufnahme" width="820">
-</div>
-
-Eine Aufnahme im Detail: achtzehn Kennwerte, jeder mit Erklärung hinter dem ⓘ,
+**Detailansicht** — achtzehn Kennwerte, jeder mit Erklärung hinter dem ⓘ,
 geprüft gegen ein Zielprofil und wahlweise verglichen mit einer anderen
-Aufnahme. „Erweitert“ klappt die Wellenform mit ziehbarem Bereich auf, um nur
-einen Ausschnitt auszuwerten. Das Beispiel zeigt eine zu leise Aufnahme — die
-Kennwerte bleiben bewusst leer, statt geraten zu werden.
+Aufnahme. „Erweitert" klappt die Wellenform mit ziehbarem Bereich auf. Das
+Beispiel zeigt eine zu leise Aufnahme: die Kennwerte bleiben leer, statt
+geraten zu werden.
 
-<div align="center">
-<img src="assets/settings-analysis.png" alt="Einstellungen, Reiter Analyse" width="700">
-<img src="assets/settings-profiles.png" alt="Einstellungen, Reiter Zielprofile" width="700">
-</div>
-
-Einstellungen. Links die Analyseparameter, jeder mit Erklärung, als Vorlagen
-speicherbar. Rechts die Zielprofile, in denen sich jeder der achtzehn
-Kennwerte einschalten und mit einem Bereich versehen lässt — unter eigenem
-Namen sicherbar oder auf die Literaturwerte zurücksetzbar.
+**Einstellungen** — Analyseparameter mit Vorlagen im einen Reiter, Zielprofile
+im anderen, in denen sich jeder der achtzehn Kennwerte einschalten und mit
+einem Bereich versehen lässt.
 
 ## Bitte zuerst lesen
 
@@ -362,10 +349,13 @@ nicht die Schwelle senken.
 
 ---
 
-## Veröffentlichen
+## Changelog
 
-Einrichtung und Ablauf stehen in [RELEASE.md](RELEASE.md) — einmaliges
-Aufsetzen von GitHub und AUR, danach der wiederkehrende Versionsablauf.
+Jede Version ist in [CHANGELOG.md](CHANGELOG.md) dokumentiert, englisch und
+deutsch, samt der behobenen Fehler und woran sie lagen.
+
+Der Ablauf für eine Veröffentlichung — GitHub, AppImage, AUR — steht in
+[update_DreamVoiceTraining.txt](update_DreamVoiceTraining.txt).
 
 ## Entwicklung
 

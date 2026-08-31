@@ -21,59 +21,45 @@ across sessions.
 
 ## What it looks like
 
-<div align="center">
-<img src="assets/dashboard.png" alt="Live view with readouts, spectrogram and pitch history" width="820">
-</div>
+<table>
+  <tr>
+    <td><b>Live view</b><br><img src="assets/dashboard.png" alt="Live view" width="300"/></td>
+    <td><b>Guided run</b><br><img src="assets/dashboard-guided.png" alt="Guided run" width="300"/></td>
+    <td><b>Session list</b><br><img src="assets/sessions.png" alt="Session list" width="300"/></td>
+  </tr>
+  <tr>
+    <td><b>Column menu</b><br><img src="assets/sessions-columns.png" alt="Column menu" width="300"/></td>
+    <td><b>Recording in detail</b><br><img src="assets/details.png" alt="Detail view" width="300"/></td>
+    <td><b>Settings · Analysis</b><br><img src="assets/settings-analysis.png" alt="Analysis settings" width="300"/></td>
+  </tr>
+  <tr>
+    <td><b>Settings · Target profiles</b><br><img src="assets/settings-profiles.png" alt="Target profiles" width="300"/></td>
+    <td></td>
+    <td></td>
+  </tr>
+</table>
 
-The Live tab before the microphone is started. Language toggle, device picker,
-recording type, target voice and the guided run all sit in one bar; below it
-the readouts, the zone bar, the spectrogram, the pitch history and the practice
-text.
+**Live view** — everything in one bar: language, microphone, recording type,
+target voice, guided run. Below it the readouts, the zone bar, the spectrogram
+with F1 and F2 marked, the pitch history and the practice text.
 
-<div align="center">
-<img src="assets/dashboard-guided.png" alt="Live view with the guided run enabled" width="820">
-</div>
+**Guided run** — a panel inside the Live tab rather than a window, so the
+spectrogram keeps running while you hold a sound.
 
-The guided run, switched on: a panel inside the Live tab rather than a window,
-so the spectrogram keeps running while you hold a sound. The status line at the
-bottom shows what a recording that was too quiet looks like.
+**Session list** — right-click a row for details, playback, renaming, deletion
+or changing the recording type afterwards. Recordings without a usable voice
+are greyed out and say so instead of showing invented numbers. Right-clicking
+a header offers sorting, moving, hiding and all 23 columns as a checkable list.
 
-<div align="center">
-<img src="assets/sessions.png" alt="Session list" width="820">
-</div>
+**Detail view** — eighteen metrics, each with an explanation behind the ⓘ,
+checked against a target profile and optionally compared against another
+recording. "Advanced" unfolds the waveform with a draggable region. The
+example shows a recording that was too quiet: the metrics stay blank rather
+than being guessed.
 
-Every recording with its metrics. Right-clicking a row offers details,
-playback, renaming, deletion and changing the recording type after the fact.
-Rows without a usable voice are greyed out and say so instead of showing
-misleading numbers.
-
-<div align="center">
-<img src="assets/sessions-columns.png" alt="Session list with the header context menu open" width="820">
-</div>
-
-Right-clicking a header offers sorting, moving, hiding and every one of the
-23 columns as a checkable list. The view dialog behind “Manage columns …”
-adds the sort order and an optional date range.
-
-<div align="center">
-<img src="assets/details.png" alt="Detail view of a single recording" width="820">
-</div>
-
-One recording in detail: eighteen metrics, each with an explanation behind the
-ⓘ, checked against a target profile and optionally compared against another
-recording. “Advanced” unfolds the waveform with a draggable region for
-analysing just part of a take. The example shows a recording that was too
-quiet — the metrics are deliberately left blank rather than guessed.
-
-<div align="center">
-<img src="assets/settings-analysis.png" alt="Settings, analysis tab" width="700">
-<img src="assets/settings-profiles.png" alt="Settings, target profiles tab" width="700">
-</div>
-
-Settings. Left: analysis parameters, each with an explanation, saved as
-templates. Right: target profiles, where every one of the eighteen metrics can
-be switched on and given a range, saved under your own name or reset to the
-values from the literature.
+**Settings** — analysis parameters with templates on one tab, target profiles
+on the other, where each of the eighteen metrics can be switched on and given
+a range.
 
 ## Please read this first
 
@@ -346,10 +332,13 @@ fix the gain rather than lowering the threshold.
 
 ---
 
-## Releasing
+## Changelog
 
-Setup and release steps live in [RELEASE.md](RELEASE.md) — first-time GitHub
-and AUR setup, then the recurring version workflow.
+Every release is documented in [CHANGELOG.md](CHANGELOG.md), in English and
+German, including what was broken and why.
+
+The step-by-step release workflow — GitHub, AppImage, AUR — is in
+[update_DreamVoiceTraining.txt](update_DreamVoiceTraining.txt).
 
 ## Development
 
