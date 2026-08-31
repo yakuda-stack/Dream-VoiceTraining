@@ -1,0 +1,16 @@
+[Desktop Entry]
+Type=Application
+Version=1.5
+Name=Dream-VoiceTraining
+GenericName=Voice Analysis
+GenericName[de]=Stimmanalyse
+Comment=Measure pitch, resonance and voice quality while training your speaking voice
+Comment[de]=Tonhöhe, Resonanz und Stimmqualität messen beim Training der Sprechstimme
+Exec=dream-voicetraining
+Icon=dream-voicetraining
+Terminal=false
+Categories=AudioVideo;Audio;Recorder;
+Keywords=voice;pitch;formant;resonance;speech;training;praat;spectrogram;
+Keywords[de]=Stimme;Tonhöhe;Formant;Resonanz;Sprechstimme;Training;Spektrogramm;
+StartupNotify=true
+StartupWMClass=Dream-VoiceTraining

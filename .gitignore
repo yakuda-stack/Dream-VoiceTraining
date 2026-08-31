@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+*.AppImage
+*.AppDir/
+!assets/*.png
+# Laufzeitdaten liegen unter ~/.config und ~/.local/share,
+# aber bei portablen Starts landen sie hier:
+config.json
+sessions/

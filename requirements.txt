@@ -1,0 +1,11 @@
+# Laufzeitabhängigkeiten. Die Untergrenzen sind die Versionen, gegen die
+# entwickelt und getestet wurde.
+PySide6>=6.6
+pyqtgraph>=0.13
+numpy>=1.24
+sounddevice>=0.4.6
+praat-parselmouth>=0.4.5
+
+# Optional: sorgt dafür, dass im Systemmonitor der Programmname statt
+# python3 steht. Fehlt das Paket, wird auf prctl zurückgefallen.
+setproctitle>=1.3
