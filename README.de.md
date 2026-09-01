@@ -172,11 +172,6 @@ braucht einen Neustart.
 
 ---
 
-**Reiter aushängen.** Rechtsklick auf die Reiterleiste oder Doppelklick auf
-einen Reiter zieht ihn in ein eigenes Fenster — praktisch, um die
-Live-Anzeige auf einem Bildschirm zu behalten und auf dem anderen die
-Sessions durchzugehen. Fenster schließen hängt ihn zurück.
-
 ## Die Kennwerte
 
 | Kennwert | Was er dir sagt |
@@ -378,7 +373,7 @@ pip install -r requirements-dev.txt
 python -m pytest tests/ -q
 ```
 
-Einhundertzwei Tests für den Analysekern, die Persistenz der Einstellungen,
+Einhundertsechs Tests für den Analysekern, die Persistenz der Einstellungen,
 Pfadauflösung und Migration, Geräteerkennung und Vollständigkeit der
 Übersetzungen. Zwei davon sind Regressionstests für echte Fehler: Rauschen,
 das als Stimme durchging, und das Spektrogramm, das zu einer Farbe kollabierte.

@@ -162,10 +162,6 @@ restart.
 
 ---
 
-**Detachable tabs.** Right-click the tab bar or double-click a tab to pull it
-into its own window — useful for watching the live readouts on one screen
-while browsing sessions on another. Closing the window docks it back.
-
 ## Metrics
 
 | Metric | What it tells you |
@@ -361,7 +357,7 @@ pip install -r requirements-dev.txt
 python -m pytest tests/ -q
 ```
 
-One hundred and two tests covering the analysis core, settings persistence, path
+One hundred and six tests covering the analysis core, settings persistence, path
 resolution and migration, device enumeration and translation completeness.
 Two of them are regression tests for real bugs: noise being reported as a
 voice, and the spectrogram collapsing to one colour.

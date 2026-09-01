@@ -140,3 +140,120 @@ def test_versionsschild_entsteht_nur_einmal(monkeypatch, tmp_path):
     window.close()
     theming.use_preset("default")
     importlib.reload(paths)
+
+
+def test_keine_verschluckten_css_klammern():
+    """Regression: sobald {NORD['x']} in ein Stylesheet kommt, wird der String
+    zum f-String und die CSS-Klammern müssen verdoppelt werden. Sonst liest
+    Python "{ color: ...}" als Ausdruck mit Formatangabe — das kompiliert und
+    scheitert erst, wenn das Widget gebaut wird."""
+    import ast
+    import pathlib
+
+    def literal_parts(node):
+        """Nur die festen Textteile; {{ steht darin bereits als {."""
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            return node.value
+        if isinstance(node, ast.JoinedStr):
+            return "".join(literal_parts(part) for part in node.values)
+        if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+            return literal_parts(node.left) + literal_parts(node.right)
+        return ""
+
+    root = pathlib.Path(__file__).resolve().parents[1]
+    problems = []
+
+    for path in sorted(root.glob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if not (isinstance(node, ast.Call)
+                    and isinstance(node.func, ast.Attribute)
+                    and node.func.attr == "setStyleSheet"):
+                continue
+            for argument in node.args:
+                text = literal_parts(argument)
+                if not text.strip():
+                    continue
+                # Ein Stylesheet mit Selektor braucht Klammern; fehlen sie im
+                # Literal, hat der f-String sie als Ausdruck geschluckt.
+                selector = any(word in text for word in
+                               ("QPushButton", "QToolButton", "QLabel",
+                                "QWidget", "QFrame", "QProgressBar",
+                                "QTableWidget", "QGroupBox", "QComboBox"))
+                if text.count("{") != text.count("}"):
+                    problems.append(f"{path.name}:{node.lineno} (unpaarig)")
+                elif selector and "{" not in text:
+                    # Der Selektor steht da, die Klammer nicht — Python hat sie
+                    # als Formatangabe verschluckt.
+                    problems.append(f"{path.name}:{node.lineno} (Klammer fehlt)")
+
+    assert not problems, "verschluckte CSS-Klammern in: " + ", ".join(problems)
+
+
+def test_jeder_dialog_laesst_sich_bauen(monkeypatch, tmp_path):
+    """Regression: ein Stylesheet mit falsch maskierten Klammern fällt erst
+    beim Öffnen des Dialogs auf, nicht beim Importieren."""
+    from PySide6 import QtWidgets
+
+    monkeypatch.setenv("DREAM_VOICETRAINING_HOME", str(tmp_path / "home"))
+    import audio
+    monkeypatch.setattr(audio, "_run", lambda args: None)
+
+    import importlib
+    import paths
+    importlib.reload(paths)
+    import dialogs
+    import main
+
+    app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+    app.setStyleSheet(theming.stylesheet())
+    window = main.MainWindow()
+
+    entry = {"timestamp": "2026-09-01T10:00:00", "file": "a.wav",
+             "type": "reading", "quality": "ok", "duration": 20.0,
+             "peak_db": -22.0, "f0_median": 120.0, "f0_p10": 90.0,
+             "f0_p90": 160.0}
+    window.sessions = [entry]
+    window._fill_session_table()
+
+    built = [
+        dialogs.SettingsDialog(window),
+        dialogs.SessionDetailDialog(entry, [entry], paths.SESSION_DIR, window),
+        dialogs.FilterDialog(window.view, window),
+        dialogs.DebugDialog(window),
+        dialogs.AboutDialog(window),
+        dialogs.DesignEditor(),
+        dialogs.ProfileEditor(),
+        dialogs.GuidedPanel(window.engine, window.store_recording, window),
+    ]
+    for widget in built:
+        widget.show()
+    app.processEvents()
+
+    # Der erweiterte Bereich baut seine Stile erst beim Aufklappen.
+    detail = built[1]
+    detail.btn_advanced.setChecked(True)
+    app.processEvents()
+
+    for widget in built:
+        widget.close()
+    window.close()
+    importlib.reload(paths)
+
+
+def test_keine_falsch_maskierten_klammern_in_stylesheets():
+    """Sucht f-Strings, in denen eine CSS-Klammer nicht verdoppelt wurde."""
+    import re
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    broken = []
+    for name in ("main.py", "dialogs.py", "theming.py"):
+        for number, line in enumerate(
+                (root / name).read_text(encoding="utf-8").splitlines(), 1):
+            for match in re.finditer(r'''[fF](["'])(.*?)\1''', line):
+                body = match.group(2).replace("{{", "\x00").replace("}}", "\x01")
+                # {name} ist eine Einsetzung, "{ color:" dagegen CSS.
+                if re.search(r"\{\s*[a-zA-Z-]+\s*:\s", body):
+                    broken.append(f"{name}:{number}")
+    assert not broken, f"CSS-Klammern nicht verdoppelt: {broken}"

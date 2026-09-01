@@ -460,7 +460,8 @@ class SessionDetailDialog(QtWidgets.QDialog):
         self.btn_advanced.setAutoRaise(True)
         self.btn_advanced.setCheckable(True)
         self.btn_advanced.setStyleSheet(
-            f"QToolButton { color: {NORD['accent']}; font-weight: 600; border: none; }")
+            f"QToolButton {{ color: {NORD['accent']}; font-weight: 600;"
+            " border: none; }")
         self.btn_advanced.toggled.connect(self._toggle_advanced)
         root.addWidget(self.btn_advanced, 0, QtCore.Qt.AlignmentFlag.AlignLeft)
 
@@ -783,8 +784,9 @@ class SessionDetailDialog(QtWidgets.QDialog):
         button.setToolTip(f"<b>{metric.label}</b><br>{metric.hint}")
         button.setAccessibleName(i18n.t("info_tip"))
         button.setStyleSheet(
-            f"QToolButton { color: {NORD['dim']}; border: none; font-size: 14px; }"
-            f"QToolButton:hover { color: {NORD['accent']}; }")
+            f"QToolButton {{ color: {NORD['dim']}; border: none;"
+            " font-size: 14px; }"
+            f"QToolButton:hover {{ color: {NORD['accent']}; }}")
         button.clicked.connect(
             lambda _=False, m=metric, b=button: QtWidgets.QToolTip.showText(
                 b.mapToGlobal(QtCore.QPoint(0, b.height())),
@@ -1377,8 +1379,8 @@ class AboutDialog(QtWidgets.QDialog):
         note = QtWidgets.QLabel(i18n.t("about_health"))
         note.setWordWrap(True)
         note.setStyleSheet(
-            f"color: {NORD['yellowf']}; border: 1px solid {NORD['border']}; border-radius: 8px;"
-            "padding: 10px;")
+            f"color: {NORD['yellow']}; border: 1px solid {NORD['border']};"
+            " border-radius: 8px; padding: 10px;")
         lay.addWidget(note)
 
         citation = QtWidgets.QLabel(i18n.t("about_citation"))

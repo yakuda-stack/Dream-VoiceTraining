@@ -212,27 +212,6 @@ class ZoneBar(QtWidgets.QWidget):
 
 # ------------------------------------------------------------ Hauptfenster
 
-class DetachedWindow(QtWidgets.QWidget):
-    """Ein ausgehaengter Reiter als eigenstaendiges Fenster."""
-
-    closed = QtCore.Signal()
-
-    def __init__(self, page: QtWidgets.QWidget, title: str, parent=None):
-        super().__init__(parent, QtCore.Qt.WindowType.Window)
-        self.setWindowTitle(title)
-        layout = QtWidgets.QVBoxLayout(self)
-        layout.setContentsMargins(8, 8, 8, 8)
-        layout.addWidget(page)
-        # removeTab() versteckt die Seite. Ohne das hier bleibt das
-        # ausgehaengte Fenster leer, obwohl alles darin haengt.
-        page.setVisible(True)
-        self.resize(1150, 720)
-
-    def closeEvent(self, event):
-        self.closed.emit()
-        super().closeEvent(event)
-
-
 class MainWindow(QtWidgets.QMainWindow):
 
     def __init__(self):
@@ -263,7 +242,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self._record_peak = 0.0
         self._action_rows: set[int] = set()
         self._action_column = None
-        self._detached: dict[str, tuple] = {}
         self._dialogs: list[QtWidgets.QDialog] = []
         self.version_label = None
 
@@ -284,17 +262,9 @@ class MainWindow(QtWidgets.QMainWindow):
     # -- UI-Aufbau -------------------------------------------------------
 
     def _build_ui(self) -> None:
-        # Beim Neuaufbau (etwa Sprachwechsel) zuerst alles zurueckholen,
-        # sonst haengen die Fenster an verworfenen Widgets.
-        self._reattach_all()
-
         tabs = QtWidgets.QTabWidget()
         tabs.addTab(self._build_live_tab(), i18n.t("tab_live"))
         tabs.addTab(self._build_session_tab(), i18n.t("tab_sessions"))
-        tabs.tabBar().setContextMenuPolicy(
-            QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
-        tabs.tabBar().customContextMenuRequested.connect(self._tab_menu)
-        tabs.tabBarDoubleClicked.connect(self._detach_tab)
         self.tabs = tabs
         self.setCentralWidget(tabs)
         if self.statusBar() is not None:
@@ -751,18 +721,59 @@ class MainWindow(QtWidgets.QMainWindow):
         self._fill_session_table()
 
     def _rename_session(self, entry: dict) -> None:
+        """Anzeigename und Datei umbenennen.
+
+        Beides zusammen, sonst heisst eine Aufnahme im Programm anders als
+        im Ordner und man findet sie beim Aufraeumen nicht wieder.
+        """
+        current = columns.display_name(entry)
         name, ok = QtWidgets.QInputDialog.getText(
-            self, i18n.t("rename_title"), i18n.t("rename_prompt"),
-            text=columns.display_name(entry))
+            self, i18n.t("rename_title"), i18n.t("rename_prompt"), text=current)
         if not ok:
             return
+
         name = name.strip()
-        if name:
-            entry["label"] = name
-        else:
-            entry.pop("label", None)      # leer heisst zurueck zum Dateinamen
+        if not name or name == current:
+            return
+
+        old_name = entry.get("file", "")
+        old_path = SESSION_DIR / old_name
+        suffix = Path(old_name).suffix or ".wav"
+        new_name = self._safe_filename(name) + suffix
+        new_path = SESSION_DIR / new_name
+
+        if new_path != old_path:
+            if new_path.exists() or any(e.get("file") == new_name
+                                        for e in self.sessions if e is not entry):
+                QtWidgets.QMessageBox.warning(
+                    self, i18n.t("rename_title"), i18n.t("rename_exists"))
+                return
+            try:
+                if old_path.exists():
+                    old_path.rename(new_path)
+            except OSError as exc:
+                debuglog.record_exception("main.rename_session", exc)
+                QtWidgets.QMessageBox.warning(
+                    self, i18n.t("rename_title"),
+                    i18n.t("rename_failed") + f"\n\n{exc}")
+                return
+            entry["file"] = new_name
+
+        entry["label"] = name
         self._save_sessions()
         self._fill_session_table()
+
+    @staticmethod
+    def _safe_filename(name: str) -> str:
+        """Anzeigename in einen Dateinamen ueberfuehren.
+
+        Schraegstriche und aehnliches wuerden sonst neue Ordner aufmachen
+        oder den Namen unbrauchbar machen.
+        """
+        cleaned = "".join("-" if c in '/\\:*?"<>|' or ord(c) < 32 else c
+                          for c in name).strip(" .")
+        cleaned = " ".join(cleaned.split())
+        return (cleaned or "recording")[:80]
 
     def _fill_session_table(self) -> None:
         visible = self._visible_columns()
@@ -1065,56 +1076,6 @@ class MainWindow(QtWidgets.QMainWindow):
             except RuntimeError:      # bereits abgeraeumt
                 pass
         self._dialogs.clear()
-
-    # -- Reiter aus- und einhaengen ---------------------------------------
-
-    def _tab_menu(self, position) -> None:
-        index = self.tabs.tabBar().tabAt(position)
-        menu = QtWidgets.QMenu(self)
-
-        if index >= 0:
-            action = menu.addAction(i18n.t("detach_tab"))
-            action.triggered.connect(lambda _=False, i=index: self._detach_tab(i))
-            # Der letzte verbliebene Reiter bleibt, sonst waere das Fenster leer.
-            action.setEnabled(self.tabs.count() > 1)
-
-        for name in list(self._detached):
-            entry = menu.addAction(f"{i18n.t('reattach_tab')}: {name}")
-            entry.triggered.connect(lambda _=False, n=name: self._reattach(n))
-
-        if menu.actions():
-            menu.exec(self.tabs.tabBar().mapToGlobal(position))
-
-    def _detach_tab(self, index: int) -> None:
-        if index < 0 or self.tabs.count() <= 1:
-            return
-        page = self.tabs.widget(index)
-        title = self.tabs.tabText(index)
-        self.tabs.removeTab(index)
-
-        window = DetachedWindow(
-            page, i18n.t("detached_title", name=title, app=paths.APP_NAME), self)
-        icon = paths.icon_file()
-        if icon is not None:
-            window.setWindowIcon(QtGui.QIcon(str(icon)))
-        window.closed.connect(lambda n=title: self._reattach(n))
-        self._detached[title] = (window, page, index)
-        window.show()
-
-    def _reattach(self, title: str) -> None:
-        entry = self._detached.pop(title, None)
-        if entry is None:
-            return
-        window, page, index = entry
-        page.setParent(None)
-        self.tabs.insertTab(min(index, self.tabs.count()), page, title)
-        window.closed.disconnect()
-        window.close()
-        window.deleteLater()
-
-    def _reattach_all(self) -> None:
-        for title in list(self._detached):
-            self._reattach(title)
 
     # -- Sprache ----------------------------------------------------------
 
@@ -1487,7 +1448,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def closeEvent(self, event):
         self._close_dialogs()
-        self._reattach_all()
         self.timer.stop()
         self.engine.stop()
         try:

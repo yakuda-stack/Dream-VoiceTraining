@@ -32,7 +32,7 @@ from pathlib import Path
 
 APP_ID = "dream-voicetraining"
 APP_NAME = "Dream-VoiceTraining"
-APP_VERSION = "1.0.1"
+APP_VERSION = "1.0.2"
 
 APP_URL = "https://github.com/yakuda-stack/Dream-VoiceTraining"
 ISSUES_URL = APP_URL + "/issues"

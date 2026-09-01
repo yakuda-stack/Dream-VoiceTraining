@@ -227,3 +227,26 @@ def test_pen_mit_pyside6_enum_funktioniert():
 
     pen = pg.mkPen("#ebcb8b", width=1, style=QtCore.Qt.PenStyle.DashLine)
     assert pen.style() == QtCore.Qt.PenStyle.DashLine
+
+
+def test_dateiname_aus_anzeigename():
+    """Umbenennen fasst die Datei mit an, der Name muss also sicher sein."""
+    import main
+
+    safe = main.MainWindow._safe_filename
+
+    # Was zaehlt, ist die Eigenschaft: nie ein Pfadtrenner, nie leer,
+    # nie laenger als das Dateisystem mag.
+    for evil in ("../../etc/passwd", "a/b", "a\\b", ".", "..", "   ",
+                 "", "zwei\nzeilen", 'a:b*c?d"e<f>g|h', "a" * 200):
+        result = safe(evil)
+        assert result, f"leer bei {evil!r}"
+        assert "/" not in result and "\\" not in result, evil
+        assert not result.startswith("."), evil
+        assert len(result) <= 80, evil
+        assert result.isprintable(), evil
+
+    # Lesbares bleibt lesbar.
+    assert safe("Vokal /a/ Baseline") == "Vokal -a- Baseline"
+    assert safe("Lesetext 2026-09-01") == "Lesetext 2026-09-01"
+    assert safe("   ") == "recording"

@@ -4,6 +4,27 @@ Notable changes per release. Format follows
 [Keep a Changelog](https://keepachangelog.com/), versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [1.0.2] — 2026-09-02
+
+### Fixed
+
+- **The Details button crashed the program** with
+  `NameError: name 'color' is not defined`. A stylesheet inside an f-string
+  had single braces where CSS needs them doubled, so Python read `color` as an
+  expression instead of literal text. It only fired when the detail dialog was
+  actually built, which no test did — the theming rewrite had replaced the
+  hardcoded colours in those stylesheets without anything checking the result.
+  There is now a test that constructs every dialog (details, settings, view,
+  debug, about) plus a check across all source files for unescaped braces.
+
+### Changed
+
+- **Renaming a recording renames the WAV file too.** Having a recording called
+  one thing in the program and another in the folder makes it impossible to
+  find when tidying up by hand. The name is sanitised — no path separators, no
+  control characters, capped at 80 characters — and a collision is refused
+  rather than overwriting an existing take.
+
 ## [1.0.1] — 2026-09-02
 
 ### Added
@@ -25,6 +46,16 @@ Notable changes per release. Format follows
   theme rebuilds the interface, because pen colours and plot backgrounds are
   set when widgets are created and a stylesheet cannot reach them.
 
+### Fixed
+
+- **The Details button crashed the program.** A stylesheet built as an
+  f-string had a CSS brace that was not doubled, so Python read `{ color: … }`
+  as an expression. It only surfaced when the dialog was actually opened,
+  which no test did. Two tests now cover it: one builds every dialog in the
+  program, one scans the source for the same mistake.
+- **The About dialog crashed** for the same reason, with a colour key that had
+  been mangled into `yellowf`.
+
 ### Changed
 
 - **Built-in target profiles now describe pitch only:** F0 median, the 10th
@@ -34,6 +65,9 @@ Notable changes per release. Format follows
   different things, and a verdict drawn from that said nothing. Anyone who
   wants formant targets can switch them on in the settings or derive a profile
   from a recording of their own, where the comparison is self-consistent.
+- **Detachable tabs removed.** They were a nice idea and worked, but they
+  complicated the rebuild path that language and theme switching depend on,
+  for a feature nobody asked for twice.
 - Switching a metric off does not switch off its warnings: level, HNR, jitter,
   shimmer, voice breaks and voiced share keep their own quality ranges.
 
