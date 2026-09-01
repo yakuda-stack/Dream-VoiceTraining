@@ -2,9 +2,9 @@
 
 
 Diese 3 Stellen ändern version:
-- paths.py                          -> APP_VERSION = "1.0.2"
-- CHANGELOG.md                      -> neuen Block "## [1.0.2] — 2026-09-06" GANZ OBEN
-- packaging/PKGBUILD                -> pkgver=1.0.2  UND  pkgrel=1
+- paths.py                          -> APP_VERSION = "1.0.3"
+- CHANGELOG.md                      -> neuen Block "## [1.0.3] — 2026-09-06" GANZ OBEN
+- packaging/PKGBUILD                -> pkgver=1.0.3  UND  pkgrel=1
 
 
 ## 1. Vorher prüfen
@@ -25,29 +25,47 @@ git ls-files | grep -E "\.venv|sessions/|config\.json"    # MUSS leer sein
 
 ## 2. Auf GitHub veröffentlichen
 git add -A
-git commit -m "v1.0.2: kurze Beschreibung"
+git commit -m "v1.0.3: kurze Beschreibung"
 git push origin main
-git tag -a v1.0.2 -m "v1.0.2"
-git push origin v1.0.2
+git tag -a v1.0.3 -m "v1.0.3"
+git push origin v1.0.3
 
 GitHub läuft über HTTPS mit Token, nicht SSH.
 Falls gefragt: User = yakuda-stack, Passwort = Personal Access Token.
 
 commands:
 bash packaging/build-appimage.sh
-# -> build/Dream-VoiceTraining-1.0.2-x86_64.AppImage
+# -> build/Dream-VoiceTraining-1.0.3-x86_64.AppImage
 # Eine Datei für alle Systeme. Testen mit:
-#   ./Dream-VoiceTraining-1.0.2-x86_64.AppImage
-#   ./Dream-VoiceTraining-1.0.2-x86_64.AppImage --appimage-extract-and-run
+#   ./Dream-VoiceTraining-1.0.3-x86_64.AppImage
+#   ./Dream-VoiceTraining-1.0.3-x86_64.AppImage --appimage-extract-and-run
 
 commands:
 cd ~/Schreibtisch/voice-training/
 tar --exclude='.venv' --exclude='__pycache__' --exclude='.git' \
     --exclude='.pytest_cache' --exclude='build' \
-    -czf Dream-VoiceTraining-v1.0.2.tar.gz Dream-VoiceTraining/
+    -czf Dream-VoiceTraining-v1.0.3.tar.gz Dream-VoiceTraining/
 cd Dream-VoiceTraining
 
 Beides hochladen auf github unter releases unter jeweiliger Versionsnummer.
+
+
+___Windows (auf einem Windows-Rechner, nach git pull)
+
+powershell -ExecutionPolicy Bypass -File packaging\windows\build_windows.ps1
+# -> dist\Dream-VoiceTraining\Dream-VoiceTraining.exe
+# -> dist\Dream-VoiceTraining-1.0.3-windows-portable.zip
+# -> dist\Dream-VoiceTraining-1.0.3-setup.exe   (nur mit Inno Setup)
+
+Python von python.org, NICHT aus dem Microsoft Store — der sperrt den
+Zugriff auf %LOCALAPPDATA%.
+
+Testen: startet die EXE? Icon? Mikrofon gefunden? Aufnahme klingt richtig?
+Details-Dialog? Umbenennen? Liegen die Dateien unter
+%APPDATA%\Dream-VoiceTraining und %LOCALAPPDATA%\Dream-VoiceTraining?
+Portable Fassung auf einem Rechner OHNE Python testen.
+
+Beide Windows-Dateien ans selbe Release hängen.
 
 
 ## 3. AUR aktualisieren
@@ -55,7 +73,7 @@ Beides hochladen auf github unter releases unter jeweiliger Versionsnummer.
 # (python-sounddevice, python-praat-parselmouth), deshalb paru statt makepkg.
 cd ~/aur/dream-voicetraining
 sudo rm -rf pkg src; rm -f *.pkg.tar.zst *.tar.gz    # Reste vom letzten Lauf
-nano PKGBUILD                        # pkgver=1.0.2, pkgrel=1 (wie im Projekt)
+nano PKGBUILD                        # pkgver=1.0.3, pkgrel=1 (wie im Projekt)
 updpkgsums                           # lädt neuen Tag, ersetzt Checksumme
 paru -Ui                             # bauen + installieren, löst AUR-Deps
                                      # yay:  yay -Bi .
@@ -63,7 +81,7 @@ cd ~ && dream-voicetraining          # testen: startet? Icon? Prozessname in bto
 cd ~/aur/dream-voicetraining
 makepkg --printsrcinfo > .SRCINFO    # PFLICHT
 git add PKGBUILD .SRCINFO            # NIE git add -A
-git commit -m "Update to v1.0.2"
+git commit -m "Update to v1.0.3"
 git push origin master               # AUR nutzt master!
 
 Danach PKGBUILD ins Projekt zurückspiegeln, sonst laufen beide auseinander:
@@ -111,7 +129,7 @@ Falscher Ordner
   -> AUR-Push NUR aus ~/aur/dream-voicetraining. Projekt-PKGBUILD ist Kopie.
 
 pkgver mit Bindestrich
-  -> 1.0.2 ist sauber; ein Alpha hieße 1.0.2_alpha (Unterstrich), nie -alpha.
+  -> 1.0.3 ist sauber; ein Alpha hieße 1.0.3_alpha (Unterstrich), nie -alpha.
 
 Branch verwechselt
   -> Projekt = push origin main, AUR = push origin master.

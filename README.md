@@ -10,7 +10,7 @@ Pitch, resonance, weight and voice quality — live while you speak, and tracked
 across sessions.
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
-![Platform: Linux](https://img.shields.io/badge/platform-Linux-informational)
+![Platform: Linux | Windows](https://img.shields.io/badge/platform-Linux%20%7C%20Windows-informational)
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
 
 [Deutsche Fassung](README.de.md)
@@ -250,6 +250,29 @@ extracts itself if neither is available. Nothing to install.
 PortAudio has to be present on the host — it is not bundled, because audio
 routing has to come from your system to work at all.
 
+### Windows
+
+Download the installer or the portable ZIP from
+[Releases](https://github.com/yakuda-stack/Dream-VoiceTraining/releases).
+The installer needs no administrator rights and leaves your recordings and
+settings in place when uninstalling.
+
+Nothing else to install — the PortAudio library ships inside the build.
+
+Building it yourself needs Python 3.10+ from python.org (not the Store
+version, which restricts access to `%LOCALAPPDATA%`):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File packaging\windows\build_windows.ps1
+```
+
+Produces `dist\Dream-VoiceTraining\Dream-VoiceTraining.exe` and a portable
+ZIP; with [Inno Setup](https://jrsoftware.org/isdl.php) installed it also
+builds the installer.
+
+Your files live in `%APPDATA%\Dream-VoiceTraining` (settings) and
+`%LOCALAPPDATA%\Dream-VoiceTraining` (recordings).
+
 ### From source, for development
 
 ```sh
@@ -357,7 +380,7 @@ pip install -r requirements-dev.txt
 python -m pytest tests/ -q
 ```
 
-One hundred and six tests covering the analysis core, settings persistence, path
+One hundred and thirteen tests covering the analysis core, settings persistence, path
 resolution and migration, device enumeration and translation completeness.
 Two of them are regression tests for real bugs: noise being reported as a
 voice, and the spectrogram collapsing to one colour.

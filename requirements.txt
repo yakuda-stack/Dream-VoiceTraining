@@ -6,6 +6,7 @@ numpy>=1.24
 sounddevice>=0.4.6
 praat-parselmouth>=0.4.5
 
-# Optional: sorgt dafür, dass im Systemmonitor der Programmname statt
-# python3 steht. Fehlt das Paket, wird auf prctl zurückgefallen.
-setproctitle>=1.3
+# Optional und nur auf Linux: sorgt dafür, dass im Systemmonitor der
+# Programmname statt python3 steht. Fehlt das Paket, wird auf prctl
+# zurückgefallen. Unter Windows trägt die EXE den Namen ohnehin.
+setproctitle>=1.3; sys_platform == "linux"

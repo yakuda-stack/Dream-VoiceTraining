@@ -249,7 +249,7 @@ def stylesheet() -> str:
 
     return f"""
 QWidget {{ background: transparent; color: {c['fg']};
-           font-family: "Noto Sans", sans-serif; font-size: 13px; }}
+           font-family: "Noto Sans", "Segoe UI", sans-serif; font-size: 13px; }}
 QMainWindow, QDialog {{ background: {c['bg']}; }}
 QGroupBox {{ background: {card}; border: 1px solid {c['border']};
              border-radius: 8px; margin-top: 14px; padding: 10px; }}

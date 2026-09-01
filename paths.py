@@ -14,25 +14,39 @@
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-"""Ablageorte nach XDG Base Directory Specification.
+"""Ablageorte.
 
+Linux, nach XDG Base Directory Specification:
     Konfiguration   $XDG_CONFIG_HOME/dream-voicetraining/config.json
     Aufnahmen       $XDG_DATA_HOME/dream-voicetraining/sessions/
+Fallbacks sind ~/.config und ~/.local/share.
 
-Fallbacks sind ~/.config und ~/.local/share. DREAM_VOICETRAINING_HOME
-ueberschreibt beides mit einem gemeinsamen Ordner, praktisch fuer Tests
-und portable Varianten.
+Windows:
+    Konfiguration   %APPDATA%\\Dream-VoiceTraining\\config.json
+    Aufnahmen       %LOCALAPPDATA%\\Dream-VoiceTraining\\sessions\\
+
+Die Aufnahmen liegen dort bewusst im lokalen Zweig: bei einem
+servergespeicherten Profil wanderten sonst hunderte WAV-Dateien bei jeder
+An- und Abmeldung durchs Netz.
+
+DREAM_VOICETRAINING_HOME ueberschreibt beides mit einem gemeinsamen Ordner,
+praktisch fuer Tests und portable Varianten.
 """
 
 from __future__ import annotations
 
 import os
 import shutil
+import sys
 from pathlib import Path
+
+WINDOWS = sys.platform.startswith("win")
+# PyInstaller entpackt die Beigaben in einen temporaeren Ordner.
+BUNDLE_DIR = Path(getattr(sys, "_MEIPASS", "")) if getattr(sys, "frozen", False) else None
 
 APP_ID = "dream-voicetraining"
 APP_NAME = "Dream-VoiceTraining"
-APP_VERSION = "1.0.2"
+APP_VERSION = "1.0.3"
 
 APP_URL = "https://github.com/yakuda-stack/Dream-VoiceTraining"
 ISSUES_URL = APP_URL + "/issues"
@@ -47,6 +61,10 @@ def set_process_name(name: str = APP_ID) -> None:
     setzt prctl wenigstens den Kurznamen (comm), der auf 15 Zeichen begrenzt
     ist und den die meisten Monitore anzeigen.
     """
+    if WINDOWS:
+        # Dort traegt die EXE den Namen, im Taskmanager steht er ohnehin.
+        return
+
     try:
         import setproctitle
         setproctitle.setproctitle(name)
@@ -65,7 +83,12 @@ def set_process_name(name: str = APP_ID) -> None:
 
 def icon_file() -> Path | None:
     """Programmsymbol suchen, egal ob aus dem Quellordner oder installiert."""
-    candidates = [
+    candidates = []
+    if BUNDLE_DIR is not None:
+        candidates += [BUNDLE_DIR / f"{APP_ID}.ico",
+                       BUNDLE_DIR / f"{APP_ID}.svg"]
+    candidates += [
+        Path(__file__).resolve().parent / "packaging" / f"{APP_ID}.ico",
         Path(__file__).resolve().parent / "packaging" / f"{APP_ID}.svg",
         Path(f"/usr/share/icons/hicolor/scalable/apps/{APP_ID}.svg"),
         Path.home() / ".local/share/icons/hicolor/scalable/apps" / f"{APP_ID}.svg",
@@ -86,11 +109,19 @@ def _xdg(var: str, default: str) -> Path:
     return (Path(base) if base else Path.home() / default).expanduser()
 
 
+def _windows_dir(variable: str, fallback: str) -> Path:
+    base = os.environ.get(variable)
+    return Path(base) if base else Path.home() / "AppData" / fallback
+
+
 def _roots() -> tuple[Path, Path]:
     override = os.environ.get(ENV_OVERRIDE)
     if override:
         root = Path(override).expanduser()
         return root, root
+    if WINDOWS:
+        return (_windows_dir("APPDATA", "Roaming") / APP_NAME,
+                _windows_dir("LOCALAPPDATA", "Local") / APP_NAME)
     return (_xdg("XDG_CONFIG_HOME", ".config") / APP_ID,
             _xdg("XDG_DATA_HOME", ".local/share") / APP_ID)
 

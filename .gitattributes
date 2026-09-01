@@ -1,0 +1,18 @@
+# Zeilenenden festnageln. Ohne das macht Git auf Windows aus jedem
+# Shell-Skript eine CRLF-Datei, und die laeuft auf Linux nicht mehr
+# ("bad interpreter"). Umgekehrt mag die PowerShell LF nicht immer.
+* text=auto eol=lf
+
+*.sh        text eol=lf
+*.py        text eol=lf
+PKGBUILD*   text eol=lf
+*.desktop   text eol=lf
+*.iss       text eol=crlf
+*.ps1       text eol=crlf
+*.bat       text eol=crlf
+
+# Binaerdateien nie anfassen.
+*.png       binary
+*.ico       binary
+*.wav       binary
+*.AppImage  binary

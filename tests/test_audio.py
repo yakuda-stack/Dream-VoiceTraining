@@ -140,3 +140,54 @@ def test_aufnahme_sammelt_bloecke():
     recorded = engine.stop_recording()
     assert recorded.size == 20 * 1024
     assert engine.is_recording is False
+
+
+WINDOWS_DEVICES = [
+    {"name": "Mikrofon (USB Audio Device)", "max_input_channels": 2, "hostapi": 0},
+    {"name": "Mikrofon (USB Audio Device)", "max_input_channels": 2, "hostapi": 1},
+    {"name": "Mikrofon (USB Audio Device)", "max_input_channels": 2, "hostapi": 2},
+    {"name": "Stereomix (Realtek Audio)", "max_input_channels": 2, "hostapi": 0},
+    {"name": "CABLE Output (VB-Audio Virtual Cable)", "max_input_channels": 2,
+     "hostapi": 2},
+]
+WINDOWS_APIS = [{"name": "MME"}, {"name": "Windows DirectSound"},
+                {"name": "Windows WASAPI"}]
+
+
+@pytest.fixture
+def windows_audio(monkeypatch):
+    """Windows nachstellen: kein pactl, mehrere Host-APIs je Gerät."""
+    monkeypatch.setattr(audio, "_run", lambda args: None)
+    monkeypatch.setattr(audio.sd, "query_devices", lambda: WINDOWS_DEVICES,
+                        raising=False)
+    monkeypatch.setattr(audio.sd, "query_hostapis", lambda: WINDOWS_APIS,
+                        raising=False)
+
+
+def test_windows_geraete_werden_entdoppelt(windows_audio):
+    sources = audio.enumerate_sources()
+    names = [s.label for s in sources]
+    mikrofone = [n for n in names if n.startswith("Mikrofon")]
+    assert len(mikrofone) == 1, names
+
+
+def test_windows_bevorzugt_wasapi(windows_audio):
+    by_label = {s.label: s for s in audio.enumerate_sources()}
+    mikrofon = next(s for label, s in by_label.items()
+                    if label.startswith("Mikrofon"))
+    assert "WASAPI" in mikrofon.label
+    assert mikrofon.pa_index == 2          # der WASAPI-Eintrag
+
+
+def test_windows_einordnung(windows_audio):
+    kinds = {s.label.split("  [")[0]: s.kind for s in audio.enumerate_sources()}
+    assert kinds["Stereomix (Realtek Audio)"] == audio.KIND_MONITOR
+    assert kinds["CABLE Output (VB-Audio Virtual Cable)"] == audio.KIND_VIRTUAL
+    assert kinds["Mikrofon (USB Audio Device)"] == audio.KIND_MIC
+
+
+def test_ohne_pactl_kein_pulse_routing(windows_audio):
+    """PULSE_SOURCE gibt es unter Windows nicht — es darf nie gesetzt werden."""
+    for source in audio.enumerate_sources():
+        assert source.pulse_source is None
+        assert source.pa_index is not None

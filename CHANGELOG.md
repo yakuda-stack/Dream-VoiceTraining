@@ -4,6 +4,31 @@ Notable changes per release. Format follows
 [Keep a Changelog](https://keepachangelog.com/), versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [1.0.3] — unreleased
+
+### Added
+
+- **Windows support.** Settings go to `%APPDATA%\Dream-VoiceTraining`,
+  recordings to `%LOCALAPPDATA%` — deliberately the local branch, or a roaming
+  profile would drag hundreds of WAV files across the network at every login.
+- Device list works without `pactl`. Windows reports the same microphone once
+  per host API; the WASAPI entry is kept, the rest dropped, and the API is
+  shown in the label so the choice stays traceable. "Stereo Mix" and
+  "What U Hear" are classified as monitors, VB-Cable and Voicemeeter as
+  virtual sources.
+- Build scripts under `packaging/windows`: a PyInstaller spec that bundles the
+  PortAudio DLL shipped with sounddevice and drops the Qt modules the program
+  never uses, a PowerShell script producing a portable ZIP, and an Inno Setup
+  installer that installs without administrator rights and leaves recordings
+  and settings alone when uninstalling.
+- `Segoe UI` added to the font stack.
+
+### Note
+
+The Windows build is untested by the author of this changelog entry — it was
+written on Linux and could not be executed there. Treat 1.0.3 on Windows as a
+first attempt and report what breaks.
+
 ## [1.0.2] — 2026-09-02
 
 ### Fixed

@@ -11,7 +11,7 @@ Tonhöhe, Resonanz, Schwere und Stimmqualität, live beim Sprechen und über
 Sessions hinweg dokumentiert.
 
 [![Lizenz: GPL v3](https://img.shields.io/badge/Lizenz-GPLv3-blue.svg)](LICENSE)
-![Plattform: Linux](https://img.shields.io/badge/Plattform-Linux-informational)
+![Plattform: Linux | Windows](https://img.shields.io/badge/Plattform-Linux%20%7C%20Windows-informational)
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
 
 [English version](README.md)
@@ -264,6 +264,29 @@ PortAudio muss auf dem System vorhanden sein — es ist bewusst nicht gebündelt
 weil das Audio-Routing vom Wirtssystem kommen muss, damit überhaupt etwas
 funktioniert.
 
+### Windows
+
+Installer oder portables ZIP aus den
+[Releases](https://github.com/yakuda-stack/Dream-VoiceTraining/releases)
+laden. Der Installer braucht keine Administratorrechte und lässt deine
+Aufnahmen und Einstellungen beim Deinstallieren stehen.
+
+Sonst ist nichts zu installieren — die PortAudio-Bibliothek steckt im Build.
+
+Selbst bauen braucht Python 3.10+ von python.org (nicht die Store-Fassung,
+die den Zugriff auf `%LOCALAPPDATA%` einschränkt):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File packaging\windows\build_windows.ps1
+```
+
+Erzeugt `dist\Dream-VoiceTraining\Dream-VoiceTraining.exe` und ein portables
+ZIP; mit installiertem [Inno Setup](https://jrsoftware.org/isdl.php)
+zusätzlich den Installer.
+
+Deine Dateien liegen unter `%APPDATA%\Dream-VoiceTraining` (Einstellungen)
+und `%LOCALAPPDATA%\Dream-VoiceTraining` (Aufnahmen).
+
 ### Aus dem Quelltext, zum Entwickeln
 
 ```sh
@@ -373,7 +396,7 @@ pip install -r requirements-dev.txt
 python -m pytest tests/ -q
 ```
 
-Einhundertsechs Tests für den Analysekern, die Persistenz der Einstellungen,
+Einhundertdreizehn Tests für den Analysekern, die Persistenz der Einstellungen,
 Pfadauflösung und Migration, Geräteerkennung und Vollständigkeit der
 Übersetzungen. Zwei davon sind Regressionstests für echte Fehler: Rauschen,
 das als Stimme durchging, und das Spektrogramm, das zu einer Farbe kollabierte.

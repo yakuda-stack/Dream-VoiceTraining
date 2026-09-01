@@ -48,10 +48,17 @@ KIND_TITLE_KEYS = {
 }
 KIND_ORDER = (KIND_MIC, KIND_VIRTUAL, KIND_MONITOR)
 
-# Namensmuster fuer den Fall, dass kein pactl vorhanden ist.
-MONITOR_HINTS = ("monitor",)
-VIRTUAL_HINTS = ("null", "loopback", "virtual", "remap", "echo-cancel",
-                 "combined", "dummy", "pipe", ".source", "sink", "wivrn", "obs")
+# Namensmuster fuer den Fall, dass kein pactl vorhanden ist — also unter
+# Windows immer, unter Linux ohne PulseAudio/PipeWire.
+MONITOR_HINTS = ("monitor", "stereo mix", "stereomix", "what u hear",
+                 "wave out", "loopback")
+VIRTUAL_HINTS = ("null", "virtual", "remap", "echo-cancel", "combined",
+                 "dummy", "pipe", ".source", "sink", "wivrn", "obs",
+                 "vb-audio", "cable", "voicemeeter")
+
+# Unter Windows meldet PortAudio dasselbe Geraet ueber mehrere Host-APIs.
+# WASAPI hat die geringste Latenz und die verlaesslichsten Namen.
+HOSTAPI_ORDER = ("wasapi", "wdm-ks", "directsound", "mme")
 
 # PortAudio-Geraete, ueber die sich beliebige PipeWire-Quellen erreichen lassen.
 ROUTER_NAMES = ("pipewire", "pulse", "default")
@@ -162,18 +169,45 @@ def _pipewire_sources() -> tuple[list[Source], dict[str, dict]] | None:
 # ------------------------------------------------------------ PortAudio
 
 def _portaudio_devices() -> tuple[list[tuple[int, str]], int | None]:
+    """(Index, Name) aller Eingangsgeraete plus Index des Standardgeraets."""
+    return ([(index, name) for index, name, _api in _portaudio_detailed()],
+            _portaudio_default())
+
+
+def _portaudio_default() -> int | None:
+    try:
+        return sd.default.device[0]
+    except Exception:
+        return None
+
+
+def _portaudio_detailed() -> list[tuple[int, str, str]]:
+    """(Index, Name, Host-API) aller Eingangsgeraete."""
     try:
         devices = sd.query_devices()
+        hostapis = sd.query_hostapis()
     except Exception:
-        return [], None
-    try:
-        default_index = sd.default.device[0]
-    except Exception:
-        default_index = None
-    return ([(i, d.get("name", ""))
-             for i, d in enumerate(devices)
-             if d.get("max_input_channels", 0) >= 1],
-            default_index)
+        return []
+
+    out = []
+    for index, device in enumerate(devices):
+        if device.get("max_input_channels", 0) < 1:
+            continue
+        api_index = device.get("hostapi")
+        api = ""
+        if isinstance(api_index, int) and 0 <= api_index < len(hostapis):
+            api = hostapis[api_index].get("name", "")
+        out.append((index, device.get("name", f"Gerät {index}"), api))
+    return out
+
+
+def _api_rank(api: str) -> int:
+    """Sortiergewicht der Host-API; unbekannte landen hinten."""
+    low = api.lower()
+    for rank, needle in enumerate(HOSTAPI_ORDER):
+        if needle in low:
+            return rank
+    return len(HOSTAPI_ORDER)
 
 
 def _find_router(pa_devices: list[tuple[int, str]]) -> int | None:
@@ -217,14 +251,23 @@ def enumerate_sources(remembered: str | None = None) -> list[Source]:
 
     if pipewire is None:
         # Kein PipeWire erreichbar: PortAudio-Namen direkt verwenden.
-        sources, seen = [], set()
-        for idx, name in pa_devices:
-            if name in seen:
-                continue
-            seen.add(name)
-            sources.append(Source(name=name, label=name,
-                                  kind=_fallback_kind(name), pa_index=idx,
-                                  is_default=(idx == pa_default)))
+        # Dasselbe Geraet taucht unter Windows mehrfach auf, einmal je
+        # Host-API. Wir behalten die beste und nennen sie im Anzeigetext,
+        # damit die Auswahl nachvollziehbar bleibt.
+        best: dict[str, tuple[int, int, str, str]] = {}
+        for index, name, api in _portaudio_detailed():
+            rank = _api_rank(api)
+            previous = best.get(name)
+            if previous is None or rank < previous[1]:
+                best[name] = (index, rank, name, api)
+
+        sources = []
+        for index, _rank, name, api in best.values():
+            label = f"{name}  [{api}]" if api else name
+            sources.append(Source(name=f"{name}|{api}", label=label,
+                                  kind=_fallback_kind(name), pa_index=index,
+                                  is_default=(index == pa_default)))
+        sources.sort(key=lambda src: src.label.lower())
     else:
         pw_sources, raw = pipewire
         router = _find_router(pa_devices)
