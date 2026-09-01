@@ -23,6 +23,16 @@ Notable changes per release. Format follows
   and settings alone when uninstalling.
 - `Segoe UI` added to the font stack.
 
+### Fixed
+
+- **Spin box arrows sat on top of the number** rather than beside it, so
+  clicking the up arrow put the cursor in the field instead of raising the
+  value. Styling a `QSpinBox` at all makes Qt stop drawing its sub-controls
+  in the right place, and the border-triangle trick from CSS does nothing
+  there — Qt wants an image. The arrows are now generated as SVG in the
+  theme's text colour and regenerated when the theme changes. On Linux the
+  native style happened to hide the problem; it only showed on Windows.
+
 ### Note
 
 The Windows build is untested by the author of this changelog entry — it was

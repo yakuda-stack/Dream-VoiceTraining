@@ -257,3 +257,66 @@ def test_keine_falsch_maskierten_klammern_in_stylesheets():
                 if re.search(r"\{\s*[a-zA-Z-]+\s*:\s", body):
                     broken.append(f"{name}:{number}")
     assert not broken, f"CSS-Klammern nicht verdoppelt: {broken}"
+
+
+def test_pfeilbilder_werden_erzeugt():
+    """Regression: gestylte Spinboxen zeichneten die Pfeile über der Zahl.
+
+    Qt zeichnet sie nicht mehr selbst, sobald das Widget per Stylesheet
+    angefasst wird, und der border-Dreieck-Trick aus CSS greift dort nicht.
+    Es braucht ein Bild, und dessen Farbe hängt am Thema.
+    """
+    import paths
+    paths.ensure_dirs()
+
+    theming.use_preset("default")
+    sheet = theming.stylesheet()
+    assert "QSpinBox::up-arrow" in sheet
+    assert 'image: url("' in sheet
+
+    up = paths.CACHE_DIR / "arrow-up.svg"
+    down = paths.CACHE_DIR / "arrow-down.svg"
+    assert up.is_file() and down.is_file()
+    assert theming.COLORS["fg"] in up.read_text(encoding="utf-8")
+
+    # Themenwechsel muss die Farbe der Pfeile mitziehen.
+    theming.use_preset("rose")
+    theming.stylesheet()
+    assert theming.COLORS["fg"] in up.read_text(encoding="utf-8")
+    theming.use_preset("default")
+
+
+def test_stylesheet_hat_keine_doppelten_klammern():
+    """Ein {{ im fertigen Stylesheet heißt: eine Ersetzung ging daneben,
+    und Qt verwirft dann das ganze Blatt."""
+    sheet = theming.stylesheet()
+    assert "{{" not in sheet
+    assert "}}" not in sheet
+
+
+def test_spinbox_pfeile_liegen_neben_dem_text():
+    """Prüft die tatsächliche Geometrie, nicht nur das Stylesheet."""
+    from PySide6 import QtWidgets
+    from PySide6.QtWidgets import QStyle
+
+    app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+    app.setStyleSheet(theming.stylesheet())
+
+    spin = QtWidgets.QDoubleSpinBox()
+    spin.setSuffix(" Hz")
+    spin.setRange(0, 1000)
+    spin.setValue(180)
+    spin.resize(160, 32)
+    spin.show()
+    app.processEvents()
+
+    option = QtWidgets.QStyleOptionSpinBox()
+    spin.initStyleOption(option)
+    style = spin.style()
+    field = style.subControlRect(QStyle.ComplexControl.CC_SpinBox, option,
+                                 QStyle.SubControl.SC_SpinBoxEditField, spin)
+    up = style.subControlRect(QStyle.ComplexControl.CC_SpinBox, option,
+                              QStyle.SubControl.SC_SpinBoxUp, spin)
+    assert up.left() >= field.right() - 2, (
+        f"Pfeil bei {up.left()} liegt über dem Textfeld bis {field.right()}")
+    spin.close()

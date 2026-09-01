@@ -380,7 +380,7 @@ pip install -r requirements-dev.txt
 python -m pytest tests/ -q
 ```
 
-One hundred and thirteen tests covering the analysis core, settings persistence, path
+One hundred and sixteen tests covering the analysis core, settings persistence, path
 resolution and migration, device enumeration and translation completeness.
 Two of them are regression tests for real bugs: noise being reported as a
 voice, and the spectrogram collapsing to one colour.

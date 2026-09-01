@@ -396,7 +396,7 @@ pip install -r requirements-dev.txt
 python -m pytest tests/ -q
 ```
 
-Einhundertdreizehn Tests für den Analysekern, die Persistenz der Einstellungen,
+Einhundertsechzehn Tests für den Analysekern, die Persistenz der Einstellungen,
 Pfadauflösung und Migration, Geräteerkennung und Vollständigkeit der
 Übersetzungen. Zwei davon sind Regressionstests für echte Fehler: Rauschen,
 das als Stimme durchging, und das Spektrogramm, das zu einer Farbe kollabierte.

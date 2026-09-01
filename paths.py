@@ -129,6 +129,7 @@ def _roots() -> tuple[Path, Path]:
 CONFIG_DIR, DATA_DIR = _roots()
 SESSION_DIR = DATA_DIR / "sessions"
 BACKGROUND_DIR = DATA_DIR / "backgrounds"
+CACHE_DIR = DATA_DIR / "cache"
 CONFIG_PATH = CONFIG_DIR / "config.json"
 SESSION_INDEX = SESSION_DIR / "sessions.json"
 
@@ -137,6 +138,7 @@ def ensure_dirs() -> None:
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     SESSION_DIR.mkdir(parents=True, exist_ok=True)
     BACKGROUND_DIR.mkdir(parents=True, exist_ok=True)
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def _adopt_file(source: Path, target: Path, moved: list[str]) -> None:

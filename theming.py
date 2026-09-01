@@ -26,6 +26,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import i18n
+import paths
 
 
 @dataclass(frozen=True)
@@ -232,6 +233,46 @@ def deviates_from_preset() -> bool:
     return any(COLORS.get(k) != base.get(k) for k in ROLE_KEYS)
 
 
+# ------------------------------------------------------------ Pfeilbilder
+
+ARROWS = {
+    "up": "3,7.5 6,4.5 9,7.5",
+    "down": "3,4.5 6,7.5 9,4.5",
+}
+
+
+def _arrow_files() -> dict[str, str]:
+    """Pfeile als SVG in der aktuellen Textfarbe ablegen.
+
+    Qt zeichnet die Pfeile einer QSpinBox nicht mehr selbst, sobald das
+    Widget per Stylesheet angefasst wird, und der aus CSS bekannte
+    Dreieck-Trick ueber border funktioniert dort nicht. Es braucht also
+    ein Bild — und weil die Farbe vom Thema abhaengt, wird es erzeugt.
+    """
+    try:
+        target = paths.CACHE_DIR
+        target.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        return {}
+
+    out = {}
+    for name, points in ARROWS.items():
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12">'
+            f'<polyline points="{points}" fill="none" stroke="{COLORS["fg"]}"'
+            ' stroke-width="1.6" stroke-linecap="round"'
+            ' stroke-linejoin="round"/></svg>'
+        )
+        path = target / f"arrow-{name}.svg"
+        try:
+            if not path.exists() or path.read_text(encoding="utf-8") != svg:
+                path.write_text(svg, encoding="utf-8")
+        except OSError:
+            return {}
+        out[name] = str(path).replace("\\", "/")
+    return out
+
+
 # ------------------------------------------------------------ Stylesheet
 
 def stylesheet() -> str:
@@ -242,6 +283,18 @@ def stylesheet() -> str:
     card = c["bg2"] if background() is None else rgba(c["bg2"], alpha)
     inner = c["bg3"] if background() is None else rgba(c["bg3"], alpha)
     sidebar = c["sidebar"] if background() is None else rgba(c["sidebar"], alpha)
+
+    arrows = _arrow_files()
+    if arrows:
+        arrow_rules = (
+            "QSpinBox::up-arrow, QDoubleSpinBox::up-arrow, QDateEdit::up-arrow"
+            ' { image: url("%s"); width: 12px; height: 12px; }\n'
+            "QSpinBox::down-arrow, QDoubleSpinBox::down-arrow,"
+            " QDateEdit::down-arrow, QComboBox::down-arrow"
+            ' { image: url("%s"); width: 12px; height: 12px; }'
+        ) % (arrows["up"], arrows["down"])
+    else:
+        arrow_rules = ""
 
     accent_text = contrast_text(c["accent"])
     accent_light = lighten(c["accent"], 0.35)
@@ -275,12 +328,40 @@ QPushButton#langright {{ border-top-right-radius: 6px; border-bottom-right-radiu
 QPushButton#langleft:checked, QPushButton#langright:checked {{
     background: {c['accent']}; color: {accent_text}; font-weight: 700; }}
 QComboBox {{ background: {inner}; border: none; border-radius: 6px;
-             padding: 7px 10px; min-width: 180px; color: {c['fg']}; }}
+             padding: 7px 26px 7px 10px; min-width: 180px; color: {c['fg']}; }}
 QComboBox QAbstractItemView {{ background: {c['bg2']}; color: {c['fg']};
                                selection-background-color: {c['bg3']}; }}
-QSpinBox, QDoubleSpinBox, QDateEdit, QLineEdit {{ background: {inner};
-    border: 1px solid {c['border']}; border-radius: 5px; padding: 4px 6px;
-    color: {c['fg']}; }}
+QLineEdit {{ background: {inner}; border: 1px solid {c['border']};
+    border-radius: 5px; padding: 4px 6px; color: {c['fg']}; }}
+
+/* Sobald eine QSpinBox per Stylesheet angefasst wird, zeichnet Qt die
+   Pfeilfelder nicht mehr selbst an die richtige Stelle. Ohne die folgenden
+   Regeln liegen sie ueber der Zahl — unter Linux faellt das je nach Stil
+   nicht auf, unter Windows schon. */
+QSpinBox, QDoubleSpinBox, QDateEdit {{ background: {inner};
+    border: 1px solid {c['border']}; border-radius: 5px;
+    padding: 4px 24px 4px 6px; color: {c['fg']}; min-height: 20px; }}
+QSpinBox::up-button, QDoubleSpinBox::up-button, QDateEdit::up-button {{
+    subcontrol-origin: border; subcontrol-position: top right;
+    width: 18px; height: 14px; margin: 1px 1px 0 0;
+    background: {c['bg3']}; border: none;
+    border-top-right-radius: 4px; }}
+QSpinBox::down-button, QDoubleSpinBox::down-button, QDateEdit::down-button {{
+    subcontrol-origin: border; subcontrol-position: bottom right;
+    width: 18px; height: 14px; margin: 0 1px 1px 0;
+    background: {c['bg3']}; border: none;
+    border-bottom-right-radius: 4px; }}
+QSpinBox::up-button:hover, QDoubleSpinBox::up-button:hover,
+QSpinBox::down-button:hover, QDoubleSpinBox::down-button:hover,
+QDateEdit::up-button:hover, QDateEdit::down-button:hover {{
+    background: {c['accent']}; }}
+{arrow_rules}
+
+/* Dasselbe gilt fuer das Aufklappfeld der Auswahllisten. */
+QComboBox::drop-down {{ subcontrol-origin: padding;
+    subcontrol-position: center right; width: 20px; border: none;
+    border-top-right-radius: 6px; border-bottom-right-radius: 6px; }}
+QComboBox::drop-down:hover {{ background: {c['bg3']}; }}
 QTextEdit, QPlainTextEdit, QTableWidget {{ background: {card};
     border: 1px solid {c['border']}; border-radius: 8px; color: {c['fg']}; }}
 QHeaderView::section {{ background: {c['bg3']}; border: none; padding: 6px;
