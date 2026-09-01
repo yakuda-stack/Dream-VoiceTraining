@@ -108,7 +108,7 @@ BUILTIN_TEMPLATES: dict[str, Settings] = {
 CFG = Settings()
 
 _state = {"active_template": "Standard", "user_templates": {}, "device": None, "language": "en", "profile": "feminin", "live_profile": "none",
-          "view": {}, "user_profiles": {},
+          "view": {}, "user_profiles": {}, "theme": {},
           "builtin_overrides": {},
           "warn_low_level": True, "recording_type": "reading"}
 
@@ -236,6 +236,15 @@ def set_recording_type(key: str) -> None:
         save()
 
 
+def get_theme() -> dict:
+    return dict(_state["theme"])
+
+
+def set_theme(data: dict) -> None:
+    _state["theme"] = dict(data)
+    save()
+
+
 def get_view() -> dict:
     return {**DEFAULT_VIEW, **_state["view"]}
 
@@ -304,6 +313,8 @@ def load() -> None:
     _state["live_profile"] = raw.get("live_profile", "none")
     stored = raw.get("view")
     _state["view"] = stored if isinstance(stored, dict) else {}
+    theme = raw.get("theme")
+    _state["theme"] = theme if isinstance(theme, dict) else {}
     profiles = raw.get("user_profiles")
     _state["user_profiles"] = profiles if isinstance(profiles, dict) else {}
     overrides = raw.get("builtin_overrides")
@@ -328,6 +339,7 @@ def save() -> None:
         "live_profile": _state["live_profile"],
         "view": _state["view"],
         "user_profiles": _state["user_profiles"],
+        "theme": _state["theme"],
         "builtin_overrides": _state["builtin_overrides"],
         "warn_low_level": _state["warn_low_level"],
         "recording_type": _state["recording_type"],

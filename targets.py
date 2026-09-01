@@ -72,30 +72,36 @@ METRICS = [
 METRIC_BY_KEY = {m.key: m for m in METRICS}
 
 # Profilabhaengige Bereiche: key -> (untere Grenze, obere Grenze), None = offen
+# Bewusst nur die Groessen rund um die Tonhoehe. Formanten stehen zwar in
+# der Literatur, dort aber fuer gehaltene Vokale — verglichen wuerde hier ein
+# Median ueber fliessenden Lesetext. Das sind zwei verschiedene Dinge, und
+# eine Bewertung daraus waere bedeutungslos. Wer Formantziele will, schaltet
+# sie im Einstellungsdialog ein oder leitet ein eigenes Profil aus einer
+# Aufnahme ab.
+#
+# Die Qualitaetsgrenzen weiter unten (Pegel, HNR, Jitter, Shimmer,
+# Stimmabbrueche, stimmhafter Anteil) gelten unabhaengig davon weiter.
 PROFILES: dict[str, dict[str, tuple[float | None, float | None]]] = {
     "maskulin": {
-        "f0_median": (85.0, 155.0),
-        "f0_sd_st": (1.5, 3.5),
-        "f1_median": (300.0, 550.0),
-        "f2_median": (1300.0, 1650.0),
-        "f3_median": (2300.0, 2650.0),
-        "h1_h2": (0.0, 6.0),
+        "f0_median": (85.0, 130.0),
+        "f0_p10": (70.0, 110.0),
+        "f0_p90": (120.0, 200.0),
+        "f0_sd_st": (2.0, 4.5),
+        "f0_range_st": (4.0, 11.0),
     },
     "androgyn": {
-        "f0_median": (145.0, 185.0),
-        "f0_sd_st": (2.5, 4.5),
-        "f1_median": (400.0, 620.0),
-        "f2_median": (1500.0, 1780.0),
-        "f3_median": (2600.0, 2900.0),
-        "h1_h2": (3.0, 9.0),
+        "f0_median": (145.0, 175.0),
+        "f0_p10": (115.0, 150.0),
+        "f0_p90": (180.0, 250.0),
+        "f0_sd_st": (2.5, 5.0),
+        "f0_range_st": (5.0, 13.0),
     },
     "feminin": {
-        "f0_median": (165.0, 255.0),
+        "f0_median": (180.0, 250.0),
+        "f0_p10": (145.0, 200.0),
+        "f0_p90": (210.0, 300.0),
         "f0_sd_st": (3.0, 5.5),
-        "f1_median": (450.0, 750.0),
-        "f2_median": (1650.0, 1950.0),
-        "f3_median": (2800.0, 3200.0),
-        "h1_h2": (6.0, 14.0),
+        "f0_range_st": (7.0, 16.0),
     },
 }
 

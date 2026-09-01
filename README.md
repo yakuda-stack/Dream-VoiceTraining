@@ -152,6 +152,10 @@ included — and saving it under your own name; the
 built-in three start from population averages and can be adjusted, saved
 under a new name, or reset back to the literature values.
 
+**Themes.** Eight built-in colour schemes, every colour role recolourable
+individually, and an optional background image with adjustable panel
+transparency.
+
 **Settings.** Every analysis parameter is adjustable while the program runs,
 with six built-in templates for different situations. Nothing requires a
 restart.
@@ -243,6 +247,9 @@ Download from
 chmod +x Dream-VoiceTraining-*.AppImage
 ./Dream-VoiceTraining-*.AppImage
 ```
+
+One file for every system: the runtime uses FUSE 3, falls back to FUSE 2 and
+extracts itself if neither is available. Nothing to install.
 
 PortAudio has to be present on the host — it is not bundled, because audio
 routing has to come from your system to work at all.
@@ -341,8 +348,8 @@ fix the gain rather than lowering the threshold.
 
 ## Changelog
 
-Every release is documented in [CHANGELOG.md](CHANGELOG.md), in English and
-German, including what was broken and why.
+Every release is documented in [CHANGELOG.md](CHANGELOG.md), including what
+was broken and why.
 
 The step-by-step release workflow — GitHub, AppImage, AUR — is in
 [update_DreamVoiceTraining.txt](update_DreamVoiceTraining.txt).
@@ -354,7 +361,7 @@ pip install -r requirements-dev.txt
 python -m pytest tests/ -q
 ```
 
-Eighty-eight tests covering the analysis core, settings persistence, path
+One hundred and two tests covering the analysis core, settings persistence, path
 resolution and migration, device enumeration and translation completeness.
 Two of them are regression tests for real bugs: noise being reported as a
 voice, and the spectrogram collapsing to one colour.

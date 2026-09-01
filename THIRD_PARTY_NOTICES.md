@@ -27,6 +27,14 @@ The AppImage build bundles PySide6. The build script in
 `packaging/build-appimage.sh` is part of this repository, so the bundled
 libraries can be rebuilt and replaced from source by anyone.
 
+## AppImage runtime
+
+The AppImage is packaged with [uruntime](https://github.com/VHSgunzo/uruntime)
+(MIT), a drop-in AppImage runtime that supports both FUSE 2 and FUSE 3 and
+falls back to self-extraction when neither is present. It replaces the
+official runtime only as the launcher; the payload is an ordinary AppDir and
+can be inspected with `--appimage-extract`.
+
 ## What is not bundled
 
 ALSA, PulseAudio and PipeWire are always taken from the host system, in the

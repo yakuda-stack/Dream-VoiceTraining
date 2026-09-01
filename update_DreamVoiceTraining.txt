@@ -11,10 +11,10 @@ Diese 3 Stellen ändern version:
 cd ~/Schreibtisch/voice-training/Dream-VoiceTraining
 source .venv/bin/activate.fish
 
-python -m pytest tests/ -q                                # 86 passed
+python -m pytest tests/ -q                                # alle grün
 desktop-file-validate packaging/dream-voicetraining.desktop
 bash -n install.sh packaging/build-appimage.sh
-python main.py                                            # von Hand testen
+python main.py
 
 Von Hand: aufnehmen, Details öffnen, Sprache umschalten, Einstellungen
 öffnen und Programm über die Taskleiste schließen.
@@ -34,97 +34,130 @@ GitHub läuft über HTTPS mit Token, nicht SSH.
 Falls gefragt: User = yakuda-stack, Passwort = Personal Access Token.
 
 commands:
-cd ~/Schreibtisch/voice-training/
-tar --exclude='.venv' --exclude='__pycache__' --exclude='.git' \
-    -czf Dream-VoiceTraining-v1.0.1.tar.gz Dream-VoiceTraining/
+bash packaging/build-appimage.sh
+# -> build/Dream-VoiceTraining-1.0.1-x86_64.AppImage
+# Eine Datei für alle Systeme. Testen mit:
+#   ./Dream-VoiceTraining-1.0.1-x86_64.AppImage
+#   ./Dream-VoiceTraining-1.0.1-x86_64.AppImage --appimage-extract-and-run
 
 commands:
+cd ~/Schreibtisch/voice-training/
+tar --exclude='.venv' --exclude='__pycache__' --exclude='.git' \
+    --exclude='.pytest_cache' --exclude='build' \
+    -czf Dream-VoiceTraining-v1.0.1.tar.gz Dream-VoiceTraining/
 cd Dream-VoiceTraining
-bash packaging/build-appimage.sh
-# -> build/Dream-VoiceTraining-1.0.1-x86_64.AppImage        (FUSE 3)
-# -> build/Dream-VoiceTraining-1.0.1-fuse2-x86_64.AppImage  (FUSE 2)
-# BEIDE ans Release hängen.
 
-Beides hochladen auf github unter releases unter jeweiligen versions nummer
+Beides hochladen auf github unter releases unter jeweiliger Versionsnummer.
 
 
 ## 3. AUR aktualisieren
-# WICHTIG: makepkg kennt nur pacman, nicht das AUR. Zwei Abhängigkeiten
-# liegen im AUR (python-sounddevice, python-praat-parselmouth), deshalb
-# paru statt makepkg zum Bauen benutzen.
+# makepkg kennt nur pacman, nicht das AUR. Zwei Abhängigkeiten liegen im AUR
+# (python-sounddevice, python-praat-parselmouth), deshalb paru statt makepkg.
 cd ~/aur/dream-voicetraining
+sudo rm -rf pkg src; rm -f *.pkg.tar.zst *.tar.gz    # Reste vom letzten Lauf
 nano PKGBUILD                        # pkgver=1.0.1, pkgrel=1 (wie im Projekt)
 updpkgsums                           # lädt neuen Tag, ersetzt Checksumme
-paru -Ui                             # bauen + installieren (löst AUR-Deps)
-# yay stattdessen:  yay -Bi .
-dream-voicetraining                  # testen: startet? Icon? Prozessname in btop?
+paru -Ui                             # bauen + installieren, löst AUR-Deps
+                                     # yay:  yay -Bi .
+cd ~ && dream-voicetraining          # testen: startet? Icon? Prozessname in btop?
+cd ~/aur/dream-voicetraining
 makepkg --printsrcinfo > .SRCINFO    # PFLICHT
-git add PKGBUILD .SRCINFO
+git add PKGBUILD .SRCINFO            # NIE git add -A
 git commit -m "Update to v1.0.1"
 git push origin master               # AUR nutzt master!
 
+Danach PKGBUILD ins Projekt zurückspiegeln, sonst laufen beide auseinander:
+cp ~/aur/dream-voicetraining/PKGBUILD \
+   ~/Schreibtisch/voice-training/Dream-VoiceTraining/packaging/PKGBUILD
 
-## Die 12 häufigsten Fehler
-1. updpkgsums gibt 404    -> GitHub-Tag existiert noch nicht. Erst Schritt 2 fertig machen.
-2. .SRCINFO vergessen     -> AUR lehnt Push ab. Nach JEDER PKGBUILD-Änderung neu erzeugen.
-3. Falscher Ordner        -> AUR-Push NUR aus ~/aur/dream-voicetraining. Projekt-PKGBUILD ist nur Kopie.
-4. pkgver mit Bindestrich -> 1.0.1 ist sauber; ein Alpha hieße 1.0.1_alpha (Unterstrich), nie 1.0.1-alpha.
-5. Branch verwechselt     -> Projekt = push origin main, AUR = push origin master.
-6. "Ziel nicht gefunden: python-sounddevice"
-                          -> das Paket liegt im AUR, makepkg kann es nicht holen.
-                             paru -Ui statt makepkg -si benutzen.
-                             In extra liegen: python, python-numpy,
-                             python-pyqtgraph, pyside6, portaudio.
-                             Im AUR liegen: python-sounddevice,
-                             python-praat-parselmouth (dein eigenes Paket).
-                             Neue Paketnamen mit pacman -Si bzw. paru -Si prüfen.
-                             Dream-VoiceTraining braucht: python, python-numpy,
-                             python-pyqtgraph, pyside6, python-sounddevice,
-                             python-praat-parselmouth, portaudio.
-                             python-praat-parselmouth ist NICHT im AUR-Repo von
-                             jemand anderem - das ist dein eigenes Paket.
-7. venv verschoben        -> überlebt kein Umbenennen des Ordners. rm -rf .venv,
-                             python -m venv .venv, pip install -r requirements-dev.txt
-8. "cd: .../src/dream-voicetraining-1.0.0: nicht gefunden"
-                          -> Das GitHub-Archiv entpackt nach Dream-VoiceTraining-1.0.0
-                             (Repo-Schreibweise), nicht nach dem Paketnamen.
-                             Im PKGBUILD steht dafür _repo=Dream-VoiceTraining
-                             und cd "$srcdir/$_repo-$pkgver". Beim Umbenennen
-                             des Repos mit anpassen.
 
-9. paru panickt: "called Result::unwrap() on an Err value: .../pkg"
-   "Keine Berechtigung (os error 13)"
-                          -> Reste eines abgebrochenen makepkg-Laufs gehören root.
-                             sudo rm -rf pkg src   danach paru -Ui erneut.
+## Nützliche Abkürzung (~/.config/fish/config.fish)
+function pkgclean
+    sudo rm -rf pkg src
+    rm -f *.pkg.tar.zst *.tar.gz
+end
 
-10. check() bricht ab mit "No module named colorama"
-                          -> pyqtgraph importiert colorama beim Laden, führt es
-                             selbst aber nur als Check-Abhängigkeit. Deshalb
-                             steht python-colorama in depends. Ohne den Eintrag
-                             baut das Paket durch und stürzt beim Start ab.
 
-11. Paket baut durch, stürzt aber beim Start ab
-    "argument 1 has unexpected type 'PenStyle'" + SIGSEGV
-                          -> pyqtgraph hat PyQt6 statt PySide6 gewählt. In der
-                             venv fällt das nie auf, weil dort nur PySide6 liegt.
-                             main.py und dialogs.py setzen deshalb vor dem
-                             Import: os.environ.setdefault("PYQTGRAPH_QT_LIB",
-                             "PySide6"). Immer das INSTALLIERTE Paket testen,
-                             nicht nur python main.py im Projektordner.
+## Fehler beim AUR-Bau
 
-12. Bau von python-praat-parselmouth schlägt fehl
-   "No module named skbuild"   -> makedepends unvollständig. Nötig sind cmake,
-                                  ninja, pybind11, python-scikit-build,
-                                  python-build, python-installer,
-                                  python-setuptools, python-wheel.
-   "Missing dependencies: cmake>=3.18"
-                               -> pyproject.toml will cmake als PYTHON-Paket.
-                                  Arch liefert es als Systemprogramm, das der
-                                  Prüfer nicht sieht. Deshalb steht im PKGBUILD
-                                  python -m build ... --skip-dependency-check
-   Läuft es nach einem Python-Sprung gar nicht mehr:
-                               -> PKGBUILD.python-praat-parselmouth-bin nehmen,
-                                  installiert das fertige Wheel ohne Compiler.
+updpkgsums gibt 404
+  -> GitHub-Tag existiert noch nicht. Erst Schritt 2 fertig machen.
+
+"Ziel nicht gefunden: python-sounddevice"
+  -> liegt im AUR, makepkg kann es nicht holen. paru -Ui benutzen.
+     In extra:  python, python-numpy, python-pyqtgraph, python-colorama,
+                pyside6, portaudio
+     Im AUR:    python-sounddevice, python-praat-parselmouth (dein Paket)
+     Neue Namen immer mit pacman -Si bzw. paru -Si prüfen, nie raten.
+
+paru panickt: "Result::unwrap() on an Err value: .../pkg"
+"Keine Berechtigung (os error 13)"
+  -> Reste eines abgebrochenen Laufs gehören root. pkgclean, dann erneut.
+
+"ist aktuell -- überspringe Erstellen"
+  -> fertiges .pkg.tar.zst mit gleicher pkgver-pkgrel liegt noch da, makepkg
+     baut nicht neu und installiert den alten Stand. pkgclean.
+     Tritt auf, wenn man einen Tag verschiebt statt die Version anzuheben.
+
+"cd: .../src/dream-voicetraining-1.0.0: nicht gefunden"
+  -> Das GitHub-Archiv entpackt nach Dream-VoiceTraining-1.0.0 (Repo-
+     Schreibweise), nicht nach dem Paketnamen. Im PKGBUILD steht dafür
+     _repo=Dream-VoiceTraining. Beim Umbenennen des Repos mit anpassen.
+
+.SRCINFO vergessen
+  -> AUR lehnt den Push ab. Nach JEDER PKGBUILD-Änderung neu erzeugen.
+
+Falscher Ordner
+  -> AUR-Push NUR aus ~/aur/dream-voicetraining. Projekt-PKGBUILD ist Kopie.
+
+pkgver mit Bindestrich
+  -> 1.0.1 ist sauber; ein Alpha hieße 1.0.1_alpha (Unterstrich), nie -alpha.
+
+Branch verwechselt
+  -> Projekt = push origin main, AUR = push origin master.
+
+Bau von python-praat-parselmouth schlägt fehl
+  "No module named skbuild"
+    -> makedepends unvollständig. Nötig: cmake, ninja, pybind11,
+       python-scikit-build, python-build, python-installer,
+       python-setuptools, python-wheel.
+  "Missing dependencies: cmake>=3.18"
+    -> pyproject.toml will cmake als PYTHON-Paket. Arch liefert es als
+       Systemprogramm, das der Prüfer nicht sieht. Deshalb steht im PKGBUILD
+       python -m build ... --skip-dependency-check
+  Läuft nach einem Python-Sprung gar nicht mehr
+    -> PKGBUILD.python-praat-parselmouth-bin nehmen, installiert das fertige
+       Wheel ohne Compiler.
+
+
+## Fehler beim Programm
+
+Paket baut durch, stürzt beim Start ab
+"argument 1 has unexpected type 'PenStyle'" + SIGSEGV
+  -> pyqtgraph hat PyQt6 statt PySide6 gewählt. In der venv fällt das nie auf,
+     weil dort nur PySide6 liegt. main.py und dialogs.py setzen deshalb vor
+     dem Import: os.environ.setdefault("PYQTGRAPH_QT_LIB", "PySide6").
+     IMMER das installierte Paket testen, nie nur python main.py im Projekt.
+
+check() bricht ab: "No module named colorama"
+  -> pyqtgraph importiert colorama beim Laden, führt es selbst aber nur als
+     Check-Abhängigkeit. Deshalb steht python-colorama in depends.
+
+venv startet nicht mehr nach dem Verschieben des Ordners
+  -> activate.fish trägt absolute Pfade ein. rm -rf .venv,
+     python -m venv .venv, pip install -r requirements-dev.txt
+
+
+## Fehler beim AppImage
+
+"Squashfs image uses (null) compression"
+  -> alte AppImageKit-Laufzeit versteht nur xz und zlib, appimagetool packt
+     zstd. Das Skript benutzt deshalb die Hybrid-Laufzeit; --classic setzt
+     für die FUSE-2-Variante --comp xz.
+
+AppImage startet, findet aber kein Mikrofon
+  -> PortAudio kommt vom Wirtssystem und ist bewusst nicht gebündelt.
+     Auf dem Testsystem portaudio bzw. libportaudio2 installieren.
 
 
 ## Wenn ein Nutzer einen Absturz meldet

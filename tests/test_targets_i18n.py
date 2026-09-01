@@ -82,7 +82,7 @@ def test_alle_profile_haben_dieselben_kennwerte():
 
 def test_profile_sind_aufsteigend_geordnet():
     """maskulin < androgyn < feminin bei den tonhoehenbezogenen Groessen."""
-    for key in ("f0_median", "f2_median", "f3_median"):
+    for key in ("f0_median", "f0_p10", "f0_p90", "f0_sd_st", "f0_range_st"):
         low = targets.PROFILES["maskulin"][key]
         mid = targets.PROFILES["androgyn"][key]
         high = targets.PROFILES["feminin"][key]
@@ -95,3 +95,18 @@ def test_spalten_haben_uebersetzte_beschriftungen():
     for column in columns.COLUMNS:
         assert column.label_key in i18n.STRINGS, column.key
     assert set(columns.DEFAULT_VISIBLE) <= set(columns.BY_KEY)
+
+
+def test_profile_beschreiben_nur_die_tonhoehe():
+    """Formanten bleiben absichtlich offen — im Lesetext wären sie ohne Aussage."""
+    for name, ranges in targets.PROFILES.items():
+        for key in ("f1_median", "f2_median", "f3_median", "h1_h2"):
+            assert key not in ranges, f"{name}: {key}"
+        assert targets.range_for("f2_median", name) is None, name
+
+
+def test_qualitaetsgrenzen_gelten_weiterhin():
+    """Abgeschaltete Ziele heißen nicht, dass Warnungen verschwinden."""
+    for name in targets.PROFILES:
+        assert targets.range_for("peak_db", name) == (-30.0, -8.0)
+        assert targets.range_for("hnr", name) == (15.0, None)

@@ -162,6 +162,10 @@ eigenem Namen sichern lässt; die drei eingebauten starten mit
 Populationsmittelwerten, lassen sich aber anpassen, unter neuem Namen sichern
 oder auf die Literaturwerte zurücksetzen.
 
+**Themen.** Acht eingebaute Farbschemata, jede Farbrolle einzeln änderbar,
+dazu ein optionales Hintergrundbild mit einstellbarer Durchsichtigkeit der
+Flächen.
+
 **Einstellungen.** Jeder Analyseparameter ist im laufenden Betrieb änderbar,
 mit sechs eingebauten Vorlagen für verschiedene Situationen. Nichts davon
 braucht einen Neustart.
@@ -257,6 +261,9 @@ laden:
 chmod +x Dream-VoiceTraining-*.AppImage
 ./Dream-VoiceTraining-*.AppImage
 ```
+
+Eine Datei für jedes System: die Laufzeit nimmt FUSE 3, fällt auf FUSE 2
+zurück und entpackt sich notfalls selbst. Nichts zu installieren.
 
 PortAudio muss auf dem System vorhanden sein — es ist bewusst nicht gebündelt,
 weil das Audio-Routing vom Wirtssystem kommen muss, damit überhaupt etwas
@@ -358,8 +365,8 @@ nicht die Schwelle senken.
 
 ## Changelog
 
-Jede Version ist in [CHANGELOG.md](CHANGELOG.md) dokumentiert, englisch und
-deutsch, samt der behobenen Fehler und woran sie lagen.
+Jede Version ist in [CHANGELOG.md](CHANGELOG.md) dokumentiert (englisch),
+samt der behobenen Fehler und woran sie lagen.
 
 Der Ablauf für eine Veröffentlichung — GitHub, AppImage, AUR — steht in
 [update_DreamVoiceTraining.txt](update_DreamVoiceTraining.txt).
@@ -371,7 +378,7 @@ pip install -r requirements-dev.txt
 python -m pytest tests/ -q
 ```
 
-Achtundachtzig Tests für den Analysekern, die Persistenz der Einstellungen,
+Einhundertzwei Tests für den Analysekern, die Persistenz der Einstellungen,
 Pfadauflösung und Migration, Geräteerkennung und Vollständigkeit der
 Übersetzungen. Zwei davon sind Regressionstests für echte Fehler: Rauschen,
 das als Stimme durchging, und das Spektrogramm, das zu einer Farbe kollabierte.

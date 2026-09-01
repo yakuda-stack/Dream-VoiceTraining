@@ -85,7 +85,7 @@ def test_eingebaute_profile_bleiben_unangetastet():
     settings.save_user_profile("Kopie", targets.profile_ranges("feminin"))
     settings.save_user_profile("Kopie", {"f0_median": [1.0, 2.0]})
     assert targets.PROFILES["feminin"] == before
-    assert targets.range_for("f0_median", "feminin") == (165.0, 255.0)
+    assert targets.range_for("f0_median", "feminin") == (180.0, 250.0)
 
 
 def test_profile_werden_sortiert_und_geloescht():
@@ -107,16 +107,16 @@ def test_leeres_ziel_ergibt_nichts():
 
 def test_eingebautes_profil_laesst_sich_anpassen_und_zuruecksetzen():
     """Der Literaturwert bleibt im Code, die Anpassung liegt daneben."""
-    assert targets.range_for("f0_median", "feminin") == (165.0, 255.0)
+    assert targets.range_for("f0_median", "feminin") == (180.0, 250.0)
 
     settings.save_builtin_override("feminin", {"f0_median": [170.0, 240.0]})
     assert targets.range_for("f0_median", "feminin") == (170.0, 240.0)
     assert targets.is_overridden("feminin") is True
     # Der Wert im Code bleibt unangetastet.
-    assert targets.PROFILES["feminin"]["f0_median"] == (165.0, 255.0)
+    assert targets.PROFILES["feminin"]["f0_median"] == (180.0, 250.0)
 
     assert settings.reset_builtin("feminin") is True
-    assert targets.range_for("f0_median", "feminin") == (165.0, 255.0)
+    assert targets.range_for("f0_median", "feminin") == (180.0, 250.0)
     assert targets.is_overridden("feminin") is False
     assert settings.reset_builtin("feminin") is False
 
@@ -125,9 +125,9 @@ def test_anpassung_ersetzt_das_ganze_profil():
     """Was beim Speichern fehlt, gilt danach als nicht gesetzt."""
     settings.save_builtin_override("androgyn", {"f0_median": [150.0, 180.0]})
     assert targets.range_for("f0_median", "androgyn") == (150.0, 180.0)
-    assert targets.range_for("f2_median", "androgyn") is None
+    assert targets.range_for("f0_sd_st", "androgyn") is None
     settings.reset_builtin("androgyn")
-    assert targets.range_for("f2_median", "androgyn") is not None
+    assert targets.range_for("f0_sd_st", "androgyn") is not None
 
 
 def test_eigenes_profil_hat_vorrang_vor_anpassung():

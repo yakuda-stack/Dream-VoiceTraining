@@ -55,6 +55,8 @@ import paths
 import rectypes
 import settings
 import targets
+import theming
+from theming import COLORS as NORD
 import audio as audio_mod
 from audio import DEFAULT_KEY, AudioEngine, write_wav
 from dialogs import (FilterDialog, GuidedPanel, SessionDetailDialog,
@@ -78,53 +80,6 @@ LOW_LEVEL_DB = -40.0
 SPEC_CEIL_DB = -25.0
 HISTORY_SECONDS = 30.0
 
-NORD = {
-    "bg": "#2e3440", "bg2": "#3b4252", "bg3": "#434c5e",
-    "fg": "#eceff4", "dim": "#8896ab",
-    "accent": "#88c0d0", "light": "#b8e2ee", "green": "#a3be8c", "yellow": "#ebcb8b",
-    "red": "#bf616a", "purple": "#b48ead",
-}
-
-STYLESHEET = f"""
-QWidget {{ background: {NORD['bg']}; color: {NORD['fg']};
-           font-family: "Noto Sans", sans-serif; font-size: 13px; }}
-QGroupBox {{ background: {NORD['bg2']}; border: 1px solid {NORD['bg3']};
-             border-radius: 8px; margin-top: 14px; padding: 10px; }}
-QGroupBox::title {{ subcontrol-origin: margin; left: 12px; padding: 0 4px;
-                    color: {NORD['dim']}; font-size: 11px;
-                    text-transform: uppercase; letter-spacing: 1px; }}
-QPushButton {{ background: {NORD['bg3']}; border: none; border-radius: 6px;
-               padding: 8px 16px; font-weight: 600; }}
-QPushButton:hover {{ background: #4c566a; }}
-QPushButton:disabled {{ color: {NORD['dim']}; background: {NORD['bg2']}; }}
-QPushButton#primary {{ background: {NORD['accent']}; color: {NORD['bg']}; }}
-QPushButton#record {{ background: {NORD['red']}; color: {NORD['fg']}; }}
-QPushButton#rowaction, QPushButton#danger {{ padding: 5px 12px; font-weight: 500; }}
-QPushButton#guided:checked {{ background: {NORD['light']}; color: {NORD['bg']};
-    font-weight: 700; border: 1px solid {NORD['accent']}; }}
-QPushButton#guided:checked:hover {{ background: #cfe9f1; }}
-QPushButton#langleft, QPushButton#langright {{ padding: 8px 0; font-size: 11px;
-    background: {NORD['bg2']}; color: {NORD['dim']}; border-radius: 0; }}
-QPushButton#langleft {{ border-top-left-radius: 6px; border-bottom-left-radius: 6px; }}
-QPushButton#langright {{ border-top-right-radius: 6px; border-bottom-right-radius: 6px; }}
-QPushButton#langleft:checked, QPushButton#langright:checked {{
-    background: {NORD['accent']}; color: {NORD['bg']}; font-weight: 700; }}
-QPushButton#danger {{ background: {NORD['bg3']}; color: {NORD['red']}; }}
-QPushButton#danger:hover {{ background: {NORD['red']}; color: {NORD['fg']}; }}
-QComboBox {{ background: {NORD['bg3']}; border: none; border-radius: 6px;
-             padding: 7px 10px; min-width: 220px; }}
-QComboBox QAbstractItemView {{ background: {NORD['bg2']};
-                               selection-background-color: {NORD['bg3']}; }}
-QTextEdit, QTableWidget {{ background: {NORD['bg2']}; border: 1px solid {NORD['bg3']};
-                           border-radius: 8px; }}
-QHeaderView::section {{ background: {NORD['bg3']}; border: none; padding: 6px; }}
-QTableWidget {{ gridline-color: {NORD['bg3']}; }}
-QTabBar::tab {{ background: {NORD['bg2']}; padding: 9px 20px;
-                border-top-left-radius: 6px; border-top-right-radius: 6px; }}
-QTabBar::tab:selected {{ background: {NORD['bg3']}; color: {NORD['accent']}; }}
-QTabWidget::pane {{ border: none; }}
-QStatusBar {{ color: {NORD['dim']}; }}
-"""
 
 
 # ---------------------------------------------------------------- Widgets
@@ -310,11 +265,14 @@ class MainWindow(QtWidgets.QMainWindow):
         self._action_column = None
         self._detached: dict[str, tuple] = {}
         self._dialogs: list[QtWidgets.QDialog] = []
+        self.version_label = None
 
         self.ui_language = i18n.LANG
         self._build_ui()
         self._refresh_devices()
         self._fill_session_table()
+
+        self.setStyleSheet(theming.window_background_style())
 
         self.timer = QtCore.QTimer(self)
         self.timer.timeout.connect(self._tick)
@@ -342,6 +300,17 @@ class MainWindow(QtWidgets.QMainWindow):
         if self.statusBar() is not None:
             self.status = self.statusBar()
             self.status.showMessage(i18n.t("pick_device"))
+
+            # Dezent unten rechts, damit sie in einem Fehlerbericht
+            # mitfotografiert wird, ohne sich in den Vordergrund zu draengen.
+            # Die Statusleiste ueberlebt einen Neuaufbau der Reiter, das
+            # Schild darf also nur einmal entstehen.
+            if self.version_label is None:
+                self.version_label = QtWidgets.QLabel(f"v{paths.APP_VERSION}")
+                self.version_label.setToolTip(paths.APP_NAME)
+                self.status.addPermanentWidget(self.version_label)
+            self.version_label.setStyleSheet(
+                f"color: {NORD['dim']}; font-size: 10px; padding: 0 8px;")
 
     def _build_live_tab(self) -> QtWidgets.QWidget:
         page = QtWidgets.QWidget()
@@ -1026,6 +995,43 @@ class MainWindow(QtWidgets.QMainWindow):
         if entry is not None:
             self._play_entry(entry)
 
+    # -- Erscheinungsbild -------------------------------------------------
+
+    def apply_theme(self) -> None:
+        """Farben, Hintergrundbild und Deckkraft übernehmen.
+
+        Die Oberfläche wird neu aufgebaut, weil Stiftfarben und
+        Diagrammhintergründe beim Erzeugen der Widgets gesetzt werden und
+        ein Stylesheet sie nicht erreicht.
+        """
+        app = QtWidgets.QApplication.instance()
+        if app is not None:
+            app.setStyleSheet(theming.stylesheet())
+        self.setStyleSheet(theming.window_background_style())
+
+        settings.set_theme(theming.snapshot())
+        self._rebuild_keeping_state()
+
+    def _rebuild_keeping_state(self) -> None:
+        was_running = self.engine.running
+        was_recording = self.engine.is_recording
+        guided = self.btn_guided.isChecked() if hasattr(self, "btn_guided") else False
+
+        self._build_ui()
+        self._refresh_devices()
+        self._fill_session_table()
+        self.spec_img.setImage(self.spec, autoLevels=False,
+                               levels=(SPEC_FLOOR_DB, SPEC_CEIL_DB))
+        self.spec_img.setRect(QtCore.QRectF(0, 0, SPEC_COLS, MAX_FREQ))
+        if was_running:
+            self.btn_start.setText(i18n.t("stop"))
+            self.btn_record.setEnabled(True)
+            self.status.showMessage(i18n.t("running", rate=self.sr))
+        if was_recording:
+            self.btn_record.setText(i18n.t("stop"))
+        if guided:
+            self.btn_guided.setChecked(True)
+
     # -- Dialoge ----------------------------------------------------------
 
     def open_dialog(self, dialog: QtWidgets.QDialog) -> QtWidgets.QDialog:
@@ -1121,32 +1127,20 @@ class MainWindow(QtWidgets.QMainWindow):
         if code == self.ui_language:
             return
 
-        was_running = self.engine.running
-        was_recording = self.engine.is_recording
         i18n.set_language(code)
         settings.set_language(code)
 
         # Der Audiostrom lebt unabhaengig vom UI, deshalb laesst sich die
         # Oberflaeche gefahrlos neu aufbauen.
-        self._build_ui()
         self.ui_language = code
-        self._refresh_devices()
-        self._fill_session_table()
-        self.spec_img.setImage(self.spec, autoLevels=False,
-                               levels=(SPEC_FLOOR_DB, SPEC_CEIL_DB))
-        self.spec_img.setRect(QtCore.QRectF(0, 0, SPEC_COLS, MAX_FREQ))
-        if was_running:
-            self.btn_start.setText(i18n.t("stop"))
-            self.btn_record.setEnabled(True)
-            self.status.showMessage(i18n.t("running", rate=self.sr))
-        if was_recording:
-            self.btn_record.setText(i18n.t("stop"))
+        self._rebuild_keeping_state()
 
     # -- Einstellungen ----------------------------------------------------
 
     def _open_settings(self) -> None:
         dialog = SettingsDialog(self)
         dialog.applied.connect(self._apply_settings)
+        dialog.theme_changed.connect(self.apply_theme)
         self.open_dialog(dialog)
 
     def _apply_settings(self) -> None:
@@ -1517,7 +1511,8 @@ def main() -> int:
     icon_path = paths.icon_file()
     if icon_path is not None:
         app.setWindowIcon(QtGui.QIcon(str(icon_path)))
-    app.setStyleSheet(STYLESHEET)
+    theming.restore(settings.get_theme())
+    app.setStyleSheet(theming.stylesheet())
     debuglog.install()
     paths.ensure_dirs()
     moved = paths.migrate_from(APP_DIR)

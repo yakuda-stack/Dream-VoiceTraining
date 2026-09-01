@@ -32,6 +32,7 @@ os.environ.setdefault("PYQTGRAPH_QT_LIB", "PySide6")
 
 import csv
 import io
+import shutil
 import wave
 from datetime import datetime
 from pathlib import Path
@@ -50,6 +51,8 @@ import paths
 import rectypes
 import settings
 import targets
+import theming
+from theming import COLORS as NORD
 from settings import PARAMS, Settings
 
 # ----------------------------------------------------- Sprache beim Export
@@ -105,6 +108,7 @@ class SettingsDialog(QtWidgets.QDialog):
     """Aenderungen werden per applied-Signal sofort weitergereicht."""
 
     applied = QtCore.Signal()
+    theme_changed = QtCore.Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -135,11 +139,19 @@ class SettingsDialog(QtWidgets.QDialog):
         self.tabs.addTab(analysis_page, i18n.t("tab_analysis"))
         self.profiles = ProfileEditor()
         self.tabs.addTab(self.profiles, i18n.t("tab_profiles"))
+
+        self.design = DesignEditor()
+        self.design.changed.connect(self.theme_changed)
+        design_page = QtWidgets.QScrollArea()
+        design_page.setWidgetResizable(True)
+        design_page.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
+        design_page.setWidget(self.design)
+        self.tabs.addTab(design_page, i18n.t("tab_design"))
         root.addWidget(self.tabs, 1)
 
         note = QtWidgets.QLabel(i18n.t("settings_note"))
         note.setWordWrap(True)
-        note.setStyleSheet("color: #8896ab;")
+        note.setStyleSheet(f"color: {NORD['dim']};")
         root.addWidget(note)
 
         buttons = QtWidgets.QDialogButtonBox(
@@ -210,7 +222,7 @@ class SettingsDialog(QtWidgets.QDialog):
             if row:
                 line = QtWidgets.QFrame()
                 line.setFrameShape(QtWidgets.QFrame.Shape.HLine)
-                line.setStyleSheet("color: #434c5e;")
+                line.setStyleSheet(f"color: {NORD['bg3']};")
                 grid.addWidget(line, row, 0, 1, 2)
                 row += 1
 
@@ -235,7 +247,7 @@ class SettingsDialog(QtWidgets.QDialog):
 
             hint = QtWidgets.QLabel(tip)
             hint.setWordWrap(True)
-            hint.setStyleSheet("color: #8896ab; font-size: 11px;")
+            hint.setStyleSheet(f"color: {NORD['dim']}; font-size: 11px;")
             hint.setSizePolicy(QtWidgets.QSizePolicy.Policy.Preferred,
                                QtWidgets.QSizePolicy.Policy.Minimum)
             grid.addWidget(hint, row, 0, 1, 2)
@@ -266,7 +278,7 @@ class SettingsDialog(QtWidgets.QDialog):
                      if record[1] in ("ERROR", "CRITICAL"))
         self.btn_debug.setText("🐞  " + i18n.t("debug")
                                + (f"  ({errors})" if errors else ""))
-        self.btn_debug.setStyleSheet("color: #bf616a;" if errors else "")
+        self.btn_debug.setStyleSheet(f"color: {NORD['red']};" if errors else "")
 
     # -- Vorlagen --------------------------------------------------------
 
@@ -439,7 +451,7 @@ class SessionDetailDialog(QtWidgets.QDialog):
         root.addWidget(self.table, 1)
 
         self.selection_note = QtWidgets.QLabel("")
-        self.selection_note.setStyleSheet("color: #ebcb8b; font-size: 11px;")
+        self.selection_note.setStyleSheet(f"color: {NORD['yellow']}; font-size: 11px;")
         self.selection_note.setVisible(False)
         root.addWidget(self.selection_note)
 
@@ -448,7 +460,7 @@ class SessionDetailDialog(QtWidgets.QDialog):
         self.btn_advanced.setAutoRaise(True)
         self.btn_advanced.setCheckable(True)
         self.btn_advanced.setStyleSheet(
-            "QToolButton { color: #88c0d0; font-weight: 600; border: none; }")
+            f"QToolButton { color: {NORD['accent']}; font-weight: 600; border: none; }")
         self.btn_advanced.toggled.connect(self._toggle_advanced)
         root.addWidget(self.btn_advanced, 0, QtCore.Qt.AlignmentFlag.AlignLeft)
 
@@ -459,7 +471,7 @@ class SessionDetailDialog(QtWidgets.QDialog):
         for key in ("targets_note", "vowel_only_note"):
             note = QtWidgets.QLabel(i18n.t(key))
             note.setWordWrap(True)
-            note.setStyleSheet("color: #8896ab; font-size: 11px;")
+            note.setStyleSheet(f"color: {NORD['dim']}; font-size: 11px;")
             root.addWidget(note)
 
         row = QtWidgets.QHBoxLayout()
@@ -499,7 +511,7 @@ class SessionDetailDialog(QtWidgets.QDialog):
         lay.addWidget(title)
         if quality != "ok":
             warn = QtWidgets.QLabel(i18n.t("no_signal_note"))
-            warn.setStyleSheet("color: #ebcb8b;")
+            warn.setStyleSheet(f"color: {NORD['yellow']};")
             warn.setWordWrap(True)
             lay.addWidget(warn)
         floor = self.entry.get("pitch_floor")
@@ -508,7 +520,7 @@ class SessionDetailDialog(QtWidgets.QDialog):
             meta = QtWidgets.QLabel(i18n.t(
                 "measured_with", floor=floor, ceiling=ceiling,
                 formant=self.entry.get("formant_ceiling", 0.0)))
-            meta.setStyleSheet("color: #8896ab; font-size: 11px;")
+            meta.setStyleSheet(f"color: {NORD['dim']}; font-size: 11px;")
             lay.addWidget(meta)
         return box
 
@@ -610,9 +622,9 @@ class SessionDetailDialog(QtWidgets.QDialog):
                 if c == 4 and note:
                     inside = targets.is_within(value, rng)
                     item.setForeground(QtGui.QColor(
-                        "#a3be8c" if inside else "#ebcb8b"))
+                        NORD["green"] if inside else NORD["yellow"]))
                 if c == 6 and text not in ("—", ""):
-                    item.setForeground(QtGui.QColor("#88c0d0"))
+                    item.setForeground(QtGui.QColor(NORD["accent"]))
                 self.table.setItem(r, c, item)
         if not self._columns_sized:
             self.table.resizeColumnsToContents()
@@ -628,11 +640,11 @@ class SessionDetailDialog(QtWidgets.QDialog):
 
         hint = QtWidgets.QLabel(i18n.t("advanced_hint"))
         hint.setWordWrap(True)
-        hint.setStyleSheet("color: #8896ab; font-size: 11px;")
+        hint.setStyleSheet(f"color: {NORD['dim']}; font-size: 11px;")
         lay.addWidget(hint)
 
         self.wave_plot = pg.PlotWidget()
-        self.wave_plot.setBackground("#3b4252")
+        self.wave_plot.setBackground(NORD["bg2"])
         self.wave_plot.setMinimumHeight(170)
         self.wave_plot.setMenuEnabled(False)
         self.wave_plot.hideButtons()
@@ -641,13 +653,15 @@ class SessionDetailDialog(QtWidgets.QDialog):
         self.wave_plot.setMouseEnabled(x=True, y=False)
         lay.addWidget(self.wave_plot)
 
-        self.region = pg.LinearRegionItem(brush=pg.mkBrush(136, 192, 208, 50),
-                                          hoverBrush=pg.mkBrush(136, 192, 208, 80))
+        accent = QtGui.QColor(NORD["accent"])
+        self.region = pg.LinearRegionItem(
+            brush=pg.mkBrush(accent.red(), accent.green(), accent.blue(), 50),
+            hoverBrush=pg.mkBrush(accent.red(), accent.green(), accent.blue(), 80))
         self.region.setZValue(10)
         self.region.sigRegionChanged.connect(self._region_moved)
 
         self.range_label = QtWidgets.QLabel("")
-        self.range_label.setStyleSheet("color: #eceff4;")
+        self.range_label.setStyleSheet(f"color: {NORD['fg']};")
         lay.addWidget(self.range_label)
 
         row = QtWidgets.QHBoxLayout()
@@ -690,7 +704,7 @@ class SessionDetailDialog(QtWidgets.QDialog):
         self._samples, self._rate = data, rate
         xs, ys = audio_mod.envelope(data, 2400)
         seconds = xs / float(rate)
-        self.wave_plot.plot(seconds, ys, pen=pg.mkPen("#88c0d0", width=1))
+        self.wave_plot.plot(seconds, ys, pen=pg.mkPen(NORD["accent"], width=1))
         duration = data.size / float(rate)
         self.wave_plot.setXRange(0, duration, padding=0)
         self.wave_plot.addItem(self.region)
@@ -769,8 +783,8 @@ class SessionDetailDialog(QtWidgets.QDialog):
         button.setToolTip(f"<b>{metric.label}</b><br>{metric.hint}")
         button.setAccessibleName(i18n.t("info_tip"))
         button.setStyleSheet(
-            "QToolButton { color: #8896ab; border: none; font-size: 14px; }"
-            "QToolButton:hover { color: #88c0d0; }")
+            f"QToolButton { color: {NORD['dim']}; border: none; font-size: 14px; }"
+            f"QToolButton:hover { color: {NORD['accent']}; }")
         button.clicked.connect(
             lambda _=False, m=metric, b=button: QtWidgets.QToolTip.showText(
                 b.mapToGlobal(QtCore.QPoint(0, b.height())),
@@ -1011,7 +1025,7 @@ class DebugDialog(QtWidgets.QDialog):
         root = QtWidgets.QVBoxLayout(self)
         hint = QtWidgets.QLabel(i18n.t("debug_hint"))
         hint.setWordWrap(True)
-        hint.setStyleSheet("color: #8896ab; font-size: 11px;")
+        hint.setStyleSheet(f"color: {NORD['dim']}; font-size: 11px;")
         root.addWidget(hint)
 
         self.summary = QtWidgets.QLabel("")
@@ -1065,9 +1079,9 @@ class DebugDialog(QtWidgets.QDialog):
             for c, text in enumerate((stamp, level, source, message)):
                 item = QtWidgets.QTableWidgetItem(text)
                 if c == 1 and level in ("ERROR", "CRITICAL"):
-                    item.setForeground(QtGui.QColor("#bf616a"))
+                    item.setForeground(QtGui.QColor(NORD["red"]))
                 elif c == 1 and level == "WARNING":
-                    item.setForeground(QtGui.QColor("#ebcb8b"))
+                    item.setForeground(QtGui.QColor(NORD["yellow"]))
                 if c == 0:
                     item.setData(QtCore.Qt.ItemDataRole.UserRole, tb)
                 self.table.setItem(r, c, item)
@@ -1147,7 +1161,7 @@ class FilterDialog(QtWidgets.QDialog):
 
         hint = QtWidgets.QLabel(i18n.t("filter_columns_hint"))
         hint.setWordWrap(True)
-        hint.setStyleSheet("color: #8896ab; font-size: 11px;")
+        hint.setStyleSheet(f"color: {NORD['dim']}; font-size: 11px;")
         lay.addWidget(hint)
 
         scroll = QtWidgets.QScrollArea()
@@ -1322,7 +1336,7 @@ class AboutDialog(QtWidgets.QDialog):
         font.setWeight(QtGui.QFont.Weight.DemiBold)
         name.setFont(font)
         version = QtWidgets.QLabel(f"v{paths.APP_VERSION}")
-        version.setStyleSheet("color: #8896ab;")
+        version.setStyleSheet(f"color: {NORD['dim']};")
         tagline = QtWidgets.QLabel(i18n.t("about_tagline"))
         tagline.setWordWrap(True)
         text.addWidget(name)
@@ -1343,9 +1357,9 @@ class AboutDialog(QtWidgets.QDialog):
                            (i18n.t("about_discord"), paths.DISCORD_URL),
                            (i18n.t("about_kofi"), paths.KOFI_URL)):
             item = QtWidgets.QLabel(
-                f'<a href="{url}" style="color:#88c0d0; '
+                f'<a href="{url}" style=f"color:{NORD['accent']}; '
                 f'text-decoration:none;">{label}</a>'
-                f'<br><span style="color:#5a6478; font-size:11px;">{url}</span>')
+                f'<br><span style=f"color:{NORD['dim']}; font-size:11px;">{url}</span>')
             item.setOpenExternalLinks(True)
             item.setTextInteractionFlags(
                 QtCore.Qt.TextInteractionFlag.TextBrowserInteraction)
@@ -1363,13 +1377,13 @@ class AboutDialog(QtWidgets.QDialog):
         note = QtWidgets.QLabel(i18n.t("about_health"))
         note.setWordWrap(True)
         note.setStyleSheet(
-            "color: #ebcb8b; border: 1px solid #4c566a; border-radius: 8px;"
+            f"color: {NORD['yellowf']}; border: 1px solid {NORD['border']}; border-radius: 8px;"
             "padding: 10px;")
         lay.addWidget(note)
 
         citation = QtWidgets.QLabel(i18n.t("about_citation"))
         citation.setWordWrap(True)
-        citation.setStyleSheet("color: #8896ab; font-size: 11px;")
+        citation.setStyleSheet(f"color: {NORD['dim']}; font-size: 11px;")
         lay.addWidget(citation)
         lay.addStretch(1)
         return page
@@ -1385,7 +1399,7 @@ class AboutDialog(QtWidgets.QDialog):
         if mono:
             label.setFont(QtGui.QFontDatabase.systemFont(
                 QtGui.QFontDatabase.SystemFont.FixedFont))
-            label.setStyleSheet("color: #8896ab;")
+            label.setStyleSheet(f"color: {NORD['dim']};")
         lay.addWidget(label)
         return box
 
@@ -1439,14 +1453,14 @@ class GuidedPanel(QtWidgets.QWidget):
 
         self.step_label = QtWidgets.QLabel("")
         self.step_label.setStyleSheet(
-            "color: #8896ab; font-size: 10px; letter-spacing: 1px;")
+            f"color: {NORD['dim']}; font-size: 10px; letter-spacing: 1px;")
 
         self.title = QtWidgets.QLabel("")
         font = self.title.font()
         font.setPointSize(font.pointSize() + 6)
         font.setWeight(QtGui.QFont.Weight.DemiBold)
         self.title.setFont(font)
-        self.title.setStyleSheet("color: #88c0d0;")
+        self.title.setStyleSheet(f"color: {NORD['accent']};")
 
         heading = QtWidgets.QVBoxLayout()
         heading.setSpacing(1)
@@ -1458,7 +1472,7 @@ class GuidedPanel(QtWidgets.QWidget):
         font = self.state.font()
         font.setPointSize(font.pointSize() + 1)
         self.state.setFont(font)
-        self.state.setStyleSheet("color: #a3be8c;")
+        self.state.setStyleSheet(f"color: {NORD['green']};")
         row.addSpacing(8)
         row.addWidget(self.state, 1)
 
@@ -1466,9 +1480,6 @@ class GuidedPanel(QtWidgets.QWidget):
         self.bar.setTextVisible(False)
         self.bar.setFixedHeight(10)
         self.bar.setMinimumWidth(200)
-        self.bar.setStyleSheet(
-            "QProgressBar { background: #2e3440; border: none; border-radius: 5px; }"
-            "QProgressBar::chunk { background: #88c0d0; border-radius: 5px; }")
         row.addWidget(self.bar)
 
         self.btn_go = QtWidgets.QPushButton(i18n.t("guided_next"))
@@ -1484,7 +1495,7 @@ class GuidedPanel(QtWidgets.QWidget):
 
         self.hint = QtWidgets.QLabel("")
         self.hint.setWordWrap(True)
-        self.hint.setStyleSheet("color: #8896ab; font-size: 11px;")
+        self.hint.setStyleSheet(f"color: {NORD['dim']}; font-size: 11px;")
         inner.addWidget(self.hint)
 
         self.timer = QtCore.QTimer(self)
@@ -1640,7 +1651,7 @@ class ProfileEditor(QtWidgets.QWidget):
 
         hint = QtWidgets.QLabel(i18n.t("profiles_hint"))
         hint.setWordWrap(True)
-        hint.setStyleSheet("color: #8896ab; font-size: 11px;")
+        hint.setStyleSheet(f"color: {NORD['dim']}; font-size: 11px;")
         root.addWidget(hint)
 
         chooser = QtWidgets.QGroupBox(i18n.t("target_voice"))
@@ -1699,7 +1710,7 @@ class ProfileEditor(QtWidgets.QWidget):
 
         self.note = QtWidgets.QLabel("")
         self.note.setWordWrap(True)
-        self.note.setStyleSheet("color: #ebcb8b; font-size: 11px;")
+        self.note.setStyleSheet(f"color: {NORD['yellow']}; font-size: 11px;")
         root.addWidget(self.note)
 
         actions = QtWidgets.QHBoxLayout()
@@ -1863,3 +1874,320 @@ class ProfileEditor(QtWidgets.QWidget):
             settings.delete_user_profile(name)
             self.refresh(select="feminin")
             self.changed.emit()
+
+
+# ------------------------------------------------------------ Design-Reiter
+
+class ThemeTile(QtWidgets.QAbstractButton):
+    """Vorschaukachel eines Themas: fuenf Farbstreifen plus Name."""
+
+    STRIPES = ["bg", "sidebar", "bg3", "accent", "fg"]
+
+    def __init__(self, name: str, colors: dict, parent=None):
+        super().__init__(parent)
+        self.name = name
+        self.colors = colors
+        self.setCheckable(True)
+        self.setFixedSize(96, 92)
+        self.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
+
+    def paintEvent(self, _event):
+        painter = QtGui.QPainter(self)
+        painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
+        width, height = self.width(), self.height()
+        strip_h = height - 24
+
+        painter.setPen(QtCore.Qt.PenStyle.NoPen)
+        step = (width - 8) / len(self.STRIPES)
+        for i, key in enumerate(self.STRIPES):
+            painter.setBrush(QtGui.QColor(self.colors.get(key, "#000000")))
+            painter.drawRect(QtCore.QRectF(4 + i * step, 4, step + 0.5,
+                                           strip_h - 8))
+
+        painter.setPen(QtGui.QPen(
+            QtGui.QColor(NORD["accent"] if self.isChecked() else NORD["border"]),
+            2 if self.isChecked() else 1))
+        painter.setBrush(QtCore.Qt.BrushStyle.NoBrush)
+        painter.drawRoundedRect(QtCore.QRectF(2, 2, width - 4, strip_h - 4), 6, 6)
+
+        painter.setPen(QtGui.QColor(
+            NORD["accent"] if self.isChecked() else NORD["fg"]))
+        painter.drawText(QtCore.QRectF(0, strip_h, width, 20),
+                         QtCore.Qt.AlignmentFlag.AlignCenter, self.text())
+        painter.end()
+
+
+class ColorButton(QtWidgets.QPushButton):
+    """Farbfeld, das beim Klick den Farbwaehler oeffnet."""
+
+    picked = QtCore.Signal(str, str)      # rolle, farbe
+
+    def __init__(self, role, parent=None):
+        super().__init__(parent)
+        self.role = role
+        self.setMinimumHeight(30)
+        self.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
+        self.clicked.connect(self._choose)
+        self.refresh()
+
+    def refresh(self) -> None:
+        color = theming.COLORS.get(self.role.key, "#000000")
+        self.setText(self.role.label)
+        self.setStyleSheet(
+            f"QPushButton {{ background: {color};"
+            f" color: {theming.contrast_text(color)};"
+            f" border: 1px solid {theming.mix(color, NORD['fg'], 0.25)};"
+            " border-radius: 5px; padding: 5px 10px; text-align: left;"
+            " font-weight: 500; }")
+
+    def _choose(self) -> None:
+        current = QtGui.QColor(theming.COLORS.get(self.role.key, "#000000"))
+        chosen = QtWidgets.QColorDialog.getColor(
+            current, self, i18n.t("pick_color", role=self.role.label))
+        if chosen.isValid():
+            self.picked.emit(self.role.key, chosen.name())
+
+
+class DesignEditor(QtWidgets.QWidget):
+    """Thema, Einzelfarben, Hintergrundbild und Deckkraft."""
+
+    changed = QtCore.Signal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._loading = False
+
+        root = QtWidgets.QVBoxLayout(self)
+        root.setContentsMargins(0, 8, 0, 0)
+        root.setSpacing(12)
+
+        hint = QtWidgets.QLabel(i18n.t("design_hint"))
+        hint.setWordWrap(True)
+        hint.setStyleSheet(f"color: {NORD['dim']}; font-size: 11px;")
+        root.addWidget(hint)
+
+        # -- Themen --
+        themes = QtWidgets.QGroupBox(i18n.t("theme"))
+        grid = QtWidgets.QGridLayout(themes)
+        grid.setSpacing(8)
+        self.tiles: dict[str, ThemeTile] = {}
+        for i, (name, colors) in enumerate(theming.PRESETS.items()):
+            tile = ThemeTile(name, colors)
+            tile.setText(i18n.t(f"theme_{name}"))
+            tile.clicked.connect(lambda _=False, n=name: self._use_preset(n))
+            self.tiles[name] = tile
+            grid.addWidget(tile, i // 5, i % 5)
+        grid.setColumnStretch(5, 1)
+        root.addWidget(themes)
+
+        # -- Farben --
+        colors_box = QtWidgets.QGroupBox(i18n.t("colors"))
+        colors_lay = QtWidgets.QVBoxLayout(colors_box)
+
+        top = QtWidgets.QHBoxLayout()
+        top.addStretch(1)
+        reset = QtWidgets.QPushButton("↺  " + i18n.t("reset_colors"))
+        reset.clicked.connect(self._reset_colors)
+        top.addWidget(reset)
+        colors_lay.addLayout(top)
+
+        swatches = QtWidgets.QGridLayout()
+        swatches.setSpacing(6)
+        self.buttons: dict[str, ColorButton] = {}
+        for i, role in enumerate(theming.ROLES):
+            button = ColorButton(role)
+            button.picked.connect(self._color_picked)
+            self.buttons[role.key] = button
+            swatches.addWidget(button, i // 3, i % 3)
+        for column in range(3):
+            swatches.setColumnStretch(column, 1)
+        colors_lay.addLayout(swatches)
+        root.addWidget(colors_box)
+
+        # -- Hintergrund --
+        background = QtWidgets.QGroupBox(i18n.t("background"))
+        bg_lay = QtWidgets.QVBoxLayout(background)
+
+        bg_top = QtWidgets.QHBoxLayout()
+        bg_top.addStretch(1)
+        add = QtWidgets.QPushButton("＋  " + i18n.t("add_image"))
+        add.setObjectName("primary")
+        add.clicked.connect(self._add_image)
+        bg_top.addWidget(add)
+        bg_lay.addLayout(bg_top)
+
+        self.thumbs = QtWidgets.QHBoxLayout()
+        self.thumbs.setSpacing(8)
+        holder = QtWidgets.QWidget()
+        holder.setLayout(self.thumbs)
+        scroll = QtWidgets.QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
+        scroll.setFixedHeight(112)
+        scroll.setWidget(holder)
+        bg_lay.addWidget(scroll)
+
+        opacity_row = QtWidgets.QHBoxLayout()
+        opacity_row.addWidget(QtWidgets.QLabel(i18n.t("card_opacity")))
+        self.opacity = QtWidgets.QSlider(QtCore.Qt.Orientation.Horizontal)
+        self.opacity.setRange(20, 100)
+        self.opacity.setValue(theming.card_opacity())
+        self.opacity.valueChanged.connect(self._opacity_changed)
+        self.opacity_label = QtWidgets.QLabel("")
+        self.opacity_label.setFixedWidth(48)
+        self.opacity_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight
+                                        | QtCore.Qt.AlignmentFlag.AlignVCenter)
+        opacity_row.addWidget(self.opacity, 1)
+        opacity_row.addWidget(self.opacity_label)
+        bg_lay.addLayout(opacity_row)
+
+        note = QtWidgets.QLabel(i18n.t("opacity_hint"))
+        note.setStyleSheet(f"color: {NORD['dim']}; font-size: 11px;")
+        bg_lay.addWidget(note)
+        root.addWidget(background)
+        root.addStretch(1)
+
+        self.refresh()
+
+    # -- Zustand ---------------------------------------------------------
+
+    def refresh(self) -> None:
+        self._loading = True
+        current = theming.preset_name()
+        for name, tile in self.tiles.items():
+            tile.setChecked(name == current)
+            tile.update()
+        for button in self.buttons.values():
+            button.refresh()
+        self.opacity.setValue(theming.card_opacity())
+        self.opacity_label.setText(f"{theming.card_opacity()} %")
+        self._fill_backgrounds()
+        self._loading = False
+
+    def _fill_backgrounds(self) -> None:
+        while self.thumbs.count():
+            item = self.thumbs.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+
+        self.thumbs.addWidget(self._thumb(None))
+        paths.ensure_dirs()
+        for path in sorted(paths.BACKGROUND_DIR.glob("*")):
+            if path.is_file():
+                self.thumbs.addWidget(self._thumb(path))
+        self.thumbs.addStretch(1)
+
+    def _thumb(self, path) -> QtWidgets.QWidget:
+        active = (str(path) if path else None) == theming.background()
+
+        box = QtWidgets.QWidget()
+        box.setFixedWidth(124)
+        lay = QtWidgets.QVBoxLayout(box)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(2)
+
+        button = QtWidgets.QPushButton()
+        button.setFixedSize(120, 68)
+        button.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
+        border = NORD["accent"] if active else NORD["border"]
+        if path is None:
+            button.setText(i18n.t("no_background"))
+            button.setStyleSheet(
+                f"QPushButton {{ background: {NORD['bg']};"
+                f" border: 2px solid {border}; border-radius: 6px;"
+                f" color: {NORD['dim']}; }}")
+        else:
+            button.setIcon(QtGui.QIcon(str(path)))
+            button.setIconSize(QtCore.QSize(116, 64))
+            button.setStyleSheet(
+                f"QPushButton {{ border: 2px solid {border};"
+                " border-radius: 6px; padding: 0; }")
+        button.clicked.connect(lambda _=False, p=path: self._use_background(p))
+        lay.addWidget(button)
+
+        row = QtWidgets.QHBoxLayout()
+        row.setContentsMargins(2, 0, 2, 0)
+        caption = QtWidgets.QLabel(
+            i18n.t("no_background") if path is None else path.stem[:14])
+        caption.setStyleSheet(f"color: {NORD['dim']}; font-size: 10px;")
+        row.addWidget(caption, 1)
+        if path is not None:
+            remove = QtWidgets.QToolButton()
+            remove.setText("🗑")
+            remove.setAutoRaise(True)
+            remove.setStyleSheet(
+                f"QToolButton {{ color: {NORD['dim']}; border: none; }}"
+                f"QToolButton:hover {{ color: {NORD['red']}; }}")
+            remove.clicked.connect(lambda _=False, p=path: self._remove_image(p))
+            row.addWidget(remove)
+        lay.addLayout(row)
+        return box
+
+    # -- Aktionen --------------------------------------------------------
+
+    def _emit(self) -> None:
+        if not self._loading:
+            self.changed.emit()
+
+    def _use_preset(self, name: str) -> None:
+        theming.use_preset(name)
+        self.refresh()
+        self._emit()
+
+    def _color_picked(self, key: str, color: str) -> None:
+        theming.apply(colors={key: color})
+        self.buttons[key].refresh()
+        self._emit()
+
+    def _reset_colors(self) -> None:
+        theming.reset_colors()
+        self.refresh()
+        self._emit()
+
+    def _opacity_changed(self, value: int) -> None:
+        self.opacity_label.setText(f"{value} %")
+        theming.apply(opacity=value)
+        self._emit()
+
+    def _use_background(self, path) -> None:
+        theming.apply(bg_image=str(path) if path else None)
+        self._fill_backgrounds()
+        self._emit()
+
+    def _add_image(self) -> None:
+        chosen, _ = QtWidgets.QFileDialog.getOpenFileName(
+            self, i18n.t("choose_image"), str(Path.home()),
+            i18n.t("image_filter"))
+        if not chosen:
+            return
+        paths.ensure_dirs()
+        source = Path(chosen)
+        target = paths.BACKGROUND_DIR / source.name
+        counter = 1
+        while target.exists() and target.resolve() != source.resolve():
+            target = paths.BACKGROUND_DIR / f"{source.stem}-{counter}{source.suffix}"
+            counter += 1
+        try:
+            if target.resolve() != source.resolve():
+                shutil.copy2(source, target)
+        except OSError as exc:
+            debuglog.record_exception("design.add_image", exc)
+            QtWidgets.QMessageBox.warning(self, i18n.t("add_image"), str(exc))
+            return
+        self._use_background(target)
+
+    def _remove_image(self, path) -> None:
+        answer = QtWidgets.QMessageBox.question(
+            self, i18n.t("remove_image"),
+            i18n.t("remove_image_body", name=path.name))
+        if answer != QtWidgets.QMessageBox.StandardButton.Yes:
+            return
+        try:
+            path.unlink()
+        except OSError as exc:
+            debuglog.record_exception("design.remove_image", exc)
+            return
+        if theming.background() == str(path):
+            theming.apply(bg_image=None)
+            self._emit()
+        self._fill_backgrounds()
