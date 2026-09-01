@@ -224,8 +224,11 @@ the bundled Praat sources and takes a few minutes.
 git clone https://github.com/yakuda-stack/Dream-VoiceTraining
 cd Dream-VoiceTraining/packaging
 makepkg -si -p PKGBUILD.python-praat-parselmouth
-makepkg -si
+paru -Ui
 ```
+
+`paru` rather than `makepkg` for the second step: `python-sounddevice` lives
+in the AUR, and `makepkg` only knows pacman. With yay: `yay -Bi .`
 
 If building Praat fails after a Python version bump in Arch, use
 `PKGBUILD.python-praat-parselmouth-bin` instead — it installs the official
@@ -351,7 +354,7 @@ pip install -r requirements-dev.txt
 python -m pytest tests/ -q
 ```
 
-Eighty-six tests covering the analysis core, settings persistence, path
+Eighty-eight tests covering the analysis core, settings persistence, path
 resolution and migration, device enumeration and translation completeness.
 Two of them are regression tests for real bugs: noise being reported as a
 voice, and the spectrogram collapsing to one colour.

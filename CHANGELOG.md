@@ -203,6 +203,10 @@ Alle Änderungen sind hier dokumentiert, englisch und deutsch.
   nothing. The dialogs ran application-modal, and Qt discards the window
   manager's close request to a blocked window before it reaches the program.
   All dialogs are now non-modal and are closed along with the main window.
+- **EN** — On systems with PyQt6 installed the program crashed on start with
+  a TypeError and a segfault: pyqtgraph picks its own Qt binding at import
+  time and prefers PyQt6 over PySide6, then receives PySide6 objects. The
+  binding is now pinned before pyqtgraph is imported.
 - **EN** — A detached tab came up empty, because removeTab() hides the page
   and it was never made visible again.
 - **EN** — Session list built an action button for every row up front, which
@@ -218,6 +222,10 @@ Alle Änderungen sind hier dokumentiert, englisch und deutsch.
   Schließanfrage des Fenstermanagers an ein blockiertes Fenster, bevor sie im
   Programm ankommt. Alle Dialoge sind jetzt nicht-modal und werden mit dem
   Hauptfenster geschlossen.
+- **DE** — Auf Systemen mit installiertem PyQt6 stürzte das Programm beim
+  Start mit TypeError und Segfault ab: pyqtgraph wählt sein Qt-Binding beim
+  Import selbst und bevorzugt PyQt6 vor PySide6, bekommt dann aber
+  PySide6-Objekte. Das Binding wird jetzt vor dem Import festgelegt.
 - **DE** — Ein ausgehängter Reiter blieb leer, weil removeTab() die Seite
   versteckt und sie nie wieder sichtbar gemacht wurde.
 - **DE** — Die Sessionliste baute für jede Zeile im Voraus Aktionsknöpfe, was

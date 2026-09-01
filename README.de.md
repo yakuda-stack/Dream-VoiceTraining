@@ -237,8 +237,11 @@ Minuten.
 git clone https://github.com/yakuda-stack/Dream-VoiceTraining
 cd Dream-VoiceTraining/packaging
 makepkg -si -p PKGBUILD.python-praat-parselmouth
-makepkg -si
+paru -Ui
 ```
+
+`paru` statt `makepkg` im zweiten Schritt: `python-sounddevice` liegt im AUR,
+und `makepkg` kennt nur pacman. Mit yay: `yay -Bi .`
 
 Scheitert der Praat-Bau nach einem Python-Sprung in Arch, nimm stattdessen
 `PKGBUILD.python-praat-parselmouth-bin` — das installiert das offizielle Wheel
@@ -368,7 +371,7 @@ pip install -r requirements-dev.txt
 python -m pytest tests/ -q
 ```
 
-Sechsundachtzig Tests für den Analysekern, die Persistenz der Einstellungen,
+Achtundachtzig Tests für den Analysekern, die Persistenz der Einstellungen,
 Pfadauflösung und Migration, Geräteerkennung und Vollständigkeit der
 Übersetzungen. Zwei davon sind Regressionstests für echte Fehler: Rauschen,
 das als Stimme durchging, und das Spektrogramm, das zu einer Farbe kollabierte.

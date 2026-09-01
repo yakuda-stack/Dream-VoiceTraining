@@ -1,5 +1,12 @@
 # Maintainer: Yakuda <yakuda-stack@users.noreply.github.com>
+#
+# Zwei Abhängigkeiten liegen im AUR, nicht in den offiziellen Repos:
+# python-sounddevice und python-praat-parselmouth. Für Nutzer ist das
+# unerheblich, paru und yay lösen das selbst auf. Zum Bauen von Hand
+# reicht makepkg aber nicht, weil makepkg nur pacman kennt:
+#   paru -Ui        (oder)   yay -Bi .
 pkgname=dream-voicetraining
+_repo=Dream-VoiceTraining          # das GitHub-Archiv entpackt unter diesem Namen
 pkgver=1.0.0
 pkgrel=1
 pkgdesc="Voice analysis for training your speaking voice: pitch, formants, resonance and voice quality"
@@ -10,28 +17,31 @@ depends=(
   'python'
   'python-numpy'
   'python-pyqtgraph'
+  # pyqtgraph importiert colorama beim Laden, fuehrt es aber selbst nur als
+  # Check-Abhaengigkeit. Ohne diesen Eintrag stuerzt das Programm beim Start
+  # mit ModuleNotFoundError ab.
+  'python-colorama'
   'pyside6'
   'python-sounddevice'
   'python-praat-parselmouth'
   'portaudio'
 )
 optdepends=(
-  'python-setproctitle: show the program name instead of python3 in process lists'
   'libpulse: readable PipeWire/PulseAudio device names via pactl'
   'pipewire-pulse: same, on a PipeWire system'
+  'python-setproctitle: show the program name instead of python3 in process lists'
 )
-makedepends=('git')
 checkdepends=('python-pytest')
 source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
 sha256sums=('SKIP')
 
 check() {
-  cd "$srcdir/$pkgname-$pkgver"
+  cd "$srcdir/$_repo-$pkgver"
   python -m pytest tests/ -q
 }
 
 package() {
-  cd "$srcdir/$pkgname-$pkgver"
+  cd "$srcdir/$_repo-$pkgver"
 
   install -dm755 "$pkgdir/usr/lib/$pkgname"
   install -Dm644 ./*.py -t "$pkgdir/usr/lib/$pkgname"

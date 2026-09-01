@@ -24,6 +24,15 @@ in einer Session-Historie abgelegt.
 
 from __future__ import annotations
 
+import os
+
+# pyqtgraph sucht sich sein Qt-Binding beim Import selbst und probiert
+# PyQt5, PySide2, PyQt6, PySide6 in dieser Reihenfolge. Ist auf dem System
+# python-pyqt6 installiert, nimmt es PyQt6 — und mischt sich dann mit den
+# PySide6-Objekten dieses Programms, was in einem TypeError und einem
+# Segfault endet. Deshalb VOR dem Import festlegen, welches Binding gilt.
+os.environ.setdefault("PYQTGRAPH_QT_LIB", "PySide6")
+
 import csv
 import io
 import json

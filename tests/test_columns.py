@@ -206,3 +206,24 @@ def test_dialoge_blockieren_das_schliessen_nicht(qt_table, monkeypatch, tmp_path
     assert window._dialogs == []
 
     importlib.reload(paths)
+
+
+def test_pyqtgraph_benutzt_pyside6():
+    """Regression: mit installiertem PyQt6 wählte pyqtgraph dieses Binding und
+    stürzte beim Mischen mit PySide6-Objekten mit einem Segfault ab."""
+    import os
+
+    import main  # noqa: F401  — setzt die Variable beim Import
+    import pyqtgraph
+
+    assert os.environ.get("PYQTGRAPH_QT_LIB") == "PySide6"
+    assert pyqtgraph.Qt.QT_LIB == "PySide6"
+
+
+def test_pen_mit_pyside6_enum_funktioniert():
+    """Genau der Aufruf, der auf dem gepackten System gescheitert ist."""
+    import pyqtgraph as pg
+    from PySide6 import QtCore
+
+    pen = pg.mkPen("#ebcb8b", width=1, style=QtCore.Qt.PenStyle.DashLine)
+    assert pen.style() == QtCore.Qt.PenStyle.DashLine
