@@ -1,5 +1,6 @@
-; Inno Setup Skript fuer Dream-VoiceTraining.
-; Wird von build_windows.ps1 aufgerufen, das die Version mitgibt.
+; Inno Setup script for Dream-VoiceTraining.
+; Called by build_windows.ps1, which passes the version in.
+; ASCII only, so older Inno Setup versions cannot mis-read it.
 
 #ifndef MyAppVersion
   #define MyAppVersion "0.0.0"
@@ -18,8 +19,8 @@ AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}/issues
 DefaultDirName={autopf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
-; Ohne Administratorrechte installieren, dann landet alles im Benutzerprofil
-; und niemand muss eine Abfrage wegklicken.
+; Install without administrator rights: everything lands in the user
+; profile and nobody has to click away an elevation prompt.
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
 OutputDir=..\..\dist
@@ -34,26 +35,20 @@ LicenseFile=..\..\LICENSE
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
-Name: "german";  MessagesFile: "compiler:Languages\German.isl"
+Name: "german"; MessagesFile: "compiler:Languages\German.isl"
 
 [Tasks]
-Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; \
-    GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "..\..\dist\Dream-VoiceTraining\*"; DestDir: "{app}"; \
-    Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\..\dist\Dream-VoiceTraining\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
-Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; \
-    Tasks: desktopicon
+Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\{#MyAppExeName}"; \
-    Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; \
-    Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
 
-; Aufnahmen und Einstellungen bleiben bei der Deinstallation erhalten.
-; Sie liegen unter %APPDATA% und %LOCALAPPDATA% und werden hier bewusst
-; nicht angefasst.
+; Recordings and settings live under %APPDATA% and %LOCALAPPDATA% and are
+; deliberately left alone when uninstalling.
