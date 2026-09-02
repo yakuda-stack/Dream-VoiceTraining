@@ -315,6 +315,7 @@ QPushButton:hover {{ background: {hover}; }}
 QPushButton:disabled {{ color: {c['dim']}; background: {card}; }}
 QPushButton#primary {{ background: {c['accent']}; color: {accent_text}; }}
 QPushButton#record {{ background: {c['red']}; color: {c['fg']}; }}
+QPushButton#help {{ font-size: 16px; padding: 6px 0; color: {c['accent']}; }}
 QPushButton#rowaction, QPushButton#danger {{ padding: 5px 12px; font-weight: 500; }}
 QPushButton#danger {{ background: {inner}; color: {c['red']}; }}
 QPushButton#danger:hover {{ background: {c['red']}; color: {c['fg']}; }}

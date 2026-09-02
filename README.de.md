@@ -166,6 +166,10 @@ oder auf die Literaturwerte zurücksetzen.
 dazu ein optionales Hintergrundbild mit einstellbarer Durchsichtigkeit der
 Flächen.
 
+**Nachschlagewerk.** Das ⓘ in der Leiste öffnet neunzehn Themen, die
+erklären, was jede Zahl bedeutet und was sie physikalisch verändert — nicht
+modal, es bleibt also neben dem Hauptfenster offen, während du aufnimmst.
+
 **Einstellungen.** Jeder Analyseparameter ist im laufenden Betrieb änderbar,
 mit sechs eingebauten Vorlagen für verschiedene Situationen. Nichts davon
 braucht einen Neustart.

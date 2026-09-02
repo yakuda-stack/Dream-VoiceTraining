@@ -156,6 +156,10 @@ under a new name, or reset back to the literature values.
 individually, and an optional background image with adjustable panel
 transparency.
 
+**Reference window.** The ⓘ in the toolbar opens nineteen topics explaining
+what every number means and what physically changes it — non-modal, so it
+stays open beside the main window while you record.
+
 **Settings.** Every analysis parameter is adjustable while the program runs,
 with six built-in templates for different situations. Nothing requires a
 restart.

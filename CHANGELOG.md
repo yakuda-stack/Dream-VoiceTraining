@@ -4,7 +4,24 @@ Notable changes per release. Format follows
 [Keep a Changelog](https://keepachangelog.com/), versions follow
 [Semantic Versioning](https://semver.org/).
 
-## [1.0.3] — unreleased
+## [1.0.4] — 02.09.26
+
+### Added
+
+- **Reference window behind the ⓘ in the toolbar.** Nineteen topics in six
+  sections explaining what every number in the program actually is: pitch and
+  its percentiles, intonation, the formants F1 to F3 and what physically moves
+  them, H1/H2 and weight, harmonicity, jitter and shimmer, how to read the
+  spectrogram, what the recording types are for, how target profiles and the
+  analysis parameters work, and how to get a first measurement that is worth
+  anything.
+- The window is **not modal**: it stays open beside the main window, so you can
+  look something up while recording rather than instead of recording. Pressing
+  ⓘ again brings the existing window forward instead of opening a second one.
+- Full-text search across titles, bodies and keywords in the active language.
+- Written in English and German, switching with the interface.
+
+## [1.0.3] — 02.09.26
 
 ### Added
 

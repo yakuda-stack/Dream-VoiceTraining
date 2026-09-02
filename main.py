@@ -59,7 +59,7 @@ import theming
 from theming import COLORS as NORD
 import audio as audio_mod
 from audio import DEFAULT_KEY, AudioEngine, write_wav
-from dialogs import (FilterDialog, GuidedPanel, SessionDetailDialog,
+from dialogs import (FilterDialog, HelpDialog, GuidedPanel, SessionDetailDialog,
                      SettingsDialog, ask_export_language, export_language)
 from settings import CFG
 
@@ -342,6 +342,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.btn_settings = QtWidgets.QPushButton("⚙  " + i18n.t("settings"))
         self.btn_settings.clicked.connect(self._open_settings)
 
+        self.btn_help = QtWidgets.QPushButton("ⓘ")
+        self.btn_help.setObjectName("help")
+        self.btn_help.setFixedWidth(40)
+        self.btn_help.setToolTip(i18n.t("help_tip"))
+        self.btn_help.clicked.connect(self._open_help)
+
         bar.addWidget(self.lang_group)
         bar.addSpacing(14)
         bar.addWidget(QtWidgets.QLabel(i18n.t("microphone")))
@@ -359,6 +365,7 @@ class MainWindow(QtWidgets.QMainWindow):
         bar.addWidget(self.btn_guided)
         bar.addSpacing(10)
         bar.addWidget(self.btn_settings)
+        bar.addWidget(self.btn_help)
         root.addLayout(bar)
 
         # Kennzahlen
@@ -1097,6 +1104,17 @@ class MainWindow(QtWidgets.QMainWindow):
         self._rebuild_keeping_state()
 
     # -- Einstellungen ----------------------------------------------------
+
+    def _open_help(self, topic: str | None = None) -> None:
+        """Nicht modal: nachschlagen waehrend der Aufnahme, nicht statt ihr."""
+        for dialog in self._dialogs:
+            if isinstance(dialog, HelpDialog):
+                if topic:
+                    dialog.show_topic(topic)
+                dialog.raise_()
+                dialog.activateWindow()
+                return
+        self.open_dialog(HelpDialog(self, topic))
 
     def _open_settings(self) -> None:
         dialog = SettingsDialog(self)
