@@ -6,6 +6,31 @@ Notable changes per release. Format follows
 
 ## [1.0.6] — unreleased
 
+### Fixed
+
+- **The Windows build failed at the very last step.** The spec has built two
+  single files straight into `dist` since the switch to onefile, but
+  `build_windows.ps1` still looked for the old
+  `dist\Dream-VoiceTraining\Dream-VoiceTraining.exe` and threw *No executable
+  was produced* on a build that had in fact worked. The installer script had
+  the same stale path. Both now use the real one, and the script checks for
+  both executables so a half-finished build is caught where it happens.
+
+### Added (Windows)
+
+- `packaging/windows/install_windows.ps1` — installing from source, the
+  counterpart to `install.sh`. Checks for Python 3.10 or newer, refuses the
+  Microsoft Store build (it redirects `%LOCALAPPDATA%`, which is where the
+  recordings go), installs Python through winget when it is missing, builds a
+  virtual environment under `%LOCALAPPDATA%\Programs`, and creates the
+  shortcuts. Reinstalling keeps the environment, so it takes seconds instead of
+  downloading Qt again.
+- The installer creates the desktop icon by default and offers to pin to the
+  taskbar. `pin-to-taskbar.ps1` tries and reports honestly: Microsoft removed
+  the pin verb for installers in Windows 10 1607, so it can fail through no
+  fault of ours, and it never fails the installation over it.
+- The portable build ships as one `.exe` instead of a ZIP around a folder.
+
 ### Removed
 
 - **The guided run is gone.** The toggle in the toolbar and the panel in the

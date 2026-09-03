@@ -290,9 +290,28 @@ version, which restricts access to `%LOCALAPPDATA%`):
 powershell -ExecutionPolicy Bypass -File packaging\windows\build_windows.ps1
 ```
 
-Produces `dist\Dream-VoiceTraining\Dream-VoiceTraining.exe` and a portable
-ZIP; with [Inno Setup](https://jrsoftware.org/isdl.php) installed it also
-builds the installer.
+Produces two single files in `dist\`, each carrying its own Python:
+
+- `Dream-VoiceTraining-<version>-setup.exe` — needs
+  [Inno Setup](https://jrsoftware.org/isdl.php); without it the script says so
+  and builds the portable one only
+- `Dream-VoiceTraining-<version>-Portable.exe` — double-click, nothing beside
+  it, settings and recordings land in a `Dream-VoiceTraining-Data` folder next
+  to the file
+
+To run from source instead, so that editing a `.py` file takes effect on the
+next start:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File packaging\windows\install_windows.ps1
+```
+
+That one checks for Python 3.10+, installs it through winget if it is missing,
+builds its own environment under `%LOCALAPPDATA%\Programs\Dream-VoiceTraining`,
+and creates a desktop icon and a start menu entry. It also tries the taskbar —
+Microsoft blocked programmatic pinning in Windows 10 1607, so that part may
+just report that it did not work; right-click the desktop icon and pick *Pin to
+taskbar*. Uninstall with the `uninstall.ps1` it leaves behind.
 
 Your files live in `%APPDATA%\Dream-VoiceTraining` (settings) and
 `%LOCALAPPDATA%\Dream-VoiceTraining` (recordings).

@@ -3,9 +3,9 @@
 #   powershell -ExecutionPolicy Bypass -File packaging\windows\build_windows.ps1
 #
 # Output:
-#   dist\Dream-VoiceTraining\Dream-VoiceTraining.exe          (portable)
-#   dist\Dream-VoiceTraining-<version>-windows-portable.zip
-#   dist\Dream-VoiceTraining-<version>-setup.exe               (needs Inno Setup)
+#   dist\Dream-VoiceTraining-<version>-Portable.exe   one file, runs anywhere
+#   dist\Dream-VoiceTraining-<version>-setup.exe      needs Inno Setup
+#   dist\Dream-VoiceTraining.exe                      what the setup packs
 #
 # Requirements: Python 3.10+ from python.org. NOT the Microsoft Store build,
 # which restricts access to %LOCALAPPDATA%. Inno Setup is optional.
@@ -60,16 +60,27 @@ Say "Running PyInstaller"
 & $Py -m PyInstaller --noconfirm --clean "packaging\windows\dream-voicetraining.spec"
 if ($LASTEXITCODE -ne 0) { throw "PyInstaller failed." }
 
-$ExePath = "dist\Dream-VoiceTraining\Dream-VoiceTraining.exe"
-if (-not (Test-Path $ExePath)) { throw "No executable was produced." }
+# The spec builds two single files straight into dist, no program folder.
+# This step used to look for dist\Dream-VoiceTraining\Dream-VoiceTraining.exe
+# and failed after the switch to onefile even though the build had worked.
+$ExePath = "dist\Dream-VoiceTraining.exe"
+$PortableBuilt = "dist\Dream-VoiceTraining-Portable.exe"
+foreach ($Needed in @($ExePath, $PortableBuilt)) {
+    if (-not (Test-Path $Needed)) {
+        throw "PyInstaller produced no $Needed. Check the output above."
+    }
+    $SizeMb = [math]::Round((Get-Item $Needed).Length / 1MB, 1)
+    Say "Built $Needed ($SizeMb MB)"
+}
 
-$Bytes = (Get-ChildItem -Recurse "dist\Dream-VoiceTraining" | Measure-Object -Property Length -Sum).Sum
-$SizeMb = [math]::Round($Bytes / 1MB, 1)
-Say "Built $ExePath ($SizeMb MB)"
-
-Say "Creating portable archive"
-$Zip = "dist\Dream-VoiceTraining-$Version-windows-portable.zip"
-Compress-Archive -Path "dist\Dream-VoiceTraining\*" -DestinationPath $Zip -Force
+# No archive: the portable build is one self-contained file. Unpacking a ZIP
+# to get at a single EXE is a step for nothing.
+Say "Naming the portable build"
+$Portable = "dist\Dream-VoiceTraining-$Version-Portable.exe"
+Move-Item -Force $PortableBuilt $Portable
+# paths.py stores next to the EXE when the file name contains "portable";
+# the version in the middle does not disturb that.
+Say "Ready: $Portable"
 
 # --- Installer (optional) ----------------------------------------------
 # ${env:ProgramFiles(x86)} cannot be used inside a double quoted string,
@@ -97,8 +108,9 @@ if ($Inno) {
 # --- Ergebnis ----------------------------------------------------------
 
 Say "Results:"
-Get-ChildItem "dist\*.zip", "dist\*.exe" -ErrorAction SilentlyContinue |
+Get-ChildItem "dist\*.exe" -ErrorAction SilentlyContinue |
     ForEach-Object { Write-Host ("   " + $_.Name) }
 
-Say "Test the executable before shipping:"
+Say "Test both before shipping:"
 Write-Host "   $ExePath"
+Write-Host "   $Portable"
