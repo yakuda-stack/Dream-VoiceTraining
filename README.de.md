@@ -125,7 +125,8 @@ neun kurze Seiten: Pegel und Mikrofon, Aufnahmetypen, eine Empfehlung für die
 erste Runde (Tonhöhentest, dann /a/, /i/ und /u/, jeweils als eigene Aufnahme),
 wo du nachschlägst, was F0 und die Formanten sind, die Sessionliste, der
 erweiterte Modus, das Anpassen der Spalten, was hinter dem Einstellungsknopf
-steckt, und eine Seite darüber, nicht gegen Schmerz zu trainieren. Jede Seite
+steckt, und eine Seite darüber, nicht gegen Schmerz zu trainieren, die mit den
+Projektverweisen endet — Quelltext, Discord, Ko-fi. Jede Seite
 öffnet in der Größe, die sie braucht, statt alle in derselben.
 
 Solange eine Seite offen ist, sitzt ein **pulsierendes goldenes ⓘ** auf dem

@@ -120,7 +120,7 @@ pages: level and microphone, recording types, a recommended first round (pitch
 test, then /a/, /i/ and /u/, each as its own take), where to look up what F0
 and the formants are, the session list, advanced mode, making the column layout
 yours, what sits behind the settings button, and one page on not training
-through pain. Each page opens at the size it needs rather than one size for
+through pain that ends with the project links — source, Discord, Ko-fi. Each page opens at the size it needs rather than one size for
 all.
 
 While a page is open, a **pulsing golden ⓘ** sits on the control that page is

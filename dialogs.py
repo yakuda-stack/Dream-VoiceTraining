@@ -1371,20 +1371,10 @@ class InfoPage(QtWidgets.QWidget):
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(12)
 
-        links = QtWidgets.QGroupBox(i18n.t("about_links"))
-        links_lay = QtWidgets.QVBoxLayout(links)
-        for label, url in ((i18n.t("about_source"), paths.APP_URL),
-                           (i18n.t("about_discord"), paths.DISCORD_URL),
-                           (i18n.t("about_kofi"), paths.KOFI_URL)):
-            item = QtWidgets.QLabel(
-                f'<a href="{url}" style=f"color:{NORD['accent']}; '
-                f'text-decoration:none;">{label}</a>'
-                f'<br><span style=f"color:{NORD['dim']}; font-size:11px;">{url}</span>')
-            item.setOpenExternalLinks(True)
-            item.setTextInteractionFlags(
-                QtCore.Qt.TextInteractionFlag.TextBrowserInteraction)
-            links_lay.addWidget(item)
-        lay.addWidget(links)
+        # Frueher stand der Stil hier direkt im f-String und enthielt ein
+        # verirrtes style=f"..." — die Angabe war damit ungueltig und die
+        # Verweise blieben ungefaerbt. Jetzt baut das eine Stelle.
+        lay.addWidget(project_links_box())
 
         lay.addWidget(self._section(i18n.t("about_license_head"),
                                     i18n.t("about_license")))
@@ -2257,6 +2247,41 @@ class Spotlight(QtWidgets.QWidget):
                          QtCore.Qt.AlignmentFlag.AlignCenter, "i")
 
 
+# Die drei Adressen des Projekts an einer Stelle: Infoseite und Einfuehrung
+# zeigen dieselben, und paths.py haelt sie.
+PROJECT_LINKS = (
+    ("about_source", paths.APP_URL),
+    ("about_discord", paths.DISCORD_URL),
+    ("about_kofi", paths.KOFI_URL),
+)
+
+
+def link_label(label: str, url: str, parent=None) -> QtWidgets.QLabel:
+    """Anklickbarer Verweis mit der Adresse klein darunter.
+
+    Die Adresse steht mit dabei, damit sichtbar ist, wohin ein Klick fuehrt,
+    bevor man ihn macht.
+    """
+    item = QtWidgets.QLabel(
+        f'<a href="{url}" style="color:{NORD["accent"]}; '
+        f'text-decoration:none;">{label}</a>'
+        f'<br><span style="color:{NORD["dim"]}; font-size:11px;">{url}</span>',
+        parent)
+    item.setOpenExternalLinks(True)
+    item.setTextInteractionFlags(
+        QtCore.Qt.TextInteractionFlag.TextBrowserInteraction)
+    return item
+
+
+def project_links_box() -> QtWidgets.QGroupBox:
+    box = QtWidgets.QGroupBox(i18n.t("about_links"))
+    box.setObjectName("projectlinks")
+    lay = QtWidgets.QVBoxLayout(box)
+    for key, url in PROJECT_LINKS:
+        lay.addWidget(link_label(i18n.t(key), url))
+    return box
+
+
 _SPOT_CACHE: dict | None = None
 
 
@@ -2349,6 +2374,9 @@ class IntroDialog(QtWidgets.QDialog):
         "intro_columns_body": "filter",
         "intro_settings_body": "settings",
     }
+
+    # Seite, die die Projektverweise mitbringt.
+    LINK_PAGE = "intro_safety_body"
 
     # Lesbare Zeilenlaenge, unabhaengig von der Fensterbreite.
     TEXT_WIDTH = 700
@@ -2515,6 +2543,14 @@ class IntroDialog(QtWidgets.QDialog):
         shot = self._shot(body_key)
         if shot is not None:
             lay.addWidget(shot, 0, QtCore.Qt.AlignmentFlag.AlignLeft)
+
+        # Auf der letzten Seite: wohin man sich wenden kann, wenn etwas
+        # klemmt. Am Ende der Einfuehrung gelesen, nicht in den
+        # Einstellungen gesucht.
+        if body_key == self.LINK_PAGE:
+            links = project_links_box()
+            links.setMaximumWidth(self.TEXT_WIDTH)
+            lay.addWidget(links)
         lay.addStretch(1)
 
         page.setProperty("title_key", title_key)
@@ -2593,6 +2629,16 @@ class IntroDialog(QtWidgets.QDialog):
 
             # Das Foto zeigt eine Oberflaeche in der alten Sprache, sobald
             # umgeschaltet wird — also gegen das der neuen tauschen.
+            old_links = page.findChild(QtWidgets.QGroupBox, "projectlinks")
+            if old_links is not None:
+                layout = old_links.parentWidget().layout()
+                if layout is not None:
+                    fresh = project_links_box()
+                    fresh.setMaximumWidth(self.TEXT_WIDTH)
+                    layout.replaceWidget(old_links, fresh)
+                    old_links.setParent(None)
+                    old_links.deleteLater()
+
             old_shot = page.findChild(ShotView)
             if old_shot is not None:
                 new_shot = self._shot(body_key)
@@ -2648,6 +2694,9 @@ class IntroDialog(QtWidgets.QDialog):
                     label, min(inner, self.TEXT_WIDTH)) + 10
         if shot is not None:
             height += shot.height() + 10
+        links = page.findChild(QtWidgets.QGroupBox, "projectlinks")
+        if links is not None:
+            height += links.sizeHint().height() + 10
         if not self.PAGES or page.property("body_key") is None:
             # Die Sprachseite lebt von ihrem Weissraum.
             width, height = self.TEXT_WIDTH, 520

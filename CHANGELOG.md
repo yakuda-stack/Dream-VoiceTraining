@@ -4,6 +4,23 @@ Notable changes per release. Format follows
 [Keep a Changelog](https://keepachangelog.com/), versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [1.0.8] — unreleased
+
+### Added
+
+- **The last page of the introduction carries the project links** — source
+  code and issues, Discord, Ko-fi — each with the address written out
+  underneath, so it is clear where a click leads before making it. They were
+  only in *Settings → Info* before, which is not where somebody looks who has
+  just finished the introduction and hit a problem.
+
+### Fixed
+
+- Those same links on the info page rendered without their colour: the style
+  attribute was built inside an f-string as `style=f"..."`, and the stray `f`
+  made the attribute invalid. Both places now build the link from one helper,
+  so the next change to it cannot drift apart again.
+
 ## [1.0.7] — unreleased
 
 ### Fixed

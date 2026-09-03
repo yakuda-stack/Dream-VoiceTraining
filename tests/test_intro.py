@@ -195,3 +195,31 @@ def test_ohne_pyinstaller_niemals_portabel():
     import paths
     importlib.reload(paths)
     assert paths.PORTABLE is False
+
+
+def test_letzte_seite_bringt_die_projektverweise(qt_app):
+    """Wer die Einfuehrung durch hat und haengt, soll nicht suchen muessen."""
+    import paths
+    from dialogs import IntroDialog, PROJECT_LINKS
+    from PySide6 import QtWidgets
+
+    urls = [url for _, url in PROJECT_LINKS]
+    assert paths.APP_URL in urls
+    assert paths.DISCORD_URL in urls
+    assert paths.KOFI_URL in urls
+    for key, _ in PROJECT_LINKS:
+        assert key in i18n.STRINGS, key
+
+    assert IntroDialog.LINK_PAGE == IntroDialog.PAGES[-1][1]
+
+    dialog = IntroDialog(None, ask_language=False)
+    last = dialog.stack.widget(dialog.stack.count() - 1)
+    box = last.findChild(QtWidgets.QGroupBox, "projectlinks")
+    assert box is not None, "Verweise fehlen auf der letzten Seite"
+
+    texts = " ".join(label.text() for label in box.findChildren(QtWidgets.QLabel))
+    for url in urls:
+        assert f'href="{url}"' in texts, url
+    # Das verirrte style=f"..." hat die Angabe frueher unbrauchbar gemacht.
+    assert 'style=f"' not in texts
+    dialog.close()
