@@ -1129,11 +1129,25 @@ class MainWindow(QtWidgets.QMainWindow):
         if target is None:
             self._spot.detach()
             return
-        # Der Ansichtsknopf liegt im Sessions-Reiter. Bleibt der Live-Reiter
-        # vorn, zeigt die Marke auf etwas Unsichtbares, also aufblaettern.
-        if self._spot_key == "filter":
-            self.tabs.setCurrentIndex(1)
+        # Liegt das Ziel in einem Reiter, der nicht vorn ist, zeigt die Marke
+        # auf etwas Unsichtbares und versteckt sich. Vorher aufblaettern.
+        # Nach Schluesseln zu entscheiden ging beim Einstellungsknopf schief:
+        # der steht im Live-Reiter, die Seite davor hatte auf Sessions
+        # umgeschaltet, und die Marke blieb unsichtbar.
+        self._reveal(target)
         self._spot.attach(target, anchor)
+
+    def _reveal(self, target: QtWidgets.QWidget) -> None:
+        """Den Reiter nach vorn holen, in dem das Ziel liegt.
+
+        Sitzt das Ziel in keinem Reiter — die Reiterleiste selbst etwa —,
+        bleibt die Ansicht, wie sie ist.
+        """
+        for index in range(self.tabs.count()):
+            page = self.tabs.widget(index)
+            if page is target or page.isAncestorOf(target):
+                self.tabs.setCurrentIndex(index)
+                return
 
     def _spot_target(self, key: str):
         if key == "microphone":

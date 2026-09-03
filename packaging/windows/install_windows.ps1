@@ -8,9 +8,10 @@
 #     is missing
 #   - copies the program to %LOCALAPPDATA%\Programs\Dream-VoiceTraining
 #   - builds its own virtual environment there and installs the requirements
-#   - creates a desktop shortcut and a start menu entry, and tries the
-#     taskbar
-#   - writes uninstall.ps1 next to the program
+#   - creates a desktop shortcut and a start menu entry, so the Windows
+#     search box finds the program by name
+#   - registers it under Apps & features, with uninstall.ps1 next to the
+#     program
 #
 # No administrator rights: everything stays inside the user profile.
 #
@@ -19,7 +20,8 @@
 # need none of this. This script is for running from source, so a change to
 # a .py file takes effect on the next start.
 #
-# ASCII only and saved with a byte order mark, see pin-to-taskbar.ps1.
+# ASCII only and saved with a byte order mark: Windows PowerShell 5.1 reads
+# .ps1 files without one as ANSI, which mangles anything above ASCII.
 
 $ErrorActionPreference = "Stop"
 
@@ -167,6 +169,12 @@ if ($LASTEXITCODE -ne 0) { throw "Installing dependencies failed." }
 # --- Verknuepfungen -----------------------------------------------------
 
 function New-Shortcut([string]$Path, [string]$Description) {
+    <#
+      A .lnk in the start menu is what makes the program show up in the
+      Windows search box -- that folder is indexed, the install directory
+      under %LOCALAPPDATA% is not. The description gives the search
+      something besides the file name to match on.
+    #>
     $Shell = New-Object -ComObject WScript.Shell
     $Link = $Shell.CreateShortcut($Path)
     # pythonw.exe instead of python.exe: otherwise a console window sits
@@ -183,12 +191,49 @@ function New-Shortcut([string]$Path, [string]$Description) {
 $Desktop = [Environment]::GetFolderPath("Desktop")
 $StartMenu = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs"
 $DesktopLink = Join-Path $Desktop "$AppName.lnk"
+$MenuLink = Join-Path $StartMenu "$AppName.lnk"
+$Blurb = "Voice training: pitch, resonance, weight and voice quality"
 
 Say "Creating shortcuts"
-New-Shortcut $DesktopLink "Measure what your voice is doing"
-New-Shortcut (Join-Path $StartMenu "$AppName.lnk") "Measure what your voice is doing"
+# Straight into Programs, not into a subfolder of it: both are searchable,
+# but a folder is one click more for no gain.
+New-Shortcut $DesktopLink $Blurb
+New-Shortcut $MenuLink $Blurb
 
-& (Join-Path $PSScriptRoot "pin-to-taskbar.ps1") -Target $DesktopLink
+# Tell the shell that the start menu changed, so the search box picks the
+# entry up now instead of whenever the indexer next comes around.
+try {
+    Add-Type -Namespace Win32 -Name Shell32 -MemberDefinition @"
+[System.Runtime.InteropServices.DllImport("shell32.dll")]
+public static extern void SHChangeNotify(int eventId, uint flags,
+                                         System.IntPtr item1,
+                                         System.IntPtr item2);
+"@ -ErrorAction Stop
+    # SHCNE_ASSOCCHANGED with SHCNF_IDLIST
+    [Win32.Shell32]::SHChangeNotify(0x08000000, 0x0000, [IntPtr]::Zero,
+                                    [IntPtr]::Zero)
+}
+catch {
+    # Only a nudge. Without it the entry still appears, just later.
+}
+
+# --- Unter "Apps und Features" eintragen --------------------------------
+
+# So laesst sich das Programm wie jedes andere deinstallieren und die
+# Windows-Suche fuehrt es unter den Apps auf.
+$UninstallKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\$AppName"
+$UninstallCommand = ("powershell.exe -NoProfile -ExecutionPolicy Bypass -File " +
+                     "\"$Target\uninstall.ps1\"")
+New-Item -Path $UninstallKey -Force | Out-Null
+Set-ItemProperty $UninstallKey DisplayName $AppName
+Set-ItemProperty $UninstallKey DisplayVersion $Version
+Set-ItemProperty $UninstallKey Publisher "Yakuda"
+Set-ItemProperty $UninstallKey InstallLocation $Target
+Set-ItemProperty $UninstallKey UninstallString $UninstallCommand
+Set-ItemProperty $UninstallKey NoModify 1 -Type DWord
+Set-ItemProperty $UninstallKey NoRepair 1 -Type DWord
+$Icon = Join-Path $Target "dream-voicetraining.ico"
+if (Test-Path $Icon) { Set-ItemProperty $UninstallKey DisplayIcon $Icon }
 
 # --- Deinstallation -----------------------------------------------------
 
@@ -197,9 +242,12 @@ $Uninstall = @"
 # delete them yourself if you want them gone:
 #   `$env:APPDATA\$AppName
 #   `$env:LOCALAPPDATA\$AppName
-Remove-Item -Recurse -Force "$Target" -ErrorAction SilentlyContinue
 Remove-Item -Force "$DesktopLink" -ErrorAction SilentlyContinue
-Remove-Item -Force "$(Join-Path $StartMenu "$AppName.lnk")" -ErrorAction SilentlyContinue
+Remove-Item -Force "$MenuLink" -ErrorAction SilentlyContinue
+Remove-Item -Recurse -Force "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\$AppName" -ErrorAction SilentlyContinue
+# Last, because the script being run lives in there.
+Start-Sleep -Milliseconds 200
+Remove-Item -Recurse -Force "$Target" -ErrorAction SilentlyContinue
 Write-Host "Removed. Your recordings are still in `$env:LOCALAPPDATA\$AppName"
 "@
 Set-Content -Path (Join-Path $Target "uninstall.ps1") -Value $Uninstall -Encoding UTF8
@@ -210,6 +258,7 @@ Say "Done."
 Write-Host "   Program:    $Target"
 Write-Host "   Settings:   $env:APPDATA\$AppName"
 Write-Host "   Recordings: $env:LOCALAPPDATA\$AppName"
-Write-Host "   Uninstall:  powershell -ExecutionPolicy Bypass -File `"$Target\uninstall.ps1`""
+Write-Host "   Uninstall:  Settings > Apps, or uninstall.ps1 in the program folder"
+Say "Press the Windows key and type 'dream' or 'voice' to find it."
 Say "Starting it once to check"
 Start-Process -FilePath $VenvPythonW -ArgumentList ('"' + (Join-Path $Target "main.py") + '"') -WorkingDirectory $Target

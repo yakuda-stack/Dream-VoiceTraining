@@ -142,6 +142,22 @@ def test_marke_folgt_den_seiten(intro_window, qt_app):
     dialog.close()
 
 
+def test_jede_marke_ist_am_ende_auch_sichtbar(intro_window, qt_app):
+    """Eine Marke auf einem Knopf im Hintergrund erklaert nichts.
+
+    Der Einstellungsknopf liegt im Live-Reiter, die Seite davor blaettert auf
+    Sessions — ohne Zurueckschalten versteckt sich die Marke.
+    """
+    from dialogs import IntroDialog
+    window = intro_window
+    for key in IntroDialog.POINTS_AT.values():
+        window.show_spotlight(key)
+        qt_app.processEvents()
+        target, _ = window._spot_target(key)
+        assert target is not None and target.isVisible(), key
+        assert window._spot.isVisible(), key
+
+
 def test_portable_erkennung(tmp_path, monkeypatch):
     """Portabel heisst: Daten neben der EXE, nicht im Benutzerprofil."""
     import sys

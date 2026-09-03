@@ -19,6 +19,9 @@ AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}/issues
 DefaultDirName={autopf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
+; No group folder to click through: the entry goes straight into Programs,
+; which is the folder Windows Search reads for the start menu.
+DisableProgramGroupPage=yes
 ; Install without administrator rights: everything lands in the user
 ; profile and nobody has to click away an elevation prompt.
 PrivilegesRequired=lowest
@@ -37,34 +40,31 @@ LicenseFile=..\..\LICENSE
 Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "german"; MessagesFile: "compiler:Languages\German.isl"
 
-[CustomMessages]
-english.PinTask=Pin to taskbar (Windows may refuse this)
-german.PinTask=An die Taskleiste anheften (Windows lehnt das eventuell ab)
-
 [Tasks]
 ; Checked by default: a program without a desktop icon is one people cannot
 ; find again.
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
-Name: "taskbarpin"; Description: "{cm:PinTask}"; GroupDescription: "{cm:AdditionalIcons}"
 
 [Files]
 ; One file. The spec builds onefile, so there is no program folder to copy
 ; and no _internal directory beside the executable.
 Source: "..\..\dist\Dream-VoiceTraining.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "pin-to-taskbar.ps1"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
-Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
-Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+; {autoprograms} instead of {group}: the shortcut sits at the top level of the
+; start menu, so typing "dream" or "voice" into the Windows search box finds
+; it. A comment gives the search something besides the file name to match.
+Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Comment: "Voice training: pitch, resonance, weight and voice quality"
+Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon; Comment: "Voice training: pitch, resonance, weight and voice quality"
+
+[Registry]
+; Lets Win+R and a command prompt start the program by name.
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\App Paths\{#MyAppExeName}"; ValueType: string; ValueName: ""; ValueData: "{app}\{#MyAppExeName}"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\App Paths\{#MyAppExeName}"; ValueType: string; ValueName: "Path"; ValueData: "{app}"; Flags: uninsdeletekey
 
 [Run]
-; Pinning is attempted, never required: the helper exits without an error
-; when Windows refuses, so a blocked pin cannot fail the installation.
-Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\pin-to-taskbar.ps1"" -Target ""{app}\{#MyAppExeName}"""; Flags: runhidden; Tasks: taskbarpin
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
 
-[UninstallDelete]
-Type: files; Name: "{app}\pin-to-taskbar.ps1"
 
 ; Recordings and settings live under %APPDATA% and %LOCALAPPDATA% and are
 ; deliberately left alone when uninstalling.

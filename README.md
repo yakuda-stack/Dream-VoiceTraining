@@ -308,10 +308,11 @@ powershell -ExecutionPolicy Bypass -File packaging\windows\install_windows.ps1
 
 That one checks for Python 3.10+, installs it through winget if it is missing,
 builds its own environment under `%LOCALAPPDATA%\Programs\Dream-VoiceTraining`,
-and creates a desktop icon and a start menu entry. It also tries the taskbar —
-Microsoft blocked programmatic pinning in Windows 10 1607, so that part may
-just report that it did not work; right-click the desktop icon and pick *Pin to
-taskbar*. Uninstall with the `uninstall.ps1` it leaves behind.
+and creates a desktop icon and a start menu entry, so pressing the Windows key
+and typing *dream* or *voice* finds it. It also registers under *Apps &
+features*, so uninstalling works from Settings like any other program (or run
+the `uninstall.ps1` it leaves behind). Recordings and settings are never
+touched by an uninstall.
 
 Your files live in `%APPDATA%\Dream-VoiceTraining` (settings) and
 `%LOCALAPPDATA%\Dream-VoiceTraining` (recordings).

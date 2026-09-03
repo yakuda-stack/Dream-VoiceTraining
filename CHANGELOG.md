@@ -4,7 +4,20 @@ Notable changes per release. Format follows
 [Keep a Changelog](https://keepachangelog.com/), versions follow
 [Semantic Versioning](https://semver.org/).
 
-## [1.0.6] — unreleased
+## [1.0.7] — unreleased
+
+### Fixed
+
+- **Step 9 of the introduction pointed at a button nobody could see.** The
+  page about the settings marks the ⚙ button, which sits in the Live tab —
+  but the page before it switches to Sessions to show the view button, and
+  nothing switched back, so the marker hid itself and the step explained a
+  button while pointing at nothing. Which tab to open is no longer decided
+  from a list of keys: the window looks up which tab actually contains the
+  target and brings that one forward. A control moved to another tab now
+  keeps working without anyone remembering to update a special case.
+
+## [1.0.6] — 2026-09-03
 
 ### Fixed
 
@@ -25,10 +38,14 @@ Notable changes per release. Format follows
   virtual environment under `%LOCALAPPDATA%\Programs`, and creates the
   shortcuts. Reinstalling keeps the environment, so it takes seconds instead of
   downloading Qt again.
-- The installer creates the desktop icon by default and offers to pin to the
-  taskbar. `pin-to-taskbar.ps1` tries and reports honestly: Microsoft removed
-  the pin verb for installers in Windows 10 1607, so it can fail through no
-  fault of ours, and it never fails the installation over it.
+- **Both install paths put the program where Windows Search looks.** The
+  shortcut goes into the top level of the start menu folder rather than a
+  subfolder of it, carries a description for the search to match on, and the
+  source install additionally registers under *Apps & features* and nudges the
+  shell so the entry appears immediately instead of at the indexer's
+  convenience. Pressing the Windows key and typing *dream* or *voice* finds it.
+  The setup also registers an App Paths key, so Win+R starts it by name.
+- The installer creates the desktop icon by default.
 - The portable build ships as one `.exe` instead of a ZIP around a folder.
 
 ### Removed
