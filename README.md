@@ -24,27 +24,19 @@ across sessions.
 <table>
   <tr>
     <td><b>Live view</b><br><img src="assets/dashboard.png" alt="Live view" width="300"/></td>
-    <td><b>Guided run</b><br><img src="assets/dashboard-guided.png" alt="Guided run" width="300"/></td>
     <td><b>Session list</b><br><img src="assets/sessions.png" alt="Session list" width="300"/></td>
+    <td><b>Column menu</b><br><img src="assets/sessions-columns.png" alt="Column menu" width="300"/></td>
   </tr>
   <tr>
-    <td><b>Column menu</b><br><img src="assets/sessions-columns.png" alt="Column menu" width="300"/></td>
     <td><b>Recording in detail</b><br><img src="assets/details.png" alt="Detail view" width="300"/></td>
     <td><b>Settings · Analysis</b><br><img src="assets/settings-analysis.png" alt="Analysis settings" width="300"/></td>
-  </tr>
-  <tr>
     <td><b>Settings · Target profiles</b><br><img src="assets/settings-profiles.png" alt="Target profiles" width="300"/></td>
-    <td></td>
-    <td></td>
   </tr>
 </table>
 
 **Live view** — everything in one bar: language, microphone, recording type,
-target voice, guided run. Below it the readouts, the zone bar, the spectrogram
-with F1 and F2 marked, the pitch history and the practice text.
-
-**Guided run** — a panel inside the Live tab rather than a window, so the
-spectrogram keeps running while you hold a sound.
+target voice. Below it the readouts, the zone bar, the spectrogram with F1 and
+F2 marked, the pitch history and the practice text.
 
 **Session list** — right-click a row for details, playback, renaming, deletion
 or changing the recording type afterwards. Recordings without a usable voice
@@ -122,12 +114,23 @@ sustained vowel, then cut out the stable middle.
 held hum), /a/, /i/, /u/ or free. Picked before recording and sortable as a
 column, so a held vowel is never averaged together with connected speech.
 
-**Guided run.** A toggle, off by default, that shows a slim strip in the Live
-tab — not a window in your face. It walks you through hum, /a/, /i/ and /u/
-with a countdown, trims each take to its steadiest stretch and files it, while
-the readouts and spectrogram keep running beside it. This is the
-step that makes formants, jitter and shimmer comparable between sessions, and
-the one people otherwise skip.
+**First-run introduction.** On the very first start the program asks for a
+language — picking one moves straight on — and then walks through nine short
+pages: level and microphone, recording types, a recommended first round (pitch
+test, then /a/, /i/ and /u/, each as its own take), where to look up what F0
+and the formants are, the session list, advanced mode, making the column layout
+yours, what sits behind the settings button, and one page on not training
+through pain. Each page opens at the size it needs rather than one size for
+all.
+
+While a page is open, a **pulsing golden ⓘ** sits on the control that page is
+about — the microphone list, the type box, the ⓘ in the toolbar, the Sessions
+tab, the view button — so nobody has to hunt for it. Pages about the detail
+view carry a screenshot, in the interface language, with the same marker on the
+spot that matters; `packaging/make-intro-shots.py` regenerates those from the
+real interface. The
+introduction is not modal, so the microphone can be set up while reading, and
+it is reachable again from *Settings → Info → Show introduction again*.
 
 **Session list.** Click a column header to sort, click again to reverse.
 Right-click a row for details, playback, rename or delete; right-click a
@@ -155,6 +158,10 @@ under a new name, or reset back to the literature values.
 **Themes.** Eight built-in colour schemes, every colour role recolourable
 individually, and an optional background image with adjustable panel
 transparency.
+
+**Info tab.** Version, licence, links and where your files live, with a
+button to replay the introduction, open the debug log or copy your system
+information for a bug report.
 
 **Reference window.** The ⓘ in the toolbar opens nineteen topics explaining
 what every number means and what physically changes it — non-modal, so it
@@ -237,6 +244,19 @@ in the AUR, and `makepkg` only knows pacman. With yay: `yay -Bi .`
 If building Praat fails after a Python version bump in Arch, use
 `PKGBUILD.python-praat-parselmouth-bin` instead — it installs the official
 wheel and needs no compiler.
+
+### Windows
+
+Two single files on the
+[Releases](https://github.com/yakuda-stack/Dream-VoiceTraining/releases) page:
+
+- **`Dream-VoiceTraining-<version>-setup.exe`** — installs into your user
+  profile, adds a start menu entry, needs no administrator rights.
+- **`Dream-VoiceTraining-Portable.exe`** — run it from anywhere. Settings and
+  recordings land in a `Dream-VoiceTraining-Data` folder next to the
+  executable, so a USB stick keeps everything together.
+
+Neither needs an `_internal` folder or any other file beside it.
 
 ### AppImage
 

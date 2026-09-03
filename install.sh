@@ -173,6 +173,11 @@ rm -rf "$LIBDIR"
 mkdir -p "$LIBDIR" "$BINDIR" "$APPDIR" "$ICONBASE/scalable/apps"
 cp "$SOURCE"/*.py "$LIBDIR/"
 cp "$SOURCE/LICENSE" "$SOURCE/THIRD_PARTY_NOTICES.md" "$LIBDIR/" 2>/dev/null || true
+# Bildschirmfotos der Einfuehrung; ohne sie laeuft alles, nur ohne Bilder.
+if [ -d "$SOURCE/assets/intro" ]; then
+  mkdir -p "$LIBDIR/assets/intro"
+  cp "$SOURCE/assets/intro"/* "$LIBDIR/assets/intro/" 2>/dev/null || true
+fi
 
 say "Python-Umgebung anlegen (das dauert eine Minute)"
 python3 -m venv "$LIBDIR/venv"

@@ -26,6 +26,32 @@ def test_alle_verwendeten_schluessel_existieren():
     assert not missing, f"fehlende Texte: {missing}"
 
 
+def test_eingebaute_vorlagen_heissen_in_beiden_sprachen_richtig():
+    """Die Namen standen frueher deutsch im Code und blieben es auch im EN."""
+    for name in settings.BUILTIN_TEMPLATES:
+        assert f"tpl_{name}" in i18n.STRINGS, name
+    i18n.set_language("en")
+    assert settings.template_label("quiet_mic") == "Quiet microphone"
+    i18n.set_language("de")
+    assert settings.template_label("quiet_mic") == "Leises Mikrofon"
+    # Eigene Vorlagen heissen so, wie der Benutzer sie genannt hat.
+    assert settings.template_label("Meins") == "Meins"
+    i18n.set_language("en")
+
+
+def test_alte_vorlagennamen_werden_uebernommen():
+    """Wer von 1.0.5 kommt, hat den deutschen Namen in der Konfiguration."""
+    import json
+    import paths
+    paths.ensure_dirs()
+    paths.CONFIG_PATH.write_text(
+        json.dumps({"active_template": "Leises Mikrofon"}), encoding="utf-8")
+    settings.load()
+    assert settings.active_template() == "quiet_mic"
+    assert settings.active_template() in settings.BUILTIN_TEMPLATES
+    paths.CONFIG_PATH.unlink()
+
+
 def test_jeder_parameter_und_kennwert_ist_uebersetzt():
     for param in settings.PARAMS:
         assert f"param_{param.attr}" in i18n.STRINGS, param.attr

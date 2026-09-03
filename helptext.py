@@ -587,7 +587,7 @@ abgelegte Aufnahme ist also nicht verloren.</p>
 <p>Einen Lesetext gegen einen gehaltenen Vokal zu vergleichen ergibt Unsinn.
 Die Typen auseinanderzuhalten ist der ganze Zweck der Sache.</p>
 """),
-        _t("type reading vowel hum guided", "typ lesetext vokal summen geführt")),
+        _t("type reading vowel hum sustained", "typ lesetext vokal summen gehalten")),
 
     Topic(
         "advanced", "workflow",
@@ -602,8 +602,8 @@ turns those numbers from noise into something you can track.</p>
 <p>The analysis is non-destructive — the stored values stay untouched until you
 press "save selection as session values". A yellow note above the table tells
 you which range you are currently looking at.</p>
-<p>The guided run does this trimming automatically, which is the main reason
-to use it.</p>
+<p>This is the step that turns a held vowel into a number worth tracking, so
+it is worth the two clicks.</p>
 """, """
 <p>In der Detailansicht klappt „Erweitert" die Wellenform der Aufnahme mit
 einem ziehbaren Bereich auf. Nur diesen Bereich auswerten, nur ihn
@@ -615,8 +615,8 @@ macht aus diesen Zahlen erst etwas Verfolgbares.</p>
 <p>Die Auswertung ist folgenlos — die gespeicherten Werte bleiben unangetastet,
 bis du „Auswahl als Sessionwerte speichern" drückst. Ein gelber Hinweis über
 der Tabelle sagt, welchen Bereich du gerade siehst.</p>
-<p>Der geführte Ablauf macht dieses Zuschneiden automatisch, und das ist der
-Hauptgrund, ihn zu benutzen.</p>
+<p>Genau dieser Schritt macht aus einem gehaltenen Vokal erst eine Zahl, die
+sich verfolgen lässt — die zwei Klicks lohnen sich.</p>
 """),
         _t("advanced selection waveform trim region",
            "erweitert auswahl wellenform zuschneiden")),
@@ -731,10 +731,13 @@ recording tab, and raise the input until the level card sits around −20 dB
 while you speak normally. Everything else is worthless until this is right.</p>
 <p><b>Then record a baseline.</b> Read the practice text once, all of it, as
 type "Reading text". Note the numbers.</p>
-<p><b>Then the vowels.</b> Use the guided run: it walks you through a hum and
-/a/, /i/, /u/, trims each to its steady middle and files it correctly. That
-gives you formant and stability values that will still be comparable in two
-months.</p>
+<p><b>Then the vowels.</b> Record four more takes, each with its own type: the
+pitch test (a held hum, about four seconds), then /a/, /i/ and /u/, about three
+seconds each. Hold every sound as steadily as you can. That gives you formant
+and stability values that will still be comparable in two months.</p>
+<p>Afterwards open each of them, unfold “Advanced” and drag the region over the
+calm middle — the beginning where you are still finding the sound and the end
+where the air runs out both distort the numbers.</p>
 <p><b>From then on:</b> ten to fifteen minutes a day beats two hours at the
 weekend. Same text, same microphone position, same template every time —
 otherwise you are measuring your setup rather than your voice.</p>
@@ -747,10 +750,13 @@ than weeks of practice do. Trends need weeks.</p>
 Sprechen um die −20 dB anzeigt. Bis das stimmt, ist alles andere wertlos.</p>
 <p><b>Dann eine Nullmessung.</b> Den Übungstext einmal komplett lesen, als Typ
 „Lesetext". Zahlen notieren.</p>
-<p><b>Dann die Vokale.</b> Nimm den geführten Ablauf: er führt dich durch
-Summen und /a/, /i/, /u/, kürzt jede Aufnahme auf ihre ruhige Mitte und legt
-sie richtig ab. Das ergibt Formant- und Stabilitätswerte, die in zwei Monaten
-noch vergleichbar sind.</p>
+<p><b>Dann die Vokale.</b> Vier weitere Aufnahmen, jede mit passendem Typ: den
+Tonhöhentest (gehaltenes Summen, etwa vier Sekunden), dann /a/, /i/ und /u/ mit
+je etwa drei Sekunden. Jeden Laut so ruhig wie möglich halten. Das ergibt
+Formant- und Stabilitätswerte, die in zwei Monaten noch vergleichbar sind.</p>
+<p>Danach jede davon öffnen, „Erweitert“ aufklappen und den Bereich über die
+ruhige Mitte ziehen — der Anfang, in dem du den Laut noch suchst, und das Ende,
+in dem die Luft ausgeht, verzerren die Zahlen.</p>
 <p><b>Danach gilt:</b> zehn bis fünfzehn Minuten täglich schlagen zwei Stunden
 am Wochenende. Immer derselbe Text, dieselbe Mikrofonposition, dieselbe
 Vorlage — sonst misst du deinen Aufbau statt deiner Stimme.</p>

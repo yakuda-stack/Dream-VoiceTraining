@@ -4,7 +4,105 @@ Notable changes per release. Format follows
 [Keep a Changelog](https://keepachangelog.com/), versions follow
 [Semantic Versioning](https://semver.org/).
 
-## [1.0.4] — 02.09.26
+## [1.0.6] — unreleased
+
+### Removed
+
+- **The guided run is gone.** The toggle in the toolbar and the panel in the
+  Live tab have both been removed, along with their strings and styles. On some
+  setups the countdown could leave the panel hanging: the timer kept the stream
+  and the recording state to itself, and once that went wrong there was no way
+  out other than restarting the program. Everything it did can be done by hand
+  — pick a type, record, trim in *Advanced* — so a feature that freezes is
+  worse than no feature.
+
+### Added
+
+- **A recommended first round in the first-run introduction**, taking over what
+  the guided run used to explain: pitch test (a held hum, about four seconds),
+  then /a/, /i/ and /u/ at about three seconds each, every one as its own take
+  with its own type, plus the hint to select the calm middle in *Advanced*
+  afterwards. Reachable again at any time from *Settings → Info → Show
+  introduction again*.
+- **A pulsing golden ⓘ points at the control each page is about** — the
+  microphone list, the type box, the ⓘ in the toolbar, the Sessions tab, the
+  view button. It sits on the real main window rather than on a picture of it,
+  ignores mouse clicks so the control underneath stays usable, and survives a
+  language switch. Pages about the detail view, which is not open at that
+  moment, carry a screenshot with the same marker on the spot that matters.
+- **Four new introduction pages**: what F0, F1 and F2 mean and where the two
+  ⓘ buttons explain them; advanced mode, with the waveform, the draggable
+  region and why cutting out the calm middle is the whole point; making the
+  column layout yours, covering the header menu, dragging columns and the view
+  dialog; and what sits behind the settings button, tab by tab.
+- `packaging/make-intro-shots.py` renders the introduction screenshots from the
+  real interface with invented data, once per language. The marker positions
+  fall out of it: they are computed from where the tab, the Details button, the
+  row ⓘ, the Advanced toggle and the analyse button actually sit, and are
+  written to `assets/intro/shots.json`. Hand-taken screenshots go stale and are
+  always in one language.
+- Screenshots for those pages ship in `assets/intro` and are installed by all
+  four packaging paths. If they are missing, the pages stay readable without
+  pictures instead of failing.
+
+### Changed
+
+- **Picking a language on the first page moves straight on.** That page has one
+  job; making people confirm it with *Next* afterwards was a click for nothing.
+- The microphone page now says what to do in one line: pick the microphone from
+  the list, press Start, speak normally, watch the level card.
+- **The introduction window sizes itself to the page.** One fixed size for all
+  of them meant a page with three paragraphs sat in a window built for a
+  screenshot, three quarters empty. Text pages now open at roughly 760×380,
+  screenshot pages as wide as the picture needs. Heading and text stand in
+  their own 700 px column, so line length stays readable under a wider image.
+- **The introduction shows screenshots in the interface language**, and swaps
+  them when the language changes rather than keeping the pictures it was built
+  with.
+- **The settings dialog opens on Info.** That tab holds the version, the links,
+  the debug window and the button that shows the introduction again — what
+  people are looking for when they open settings without a specific parameter
+  in mind.
+- **Built-in analysis templates are no longer named in German in the English
+  interface.** They carried their German names in the code, so *Leises
+  Mikrofon* and *Formantmessung (Vokal halten)* showed up untranslated. They
+  now have keys and translated labels; an old name in an existing `config.json`
+  is migrated on load, so a saved selection survives the update.
+
+- **The About dialog is now an Info tab in the settings**, next to Design.
+  Version, links, licence, the note on network use and the file locations all
+  live there, and it is reading material rather than a window that wants
+  something, so a tab fits it better than a dialog.
+- The buttons that used to crowd the settings button row moved to the top of
+  that tab: **show introduction again**, debug window, copy system info and
+  open folder. The button row is back to OK, Cancel and Apply.
+- The debug button keeps its error counter and turns red there just as before.
+
+## [1.0.5] — unreleased
+
+### Added
+
+- **First-run introduction.** On the very first start the program asks for a
+  language and then walks through five short pages: set your level, pick a
+  recording type, where sessions and details live, where to look things up,
+  and one page on not training through pain. It is **not modal**, so the
+  microphone can be set up while reading. Reachable again at any time from
+  *Settings → Show introduction again*.
+
+### Changed
+
+- **Windows builds are now two single files.** `Dream-VoiceTraining.exe` for
+  the installer and `Dream-VoiceTraining-Portable.exe` for carrying around.
+  Neither needs an `_internal` folder or anything else beside it — one file is
+  the whole program.
+- The portable build keeps settings and recordings in a
+  `Dream-VoiceTraining-Data` folder next to the executable instead of under
+  `%APPDATA%`. It recognises portable mode by the file name, or by a
+  `portable.txt` placed beside it if the executable was renamed. If that
+  folder cannot be written — a read-only drive, or Program Files — it falls
+  back to the normal user folders rather than failing to start.
+
+## [1.0.4] — unreleased
 
 ### Added
 
@@ -21,7 +119,7 @@ Notable changes per release. Format follows
 - Full-text search across titles, bodies and keywords in the active language.
 - Written in English and German, switching with the interface.
 
-## [1.0.3] — 02.09.26
+## [1.0.3] — unreleased
 
 ### Added
 

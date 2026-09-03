@@ -25,27 +25,19 @@ Sessions hinweg dokumentiert.
 <table>
   <tr>
     <td><b>Live-Ansicht</b><br><img src="assets/dashboard.png" alt="Live-Ansicht" width="300"/></td>
-    <td><b>Geführter Ablauf</b><br><img src="assets/dashboard-guided.png" alt="Geführter Ablauf" width="300"/></td>
     <td><b>Sessionliste</b><br><img src="assets/sessions.png" alt="Sessionliste" width="300"/></td>
+    <td><b>Spaltenmenü</b><br><img src="assets/sessions-columns.png" alt="Spaltenmenü" width="300"/></td>
   </tr>
   <tr>
-    <td><b>Spaltenmenü</b><br><img src="assets/sessions-columns.png" alt="Spaltenmenü" width="300"/></td>
     <td><b>Aufnahme im Detail</b><br><img src="assets/details.png" alt="Detailansicht" width="300"/></td>
     <td><b>Einstellungen · Analyse</b><br><img src="assets/settings-analysis.png" alt="Analyse" width="300"/></td>
-  </tr>
-  <tr>
     <td><b>Einstellungen · Zielprofile</b><br><img src="assets/settings-profiles.png" alt="Zielprofile" width="300"/></td>
-    <td></td>
-    <td></td>
   </tr>
 </table>
 
 **Live-Ansicht** — alles in einer Leiste: Sprache, Mikrofon, Aufnahmetyp,
-Zielstimme, geführter Ablauf. Darunter die Kacheln, der Zonenbalken, das
-Spektrogramm mit markiertem F1 und F2, der Tonhöhenverlauf und der Übungstext.
-
-**Geführter Ablauf** — ein Bereich im Live-Reiter statt eines Fensters, damit
-das Spektrogramm weiterläuft, während du einen Laut hältst.
+Zielstimme. Darunter die Kacheln, der Zonenbalken, das Spektrogramm mit
+markiertem F1 und F2, der Tonhöhenverlauf und der Übungstext.
 
 **Sessionliste** — Rechtsklick auf eine Zeile für Details, Wiedergabe,
 Umbenennen, Löschen oder nachträgliches Ändern des Aufnahmetyps. Aufnahmen ohne
@@ -127,13 +119,24 @@ Summen), /a/, /i/, /u/ oder frei abgelegt. Vor der Aufnahme wählbar und als
 Spalte sortierbar, damit ein gehaltener Vokal nie mit fließender Sprache
 verrechnet wird.
 
-**Geführter Ablauf.** Ein Umschalter, standardmäßig aus, der eine schmale
-Leiste im Live-Reiter zeigt statt eines Fensters vor der Nase. Er führt mit
-Countdown durch Summen, /a/, /i/ und /u/, kürzt jede Aufnahme auf ihren
-ruhigsten Abschnitt und legt sie ab, während Kennzahlen und Spektrogramm
-daneben weiterlaufen. Genau
-dieser Schritt macht Formanten, Jitter und Shimmer zwischen Sessions
-vergleichbar — und genau den lässt man sonst weg.
+**Einführung beim ersten Start.** Beim allerersten Start fragt das Programm
+nach der Sprache — ein Klick darauf blättert gleich weiter — und zeigt dann
+neun kurze Seiten: Pegel und Mikrofon, Aufnahmetypen, eine Empfehlung für die
+erste Runde (Tonhöhentest, dann /a/, /i/ und /u/, jeweils als eigene Aufnahme),
+wo du nachschlägst, was F0 und die Formanten sind, die Sessionliste, der
+erweiterte Modus, das Anpassen der Spalten, was hinter dem Einstellungsknopf
+steckt, und eine Seite darüber, nicht gegen Schmerz zu trainieren. Jede Seite
+öffnet in der Größe, die sie braucht, statt alle in derselben.
+
+Solange eine Seite offen ist, sitzt ein **pulsierendes goldenes ⓘ** auf dem
+Bedienelement, um das es gerade geht — Mikrofonliste, Typ-Auswahl, das ⓘ in der
+Leiste, der Sessions-Reiter, der Ansichtsknopf —, damit niemand suchen muss.
+Seiten über die Detailansicht bringen ein Bildschirmfoto in der Sprache der
+Oberfläche mit, mit derselben Marke an der entscheidenden Stelle;
+`packaging/make-intro-shots.py` erzeugt diese Fotos neu aus der echten
+Oberfläche. Die Einführung ist nicht modal, das Mikrofon
+lässt sich also nebenher einstellen, und sie ist jederzeit wieder über
+*Einstellungen → Info → Einführung erneut zeigen* erreichbar.
 
 **Sessionliste.** Klick auf eine Spaltenüberschrift sortiert, erneuter Klick
 dreht um. Rechtsklick auf eine Zeile für Details, Wiedergabe, Umbenennen oder
@@ -165,6 +168,10 @@ oder auf die Literaturwerte zurücksetzen.
 **Themen.** Acht eingebaute Farbschemata, jede Farbrolle einzeln änderbar,
 dazu ein optionales Hintergrundbild mit einstellbarer Durchsichtigkeit der
 Flächen.
+
+**Info-Reiter.** Version, Lizenz, Links und wo deine Dateien liegen, mit
+Knöpfen für die Einführung, das Debugprotokoll und das Kopieren der
+Systeminfos für einen Fehlerbericht.
 
 **Nachschlagewerk.** Das ⓘ in der Leiste öffnet neunzehn Themen, die
 erklären, was jede Zahl bedeutet und was sie physikalisch verändert — nicht
@@ -249,6 +256,20 @@ und `makepkg` kennt nur pacman. Mit yay: `yay -Bi .`
 Scheitert der Praat-Bau nach einem Python-Sprung in Arch, nimm stattdessen
 `PKGBUILD.python-praat-parselmouth-bin` — das installiert das offizielle Wheel
 und braucht keinen Compiler.
+
+### Windows
+
+Zwei einzelne Dateien unter
+[Releases](https://github.com/yakuda-stack/Dream-VoiceTraining/releases):
+
+- **`Dream-VoiceTraining-<version>-setup.exe`** — installiert ins
+  Benutzerprofil, legt einen Startmenüeintrag an, braucht keine
+  Administratorrechte.
+- **`Dream-VoiceTraining-Portable.exe`** — von überall startbar. Einstellungen
+  und Aufnahmen landen in einem Ordner `Dream-VoiceTraining-Data` neben der
+  EXE, auf einem USB-Stick bleibt also alles beisammen.
+
+Beide brauchen weder einen `_internal`-Ordner noch sonst eine Datei daneben.
 
 ### AppImage
 

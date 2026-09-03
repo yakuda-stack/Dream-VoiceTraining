@@ -41,12 +41,13 @@ import sys
 from pathlib import Path
 
 WINDOWS = sys.platform.startswith("win")
+FROZEN = getattr(sys, "frozen", False)
 # PyInstaller entpackt die Beigaben in einen temporaeren Ordner.
-BUNDLE_DIR = Path(getattr(sys, "_MEIPASS", "")) if getattr(sys, "frozen", False) else None
+BUNDLE_DIR = Path(getattr(sys, "_MEIPASS", "")) if FROZEN else None
 
 APP_ID = "dream-voicetraining"
 APP_NAME = "Dream-VoiceTraining"
-APP_VERSION = "1.0.4"
+APP_VERSION = "1.0.6"
 
 APP_URL = "https://github.com/yakuda-stack/Dream-VoiceTraining"
 ISSUES_URL = APP_URL + "/issues"
@@ -98,6 +99,27 @@ def icon_file() -> Path | None:
             return candidate
     return None
 
+def intro_shot(name: str) -> Path | None:
+    """Bildschirmfoto fuer die Einfuehrung suchen.
+
+    Liegt im Quellordner unter assets/intro und wird von den Paketen daneben
+    installiert. Wer nur die .py-Dateien kopiert, bekommt None zurueck und
+    die Einfuehrung zeigt die Seite ohne Bild — das ist kein Fehlerfall.
+    """
+    candidates = []
+    if BUNDLE_DIR is not None:
+        candidates.append(BUNDLE_DIR / "assets" / "intro" / name)
+    here = Path(__file__).resolve().parent
+    candidates += [
+        here / "assets" / "intro" / name,
+        Path(f"/usr/share/{APP_ID}/assets/intro") / name,
+    ]
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate
+    return None
+
+
 ENV_OVERRIDE = "DREAM_VOICETRAINING_HOME"
 
 # Frueher benutzte Orte, aus denen beim Start uebernommen wird.
@@ -114,7 +136,40 @@ def _windows_dir(variable: str, fallback: str) -> Path:
     return Path(base) if base else Path.home() / "AppData" / fallback
 
 
+def _portable_root() -> Path | None:
+    """Ordner neben der EXE, wenn portabel gestartet.
+
+    Erkannt an einer Datei "portable.txt" neben der EXE oder daran, dass der
+    Dateiname auf "portable" endet. Laesst sich der Ordner nicht beschreiben —
+    schreibgeschuetzter Datentraeger, Programme-Verzeichnis —, faellt alles
+    auf die normalen Benutzerordner zurueck, statt beim Start zu scheitern.
+    """
+    if not FROZEN:
+        return None
+
+    executable = Path(sys.executable).resolve()
+    marker = executable.parent / "portable.txt"
+    if not (marker.is_file() or "portable" in executable.stem.lower()):
+        return None
+
+    root = executable.parent / f"{APP_NAME}-Data"
+    try:
+        root.mkdir(parents=True, exist_ok=True)
+        probe = root / ".writetest"
+        probe.write_text("", encoding="utf-8")
+        probe.unlink()
+    except OSError:
+        return None
+    return root
+
+
+PORTABLE_ROOT = _portable_root()
+PORTABLE = PORTABLE_ROOT is not None
+
+
 def _roots() -> tuple[Path, Path]:
+    if PORTABLE_ROOT is not None:
+        return PORTABLE_ROOT, PORTABLE_ROOT
     override = os.environ.get(ENV_OVERRIDE)
     if override:
         root = Path(override).expanduser()

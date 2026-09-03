@@ -18,8 +18,8 @@ def test_alle_typen_sind_uebersetzt():
     i18n.set_language("en")
 
 
-def test_gefuehrter_ablauf_nur_gehaltene_laute():
-    for key in rectypes.GUIDED:
+def test_empfohlene_runde_nur_gehaltene_laute():
+    for key in rectypes.RECOMMENDED:
         kind = rectypes.get(key)
         assert kind.sustained is True, key
         assert kind.seconds and kind.seconds >= 3.0, key

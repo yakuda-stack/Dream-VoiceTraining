@@ -59,8 +59,9 @@ import theming
 from theming import COLORS as NORD
 import audio as audio_mod
 from audio import DEFAULT_KEY, AudioEngine, write_wav
-from dialogs import (FilterDialog, HelpDialog, GuidedPanel, SessionDetailDialog,
-                     SettingsDialog, ask_export_language, export_language)
+from dialogs import (FilterDialog, HelpDialog, IntroDialog, SessionDetailDialog,
+                     SettingsDialog, Spotlight, ask_export_language,
+                     export_language)
 from settings import CFG
 
 APP_DIR = Path(__file__).resolve().parent
@@ -244,6 +245,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self._action_column = None
         self._dialogs: list[QtWidgets.QDialog] = []
         self.version_label = None
+        # Die Marke der Einfuehrung haengt am Fenster, nicht am Reiterinhalt:
+        # so ueberlebt sie einen Neuaufbau der Oberflaeche.
+        self._spot = None
+        self._spot_key = ""
 
         self.ui_language = i18n.LANG
         self._build_ui()
@@ -334,11 +339,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self._fill_profiles()
         self.profile_box.currentIndexChanged.connect(self._profile_chosen)
 
-        self.btn_guided = QtWidgets.QPushButton(i18n.t("guided"))
-        self.btn_guided.setObjectName("guided")
-        self.btn_guided.setCheckable(True)
-        self.btn_guided.toggled.connect(self._toggle_guided)
-
         self.btn_settings = QtWidgets.QPushButton("⚙  " + i18n.t("settings"))
         self.btn_settings.clicked.connect(self._open_settings)
 
@@ -362,7 +362,6 @@ class MainWindow(QtWidgets.QMainWindow):
         bar.addSpacing(10)
         bar.addWidget(QtWidgets.QLabel(i18n.t("target_voice")))
         bar.addWidget(self.profile_box)
-        bar.addWidget(self.btn_guided)
         bar.addSpacing(10)
         bar.addWidget(self.btn_settings)
         bar.addWidget(self.btn_help)
@@ -443,11 +442,6 @@ class MainWindow(QtWidgets.QMainWindow):
         pgl.addWidget(self.pitch_plot)
         root.addWidget(pitch_group, 2)
 
-        self.guided_panel = GuidedPanel(self.engine, self.store_recording, page)
-        self.guided_panel.setVisible(False)
-        self.guided_panel.finished.connect(self._guided_finished)
-        root.addWidget(self.guided_panel)
-
         # Uebungstext
         text_group = QtWidgets.QGroupBox(i18n.t("practice_text"))
         tg = QtWidgets.QVBoxLayout(text_group)
@@ -468,6 +462,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.count_label.setStyleSheet(f"color: {NORD['dim']};")
         btn_filter = QtWidgets.QPushButton(i18n.t("filter"))
         btn_filter.clicked.connect(self._open_filter)
+        self.btn_filter = btn_filter
         btn_export = QtWidgets.QPushButton(i18n.t("export_list"))
         btn_export.clicked.connect(self._export_list)
         bar.addWidget(self.count_label, 1)
@@ -1033,7 +1028,6 @@ class MainWindow(QtWidgets.QMainWindow):
     def _rebuild_keeping_state(self) -> None:
         was_running = self.engine.running
         was_recording = self.engine.is_recording
-        guided = self.btn_guided.isChecked() if hasattr(self, "btn_guided") else False
 
         self._build_ui()
         self._refresh_devices()
@@ -1047,8 +1041,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.status.showMessage(i18n.t("running", rate=self.sr))
         if was_recording:
             self.btn_record.setText(i18n.t("stop"))
-        if guided:
-            self.btn_guided.setChecked(True)
+        self.show_spotlight(self._spot_key)
 
     # -- Dialoge ----------------------------------------------------------
 
@@ -1105,6 +1098,61 @@ class MainWindow(QtWidgets.QMainWindow):
 
     # -- Einstellungen ----------------------------------------------------
 
+    def show_intro(self, ask_language: bool = True) -> None:
+        for dialog in self._dialogs:
+            if isinstance(dialog, IntroDialog):
+                dialog.raise_()
+                dialog.activateWindow()
+                return
+        dialog = IntroDialog(self, ask_language)
+        dialog.language_chosen.connect(self._set_language)
+        dialog.spotlight.connect(self.show_spotlight)
+        dialog.finished.connect(lambda _=0: self.show_spotlight(""))
+        self.open_dialog(dialog)
+
+    # -- Wegweiser der Einfuehrung ----------------------------------------
+
+    def show_spotlight(self, key: str) -> None:
+        """Goldene Marke auf das Bedienelement setzen, um das es gerade geht.
+
+        Die Einfuehrung nennt nur einen Schluessel; welches Widget dahinter
+        steckt, weiss allein das Hauptfenster. Ein unbekannter Schluessel
+        nimmt die Marke weg, statt zu scheitern.
+        """
+        self._spot_key = key or ""
+        if self._spot is None:
+            if not self._spot_key:
+                return
+            self._spot = Spotlight(self)
+
+        target, anchor = self._spot_target(self._spot_key)
+        if target is None:
+            self._spot.detach()
+            return
+        # Der Ansichtsknopf liegt im Sessions-Reiter. Bleibt der Live-Reiter
+        # vorn, zeigt die Marke auf etwas Unsichtbares, also aufblaettern.
+        if self._spot_key == "filter":
+            self.tabs.setCurrentIndex(1)
+        self._spot.attach(target, anchor)
+
+    def _spot_target(self, key: str):
+        if key == "microphone":
+            return self.device_box, None
+        if key == "type":
+            return self.type_box, None
+        if key == "help":
+            return self.btn_help, lambda w: QtCore.QPoint(w.width() // 2,
+                                                          w.height() // 2)
+        if key == "settings":
+            return self.btn_settings, None
+        if key == "filter":
+            return getattr(self, "btn_filter", None), None
+        if key == "sessions":
+            bar = self.tabs.tabBar()
+            return bar, lambda w: QtCore.QPoint(w.tabRect(1).right(),
+                                                w.tabRect(1).top() + 8)
+        return None, None
+
     def _open_help(self, topic: str | None = None) -> None:
         """Nicht modal: nachschlagen waehrend der Aufnahme, nicht statt ihr."""
         for dialog in self._dialogs:
@@ -1120,6 +1168,7 @@ class MainWindow(QtWidgets.QMainWindow):
         dialog = SettingsDialog(self)
         dialog.applied.connect(self._apply_settings)
         dialog.theme_changed.connect(self.apply_theme)
+        dialog.intro_requested.connect(self.show_intro)
         self.open_dialog(dialog)
 
     def _apply_settings(self) -> None:
@@ -1130,7 +1179,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.pitch_plot.setYRange(lo, hi, padding=0)
         self.zone_bar.update()
         self.f0_smooth.clear()
-        name = settings.active_template()
+        name = settings.template_label(settings.active_template())
         self.status.showMessage(i18n.t("settings_applied", name=name))
 
     # -- Geraete / Stream -------------------------------------------------
@@ -1426,30 +1475,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self._fill_session_table()
         return entry
 
-    def _toggle_guided(self, active: bool) -> None:
-        """Standardmaessig aus. Eingeschaltet erscheint eine Leiste im
-        Live-Reiter statt eines Fensters vor der Nase."""
-        if not active:
-            self.guided_panel.stop()
-            self.guided_panel.setVisible(False)
-            self.status.clearMessage()
-            return
-
-        if not self.engine.running:
-            QtWidgets.QMessageBox.information(
-                self, i18n.t("guided_title"), i18n.t("guided_needs_stream"))
-            self.btn_guided.setChecked(False)
-            return
-        if self.engine.is_recording:
-            self._toggle_record()
-
-        self.guided_panel.reset()
-        self.guided_panel.setVisible(True)
-
-    def _guided_finished(self) -> None:
-        # Die Leiste bleibt mit dem Ergebnis stehen, bis abgeschaltet wird.
-        self.btn_record.setEnabled(True)
-
     def _load_sessions(self) -> list[dict]:
         if not SESSION_INDEX.exists():
             return []
@@ -1499,10 +1524,14 @@ def main() -> int:
     if not paths.CONFIG_PATH.exists():
         settings.save()      # beim ersten Start eine Datei anlegen
     win = MainWindow()
+    first_run = not settings.get_intro_done()
     if moved:
         win.status.showMessage(
             f"{len(moved)} file(s) moved to {paths.CONFIG_DIR}")
     win.show()
+    if first_run:
+        # Erst nach show(), sonst steht der Assistent hinter dem Fenster.
+        QtCore.QTimer.singleShot(0, win.show_intro)
     return app.exec()
 
 

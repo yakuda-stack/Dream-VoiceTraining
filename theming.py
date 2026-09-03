@@ -297,7 +297,6 @@ def stylesheet() -> str:
         arrow_rules = ""
 
     accent_text = contrast_text(c["accent"])
-    accent_light = lighten(c["accent"], 0.35)
     hover = lighten(c["bg3"], 0.10)
 
     return f"""
@@ -319,9 +318,6 @@ QPushButton#help {{ font-size: 16px; padding: 6px 0; color: {c['accent']}; }}
 QPushButton#rowaction, QPushButton#danger {{ padding: 5px 12px; font-weight: 500; }}
 QPushButton#danger {{ background: {inner}; color: {c['red']}; }}
 QPushButton#danger:hover {{ background: {c['red']}; color: {c['fg']}; }}
-QPushButton#guided:checked {{ background: {accent_light}; color: {accent_text};
-    font-weight: 700; border: 1px solid {c['accent']}; }}
-QPushButton#guided:checked:hover {{ background: {lighten(c['accent'], 0.5)}; }}
 QPushButton#langleft, QPushButton#langright {{ padding: 8px 0; font-size: 11px;
     background: {card}; color: {c['dim']}; border-radius: 0; }}
 QPushButton#langleft {{ border-top-left-radius: 6px; border-bottom-left-radius: 6px; }}

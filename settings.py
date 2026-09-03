@@ -85,30 +85,45 @@ PARAMS = [
     Param("min_voiced_ratio", "", 0.00, 0.60, 0.05, 2),
 ]
 
+# Schluessel, keine Namen: der Name steht uebersetzt in i18n und der
+# Schluessel landet in der Konfiguration. Frueher standen hier deutsche
+# Namen, die in der englischen Oberflaeche deutsch blieben.
 BUILTIN_TEMPLATES: dict[str, Settings] = {
-    "Standard": Settings(),
-    "Leises Mikrofon": Settings(
+    "standard": Settings(),
+    "quiet_mic": Settings(
         silence_rms=0.0006, pitch_floor=60.0, pitch_ceiling=500.0,
         formant_ceiling=5000.0),
-    "Tiefe Stimme / Baseline": Settings(
+    "low_voice": Settings(
         silence_rms=0.0015, pitch_floor=50.0, pitch_ceiling=350.0,
         formant_ceiling=5000.0),
-    "Hohe Stimme": Settings(
+    "high_voice": Settings(
         silence_rms=0.0020, pitch_floor=100.0, pitch_ceiling=600.0,
         formant_ceiling=5500.0),
-    "Formantmessung (Vokal halten)": Settings(
+    "formants": Settings(
         silence_rms=0.0040, pitch_floor=60.0, pitch_ceiling=400.0,
         formant_ceiling=5000.0, voicing_threshold=0.70),
-    "Lautes Umfeld / strenger": Settings(
+    "noisy": Settings(
         silence_rms=0.0030, pitch_floor=70.0, pitch_ceiling=500.0,
         formant_ceiling=5000.0, voicing_threshold=0.80, min_voiced_ratio=0.25),
+}
+
+DEFAULT_TEMPLATE = "standard"
+
+# Was bis 1.0.6 in der Konfiguration stand.
+LEGACY_TEMPLATES = {
+    "Standard": "standard",
+    "Leises Mikrofon": "quiet_mic",
+    "Tiefe Stimme / Baseline": "low_voice",
+    "Hohe Stimme": "high_voice",
+    "Formantmessung (Vokal halten)": "formants",
+    "Lautes Umfeld / strenger": "noisy",
 }
 
 # Aktive Konfiguration. analysis.py liest hier zur Laufzeit.
 CFG = Settings()
 
-_state = {"active_template": "Standard", "user_templates": {}, "device": None, "language": "en", "profile": "feminin", "live_profile": "none",
-          "view": {}, "user_profiles": {}, "theme": {},
+_state = {"active_template": DEFAULT_TEMPLATE, "user_templates": {}, "device": None, "language": "en", "profile": "feminin", "live_profile": "none",
+          "view": {}, "user_profiles": {}, "theme": {}, "intro_done": False,
           "builtin_overrides": {},
           "warn_low_level": True, "recording_type": "reading"}
 
@@ -236,6 +251,16 @@ def set_recording_type(key: str) -> None:
         save()
 
 
+def get_intro_done() -> bool:
+    return bool(_state["intro_done"])
+
+
+def set_intro_done(done: bool) -> None:
+    if _state["intro_done"] != bool(done):
+        _state["intro_done"] = bool(done)
+        save()
+
+
 def get_theme() -> dict:
     return dict(_state["theme"])
 
@@ -264,6 +289,17 @@ def is_builtin(name: str) -> bool:
     return name in BUILTIN_TEMPLATES
 
 
+def template_label(name: str) -> str:
+    """Anzeigename einer Vorlage.
+
+    Eingebaute Vorlagen tragen einen Schluessel und werden uebersetzt,
+    eigene heissen so, wie der Benutzer sie genannt hat.
+    """
+    if name in BUILTIN_TEMPLATES:
+        return i18n.t(f"tpl_{name}")
+    return name
+
+
 def active_template() -> str:
     return _state["active_template"]
 
@@ -282,7 +318,7 @@ def delete_template(name: str) -> bool:
     if name in _state["user_templates"]:
         del _state["user_templates"][name]
         if _state["active_template"] == name:
-            _state["active_template"] = "Standard"
+            _state["active_template"] = DEFAULT_TEMPLATE
         save()
         return True
     return False
@@ -306,13 +342,15 @@ def load() -> None:
         clean = {k: float(v) for k, v in data.items() if k in known}
         templates[name] = Settings(**{**asdict(Settings()), **clean}).clamped()
     _state["user_templates"] = templates
-    _state["active_template"] = raw.get("active_template", "Standard")
+    active = raw.get("active_template", DEFAULT_TEMPLATE)
+    _state["active_template"] = LEGACY_TEMPLATES.get(active, active)
     _state["device"] = raw.get("device")
     _state["language"] = raw.get("language", "en")
     _state["profile"] = raw.get("profile", "feminin")
     _state["live_profile"] = raw.get("live_profile", "none")
     stored = raw.get("view")
     _state["view"] = stored if isinstance(stored, dict) else {}
+    _state["intro_done"] = bool(raw.get("intro_done", False))
     theme = raw.get("theme")
     _state["theme"] = theme if isinstance(theme, dict) else {}
     profiles = raw.get("user_profiles")
@@ -340,6 +378,7 @@ def save() -> None:
         "view": _state["view"],
         "user_profiles": _state["user_profiles"],
         "theme": _state["theme"],
+        "intro_done": _state["intro_done"],
         "builtin_overrides": _state["builtin_overrides"],
         "warn_low_level": _state["warn_low_level"],
         "recording_type": _state["recording_type"],

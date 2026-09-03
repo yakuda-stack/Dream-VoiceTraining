@@ -32,7 +32,7 @@ import i18n
 @dataclass(frozen=True)
 class RecordingType:
     key: str
-    seconds: float | None = None      # Vorgabe fuer den gefuehrten Ablauf
+    seconds: float | None = None      # empfohlene Laenge fuer gehaltene Laute
     sustained: bool = False           # gehaltener Laut, Mitte ausschneidbar
 
     @property
@@ -56,8 +56,10 @@ TYPES = [
 BY_KEY = {t.key: t for t in TYPES}
 DEFAULT = "reading"
 
-# Reihenfolge des gefuehrten Ablaufs
-GUIDED = ["hum", "vowel_a", "vowel_i", "vowel_u"]
+# Empfohlene Reihenfolge fuer die erste Runde: Tonhoehentest, dann die drei
+# Vokale. Alle vier sind gehaltene Laute und damit die Aufnahmen, aus denen
+# ueber Wochen vergleichbare Formant- und Stabilitaetswerte entstehen.
+RECOMMENDED = ["hum", "vowel_a", "vowel_i", "vowel_u"]
 
 
 def get(key: str | None) -> RecordingType:

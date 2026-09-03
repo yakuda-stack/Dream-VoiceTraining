@@ -126,6 +126,15 @@ STRINGS: dict[str, dict[str, str]] = {
     # --- Einstellungsdialog ---
     "dlg_settings": {"en": "Settings", "de": "Einstellungen"},
     "template": {"en": "Template", "de": "Vorlage"},
+    "tpl_standard": {"en": "Standard", "de": "Standard"},
+    "tpl_quiet_mic": {"en": "Quiet microphone", "de": "Leises Mikrofon"},
+    "tpl_low_voice": {"en": "Low voice / baseline",
+                      "de": "Tiefe Stimme / Baseline"},
+    "tpl_high_voice": {"en": "High voice", "de": "Hohe Stimme"},
+    "tpl_formants": {"en": "Formant measurement (hold a vowel)",
+                     "de": "Formantmessung (Vokal halten)"},
+    "tpl_noisy": {"en": "Noisy surroundings / stricter",
+                  "de": "Lautes Umfeld / strenger"},
     "save_as": {"en": "Save as …", "de": "Speichern unter …"},
     "parameters": {"en": "Parameters", "de": "Parameter"},
     "custom_values": {"en": "— custom values —", "de": "— eigene Werte —"},
@@ -372,31 +381,6 @@ STRINGS: dict[str, dict[str, str]] = {
                        "de": "Alles andere — Gespräch, ein Satz, ein Versuch."},
     "recording_type": {"en": "Type", "de": "Typ"},
 
-    "guided": {"en": "Guided run", "de": "Geführter Ablauf"},
-    "guided_title": {"en": "Guided vowel run", "de": "Geführter Vokal-Ablauf"},
-    "guided_intro": {
-        "en": "Four short recordings in a row: a hum, then /a/, /i/ and /u/. "
-              "Each one is trimmed to its stable middle automatically, which is "
-              "what makes formants and jitter comparable between sessions.",
-        "de": "Vier kurze Aufnahmen nacheinander: erst summen, dann /a/, /i/ und "
-              "/u/. Jede wird automatisch auf ihre stabile Mitte gekürzt — genau "
-              "das macht Formanten und Jitter zwischen Sessions vergleichbar."},
-    "guided_step": {"en": "Step {step} of {total}", "de": "Schritt {step} von {total}"},
-    "guided_ready": {"en": "Hold it steady when the countdown ends.",
-                     "de": "Halte ihn ruhig, sobald der Countdown durch ist."},
-    "guided_get_ready": {"en": "Get ready … {seconds}", "de": "Gleich geht’s los … {seconds}"},
-    "guided_recording": {"en": "Recording … {seconds} s left",
-                         "de": "Aufnahme … noch {seconds} s"},
-    "guided_saved": {"en": "Saved, trimmed to {length:.1f} s.",
-                     "de": "Gespeichert, auf {length:.1f} s gekürzt."},
-    "guided_skip": {"en": "Skip", "de": "Überspringen"},
-    "guided_next": {"en": "Start", "de": "Starten"},
-    "guided_done": {"en": "Done. {count} recordings added.",
-                    "de": "Fertig. {count} Aufnahmen hinzugefügt."},
-    "guided_needs_stream": {
-        "en": "Start the microphone on the Live tab first.",
-        "de": "Starte zuerst das Mikrofon im Live-Reiter."},
-
     "level_live_warning": {
         "en": "Level low ({level:.0f} dBFS) — the analysis may find no usable "
               "voice. Raise the gain or move closer.",
@@ -405,6 +389,7 @@ STRINGS: dict[str, dict[str, str]] = {
     "change_type": {"en": "Change type", "de": "Typ ändern"},
 
     "tab_analysis": {"en": "Analysis", "de": "Analyse"},
+    "tab_info": {"en": "Info", "de": "Info"},
     "tab_design": {"en": "Design", "de": "Design"},
     "design_hint": {
         "en": "Pick a theme, then recolour anything you like or drop an image "
@@ -551,6 +536,286 @@ STRINGS: dict[str, dict[str, str]] = {
         "de": "In welcher Sprache soll die Datei geschrieben werden?"},
     "language_de": {"en": "German", "de": "Deutsch"},
     "language_en": {"en": "English", "de": "Englisch"},
+    "intro_title": {"en": "Welcome", "de": "Willkommen"},
+    "intro_language": {"en": "Choose your language",
+                       "de": "Sprache wählen"},
+    "intro_language_body": {
+        "en": "You can change this at any time with the EN/DE switch in the "
+              "toolbar.",
+        "de": "Lässt sich jederzeit über den EN/DE-Schalter in der Leiste "
+              "ändern."},
+    "intro_step": {"en": "Step {step} of {total}", "de": "Schritt {step} von {total}"},
+    "intro_next": {"en": "Next", "de": "Weiter"},
+    "intro_back": {"en": "Back", "de": "Zurück"},
+    "intro_skip": {"en": "Skip", "de": "Überspringen"},
+    "intro_done": {"en": "Get started", "de": "Los geht’s"},
+    "intro_restart": {"en": "Show introduction again",
+                      "de": "Einführung erneut zeigen"},
+
+    "intro_level_title": {"en": "Set your level first",
+                          "de": "Zuerst den Pegel richten"},
+    "intro_level_body": {
+        "en": "<p>Pick the microphone from the list and press <b>Start</b>. "
+              "Speak normally and watch the level card.</p>"
+              "<p>The pulsing golden ⓘ in the main window points at the "
+              "control this page is about — it moves along as you go through "
+              "these pages.</p>"
+              "<p>Aim for roughly <b>−20 dB</b>. Below −40 dB the analysis "
+              "stops being trustworthy — it will report noise as a voice, or "
+              "refuse to report anything at all.</p>"
+              "<p>Raise the input in <code>pavucontrol</code> or sit closer, "
+              "about a hand's width away and slightly off to the side.</p>",
+        "de": "<p>Wähle das Mikrofon aus der Liste und drücke <b>Start</b>. "
+              "Sprich normal und schaue auf den Kachelpegel.</p>"
+              "<p>Das pulsierende goldene ⓘ im Hauptfenster zeigt auf das "
+              "Bedienelement, um das es auf dieser Seite geht — es wandert "
+              "mit, während du weiterblätterst.</p>"
+              "<p>Ziel sind rund <b>−20 dB</b>. Unter −40 dB wird die "
+              "Auswertung unzuverlässig — sie hält dann Rauschen für Stimme "
+              "oder verweigert die Werte ganz.</p>"
+              "<p>Zieh den Eingang in <code>pavucontrol</code> hoch oder setz "
+              "dich näher, etwa eine Handbreit und leicht seitlich.</p>"},
+
+    "intro_record_title": {"en": "Record with a type",
+                           "de": "Aufnehmen mit Typ"},
+    "intro_record_body": {
+        "en": "<p>Before recording, pick a <b>type</b>: reading text, a held "
+              "hum, or one of the vowels. The type decides what the numbers "
+              "are worth later — a median over reading text and a held vowel "
+              "measure different things.</p>"
+              "<p>The type can still be changed afterwards from the row's "
+              "context menu, so a take filed under the wrong one is not "
+              "lost.</p>",
+        "de": "<p>Vor der Aufnahme einen <b>Typ</b> wählen: Lesetext, "
+              "gehaltenes Summen oder einen der Vokale. Der Typ entscheidet, "
+              "was die Zahlen später wert sind — ein Median über Lesetext und "
+              "ein gehaltener Vokal messen verschiedene Dinge.</p>"
+              "<p>Der Typ lässt sich später über das Kontextmenü der Zeile "
+              "ändern, eine falsch abgelegte Aufnahme ist also nicht "
+              "verloren.</p>"},
+
+    "intro_first_title": {"en": "A good first round",
+                          "de": "Eine gute erste Runde"},
+    "intro_first_body": {
+        "en": "<p>Once the level sits right, record these four, one after the "
+              "other, each as its own take:</p>"
+              "<ul>"
+              "<li><b>Pitch test (hum)</b> — a held “mmm” at a comfortable "
+              "pitch, about four seconds.</li>"
+              "<li><b>Vowel /a/</b> — a held “ah”, about three seconds.</li>"
+              "<li><b>Vowel /i/</b> — a held “ee”, about three seconds.</li>"
+              "<li><b>Vowel /u/</b> — a held “oo”, about three seconds.</li>"
+              "</ul>"
+              "<p>Pick the matching type before each one, hold the sound as "
+              "steadily as you can, and breathe in between. Held sounds are "
+              "what make formants, jitter and shimmer comparable between "
+              "sessions — connected speech moves too much for that.</p>"
+              "<p>Beginning and end of a take are always a bit unsteady. In "
+              "the detail view, <b>Advanced</b> lets you drag a region over "
+              "the calm middle and analyse only that.</p>"
+              "<p>Reading the practice text once as <b>Reading text</b> is a "
+              "good baseline on top of that.</p>",
+        "de": "<p>Wenn der Pegel stimmt, nimm diese vier nacheinander auf, "
+              "jede als eigene Aufnahme:</p>"
+              "<ul>"
+              "<li><b>Tonhöhentest (Summen)</b> — ein gehaltenes „mhh“ in "
+              "bequemer Lage, etwa vier Sekunden.</li>"
+              "<li><b>Vokal /a/</b> — ein gehaltenes „ah“, etwa drei "
+              "Sekunden.</li>"
+              "<li><b>Vokal /i/</b> — ein gehaltenes „ih“, etwa drei "
+              "Sekunden.</li>"
+              "<li><b>Vokal /u/</b> — ein gehaltenes „uh“, etwa drei "
+              "Sekunden.</li>"
+              "</ul>"
+              "<p>Vor jeder Aufnahme den passenden Typ wählen, den Laut so "
+              "ruhig wie möglich halten und dazwischen durchatmen. Gehaltene "
+              "Laute sind das, was Formanten, Jitter und Shimmer zwischen "
+              "Sessions vergleichbar macht — fließende Sprache bewegt sich "
+              "dafür zu stark.</p>"
+              "<p>Anfang und Ende einer Aufnahme sind immer etwas unruhig. In "
+              "der Detailansicht kannst du unter <b>Erweitert</b> einen "
+              "Bereich über die ruhige Mitte ziehen und nur den auswerten.</p>"
+              "<p>Den Übungstext einmal als <b>Lesetext</b> zu lesen ist "
+              "zusätzlich eine gute Nullmessung.</p>"},
+
+    "intro_sessions_title": {"en": "Sessions and details",
+                             "de": "Sessions und Details"},
+    "intro_sessions_body": {
+        "en": "<p>Every recording lands in the <b>Sessions</b> tab — the "
+              "second tab at the top left, marked below. Click a column "
+              "header to sort, right-click a row for playback, renaming or "
+              "deletion.</p>"
+              "<p><b>Details</b> at the end of a row opens that recording: "
+              "all eighteen metrics, each checked against your target "
+              "profile, and optionally compared against another take.</p>"
+              "<p>Recordings without a usable voice say so instead of showing "
+              "invented numbers.</p>",
+        "de": "<p>Jede Aufnahme landet im Reiter <b>Sessions</b> — der zweite "
+              "Reiter oben links, unten markiert. Klick auf eine "
+              "Spaltenüberschrift sortiert, Rechtsklick auf eine Zeile bietet "
+              "Wiedergabe, Umbenennen und Löschen.</p>"
+              "<p><b>Details</b> am Ende einer Zeile öffnet die Aufnahme: "
+              "alle achtzehn Kennwerte, jeder gegen dein Zielprofil geprüft "
+              "und auf Wunsch mit einer anderen Aufnahme verglichen.</p>"
+              "<p>Aufnahmen ohne verwertbare Stimme sagen das auch, statt "
+              "erfundene Zahlen zu zeigen.</p>"},
+
+    "intro_advanced_title": {"en": "Advanced mode — analysing a section",
+                             "de": "Erweiterter Modus — Ausschnitt auswerten"},
+    "intro_advanced_body": {
+        "en": "<p>At the bottom of the detail view, <b>Advanced</b> unfolds "
+              "the waveform of the recording with a draggable region. Drag "
+              "its edges over the part you want, then press <b>Analyse "
+              "selection</b> — the table above updates to that section "
+              "alone.</p>"
+              "<p>This is the point of the whole thing: a held vowel has a "
+              "beginning where you are still finding the sound and an end "
+              "where the air runs out. Both distort formants, jitter and "
+              "shimmer. Cutting out the calm middle is what turns those "
+              "numbers into something you can track over weeks.</p>"
+              "<p>Nothing is overwritten — the stored session values stay "
+              "untouched until you press <b>Save selection as session "
+              "values</b>. <b>Whole recording</b> goes back to the full "
+              "take.</p>",
+        "de": "<p>Unten in der Detailansicht klappt <b>Erweitert</b> die "
+              "Wellenform der Aufnahme mit einem ziehbaren Bereich auf. Zieh "
+              "seine Ränder über den gewünschten Teil und drück <b>Auswahl "
+              "auswerten</b> — die Tabelle darüber zeigt dann nur noch diesen "
+              "Ausschnitt.</p>"
+              "<p>Genau darum geht es: ein gehaltener Vokal hat einen Anfang, "
+              "in dem du den Laut noch suchst, und ein Ende, in dem die Luft "
+              "ausgeht. Beides verzerrt Formanten, Jitter und Shimmer. Die "
+              "ruhige Mitte herauszuschneiden macht aus diesen Zahlen erst "
+              "etwas, das sich über Wochen verfolgen lässt.</p>"
+              "<p>Überschrieben wird nichts — die gespeicherten Sessionwerte "
+              "bleiben unangetastet, bis du <b>Auswahl als Sessionwerte "
+              "speichern</b> drückst. <b>Ganze Aufnahme</b> holt die "
+              "vollständige Aufnahme zurück.</p>"},
+
+    "intro_columns_title": {"en": "Make the list yours",
+                            "de": "Die Liste anpassen"},
+    "intro_columns_body": {
+        "en": "<p>The list ships with a sensible dozen columns, but all "
+              "twenty-three are available: F0 lower and upper end, pitch "
+              "range, F1, weight, clarity, voice breaks, voiced share and the "
+              "rest.</p>"
+              "<p><b>Right-click any column header</b> for a checkable list "
+              "of them, plus sorting and hiding. Columns can be dragged into "
+              "any order, and the order is remembered.</p>"
+              "<p><b>View …</b>, marked in the main window, does the same in "
+              "one dialog and can additionally limit the list to a date "
+              "range. <b>Export …</b> beside it writes the list as text or "
+              "CSV.</p>",
+        "de": "<p>Die Liste startet mit einem sinnvollen Dutzend Spalten, "
+              "verfügbar sind aber alle dreiundzwanzig: F0 unteres und oberes "
+              "Ende, Tonumfang, F1, Schwere, Klarheit, Stimmabbrüche, "
+              "stimmhafter Anteil und der Rest.</p>"
+              "<p><b>Rechtsklick auf eine Spaltenüberschrift</b> zeigt sie "
+              "alle zum Anhaken, dazu Sortieren und Ausblenden. Spalten "
+              "lassen sich per Ziehen in beliebige Reihenfolge bringen, die "
+              "bleibt erhalten.</p>"
+              "<p><b>Ansicht …</b>, im Hauptfenster markiert, macht dasselbe "
+              "in einem Dialog und kann die Liste zusätzlich auf einen "
+              "Zeitraum begrenzen. <b>Exportieren …</b> daneben schreibt die "
+              "Liste als Text oder CSV.</p>"},
+
+    "intro_help_title": {"en": "What F0, F1 and F2 mean",
+                         "de": "Was F0, F1 und F2 bedeuten"},
+    "intro_help_body": {
+        "en": "<p>The <b>ⓘ</b> at the right end of the toolbar — marked in "
+              "the main window right now — opens a reference with nineteen "
+              "topics: what F0, the formants, weight and the quality measures "
+              "are, and what physically changes them. It stays open beside "
+              "the main window, so you can look something up while "
+              "recording.</p>"
+              "<p>There is a second, smaller ⓘ in front of every single row "
+              "of the detail view, marked in the picture below. Hovering it "
+              "explains that one metric in two sentences, which is usually "
+              "all you need in the moment.</p>"
+              "<p><b>Settings</b> holds the analysis parameters, the target "
+              "profiles and the design tab — and a button to show this "
+              "introduction again.</p>",
+        "de": "<p>Das <b>ⓘ</b> am rechten Ende der Leiste — gerade im "
+              "Hauptfenster markiert — öffnet ein Nachschlagewerk mit "
+              "neunzehn Themen: was F0, die Formanten, die Schwere und die "
+              "Qualitätsmaße sind und was sie physikalisch verändert. Es "
+              "bleibt neben dem Hauptfenster offen, du kannst also während "
+              "der Aufnahme nachschlagen.</p>"
+              "<p>Ein zweites, kleineres ⓘ steht vor jeder einzelnen Zeile "
+              "der Detailansicht, im Bild unten markiert. Fährst du darüber, "
+              "erklärt es diesen einen Kennwert in zwei Sätzen — meistens "
+              "genau das, was man im Moment braucht.</p>"
+              "<p>Unter <b>Einstellungen</b> liegen die Analyseparameter, die "
+              "Zielprofile und der Design-Reiter — und ein Knopf, der diese "
+              "Einführung erneut zeigt.</p>"},
+
+    "intro_settings_title": {"en": "What is in the settings",
+                             "de": "Was in den Einstellungen steckt"},
+    "intro_settings_body": {
+        "en": "<p>The <b>⚙ Settings</b> button, marked in the main window, "
+              "opens four tabs:</p>"
+              "<ul>"
+              "<li><b>Analysis</b> — the limits the measurement runs with: "
+              "pitch floor and ceiling, formant ceiling, silence threshold and "
+              "how much of a take has to be voiced. Templates hold whole sets "
+              "of them, so you can switch between a quiet microphone and a "
+              "vowel measurement without retyping, and save your own.</li>"
+              "<li><b>Target profiles</b> — the ranges each metric is checked "
+              "against. The built-in feminine, androgynous and masculine "
+              "profiles can be edited and reset, and you can build your own, "
+              "including straight from one of your recordings.</li>"
+              "<li><b>Design</b> — eight colour themes, a colour picker per "
+              "role, a background image and the card opacity.</li>"
+              "<li><b>Info</b> — version, links, licence, where your files "
+              "live, the debug window with its error counter, and the button "
+              "that shows this introduction again.</li>"
+              "</ul>"
+              "<p>Changing a limit never touches saved recordings: each entry "
+              "records the limits it was measured with.</p>",
+        "de": "<p>Der Knopf <b>⚙ Einstellungen</b>, im Hauptfenster markiert, "
+              "öffnet vier Reiter:</p>"
+              "<ul>"
+              "<li><b>Analyse</b> — die Grenzen, mit denen gemessen wird: "
+              "untere und obere Tonhöhengrenze, Formant-Obergrenze, "
+              "Stilleschwelle und wie viel einer Aufnahme stimmhaft sein "
+              "muss. Vorlagen speichern ganze Sätze davon, du wechselst also "
+              "zwischen leisem Mikrofon und Vokalmessung, ohne alles neu "
+              "einzutippen, und legst eigene an.</li>"
+              "<li><b>Zielprofile</b> — die Bereiche, gegen die jeder "
+              "Kennwert geprüft wird. Die eingebauten Profile feminin, "
+              "androgyn und maskulin lassen sich ändern und zurücksetzen, und "
+              "du kannst eigene anlegen, auch direkt aus einer deiner "
+              "Aufnahmen.</li>"
+              "<li><b>Design</b> — acht Farbschemata, ein Farbwähler je "
+              "Rolle, ein Hintergrundbild und die Deckkraft der Kacheln.</li>"
+              "<li><b>Info</b> — Version, Links, Lizenz, wo deine Dateien "
+              "liegen, das Debugfenster mit seinem Fehlerzähler und der "
+              "Knopf, der diese Einführung erneut zeigt.</li>"
+              "</ul>"
+              "<p>Eine geänderte Grenze fasst gespeicherte Aufnahmen nie an: "
+              "jeder Eintrag hält fest, mit welchen Grenzen er gemessen "
+              "wurde.</p>"},
+
+    "intro_safety_title": {"en": "One thing before you start",
+                           "de": "Eine Sache noch"},
+    "intro_safety_body": {
+        "en": "<p>This is a <b>measuring instrument, not a therapy "
+              "programme</b>. It shows what your voice does. It cannot hear "
+              "whether you sound good, and it cannot diagnose anything.</p>"
+              "<p><b>Never train through pain.</b> If your throat hurts, if it "
+              "feels scratchy, or if you are hoarse afterwards: stop. Those "
+              "are signs of too much tension, not of effort paying off.</p>"
+              "<p>A speech-language pathologist can hear things no software "
+              "can. A few sessions save a lot of guessing.</p>",
+        "de": "<p>Das hier ist ein <b>Messgerät, kein Therapieprogramm</b>. Es "
+              "zeigt, was deine Stimme tut. Es kann nicht hören, ob du gut "
+              "klingst, und es diagnostiziert nichts.</p>"
+              "<p><b>Trainiere niemals gegen Schmerz.</b> Wenn der Hals "
+              "wehtut, wenn es kratzt oder wenn du danach heiser bist: "
+              "aufhören. Das sind Zeichen von zu viel Spannung, nicht von "
+              "Anstrengung, die sich auszahlt.</p>"
+              "<p>Logopädie hört Dinge, die keine Software hört. Ein paar "
+              "Stunden ersparen viel Rumprobieren.</p>"},
     "help": {"en": "Help", "de": "Hilfe"},
     "help_title": {"en": "What the numbers mean",
                    "de": "Was die Zahlen bedeuten"},

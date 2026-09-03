@@ -2,6 +2,10 @@
 #
 # PyInstaller-Beschreibung fuer Dream-VoiceTraining.
 # Aufruf ueber packaging/windows/build_windows.ps1, nicht direkt.
+#
+# Erzeugt zwei eigenstaendige EXE-Dateien:
+#   dist/Dream-VoiceTraining.exe           fuer den Installer
+#   dist/Dream-VoiceTraining-Portable.exe  laeuft von ueberall, schreibt daneben
 
 import sys
 from pathlib import Path
@@ -30,6 +34,12 @@ datas += [
     (str(ROOT / "THIRD_PARTY_NOTICES.md"), "."),
 ]
 
+# Bildschirmfotos der Einfuehrung. PyInstaller entpackt sie nach
+# _MEIPASS/assets/intro, wo paths.intro_shot() zuerst nachsieht.
+datas += [(str(shot), "assets/intro")
+          for shot in sorted((ROOT / "assets" / "intro").iterdir())
+          if shot.is_file()]
+
 analysis = Analysis(
     [str(ROOT / "main.py")],
     pathex=[str(ROOT)],
@@ -53,12 +63,14 @@ analysis = Analysis(
 
 pyz = PYZ(analysis.pure)
 
-exe = EXE(
-    pyz,
-    analysis.scripts,
-    [],
-    exclude_binaries=True,
-    name="Dream-VoiceTraining",
+# Zwei Ergebnisse aus einer Analyse. Beide sind onefile: PyInstaller legt
+# alles in die EXE und entpackt es beim Start in einen temporaeren Ordner.
+# Kein _internal-Verzeichnis, kein Beiwerk — nur die eine Datei.
+#
+# Der Unterschied liegt allein im Namen. paths.py erkennt "portable" im
+# Dateinamen und legt Einstellungen und Aufnahmen dann neben der EXE ab
+# statt unter %APPDATA%.
+_common = dict(
     icon=str(PACKAGING / "dream-voicetraining.ico"),
     debug=False,
     strip=False,
@@ -68,11 +80,22 @@ exe = EXE(
     version_info=None,
 )
 
-COLLECT(
-    exe,
+exe_installed = EXE(
+    pyz,
+    analysis.scripts,
     analysis.binaries,
     analysis.datas,
-    strip=False,
-    upx=False,
+    [],
     name="Dream-VoiceTraining",
+    **_common,
+)
+
+exe_portable = EXE(
+    pyz,
+    analysis.scripts,
+    analysis.binaries,
+    analysis.datas,
+    [],
+    name="Dream-VoiceTraining-Portable",
+    **_common,
 )

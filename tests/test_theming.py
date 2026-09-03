@@ -221,10 +221,9 @@ def test_jeder_dialog_laesst_sich_bauen(monkeypatch, tmp_path):
         dialogs.SessionDetailDialog(entry, [entry], paths.SESSION_DIR, window),
         dialogs.FilterDialog(window.view, window),
         dialogs.DebugDialog(window),
-        dialogs.AboutDialog(window),
+        dialogs.InfoPage(),
         dialogs.DesignEditor(),
         dialogs.ProfileEditor(),
-        dialogs.GuidedPanel(window.engine, window.store_recording, window),
     ]
     for widget in built:
         widget.show()

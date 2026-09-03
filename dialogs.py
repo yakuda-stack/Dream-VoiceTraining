@@ -32,6 +32,8 @@ os.environ.setdefault("PYQTGRAPH_QT_LIB", "PySide6")
 
 import csv
 import io
+import json
+import math
 import shutil
 import wave
 from datetime import datetime
@@ -110,6 +112,7 @@ class SettingsDialog(QtWidgets.QDialog):
 
     applied = QtCore.Signal()
     theme_changed = QtCore.Signal()
+    intro_requested = QtCore.Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -148,6 +151,15 @@ class SettingsDialog(QtWidgets.QDialog):
         design_page.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
         design_page.setWidget(self.design)
         self.tabs.addTab(design_page, i18n.t("tab_design"))
+
+        self.info = InfoPage()
+        self.info.intro_requested.connect(self.intro_requested)
+        self.info.debug_requested.connect(self._open_debug)
+        self.tabs.addTab(self.info, i18n.t("tab_info"))
+        # Info steht vorn: dort liegen Version, Links, Debug und der Knopf,
+        # der die Einfuehrung erneut zeigt — das, was man sucht, wenn man
+        # die Einstellungen ohne bestimmten Parameter im Kopf oeffnet.
+        self.tabs.setCurrentWidget(self.info)
         root.addWidget(self.tabs, 1)
 
         note = QtWidgets.QLabel(i18n.t("settings_note"))
@@ -169,16 +181,6 @@ class SettingsDialog(QtWidgets.QDialog):
         buttons.button(QtWidgets.QDialogButtonBox.StandardButton.Apply
                        ).clicked.connect(self._apply)
 
-        self.btn_about = QtWidgets.QPushButton("ⓘ  " + i18n.t("about"))
-        self.btn_about.clicked.connect(self._open_about)
-        buttons.addButton(self.btn_about,
-                          QtWidgets.QDialogButtonBox.ButtonRole.HelpRole)
-
-        self.btn_debug = QtWidgets.QPushButton("🐞  " + i18n.t("debug"))
-        self.btn_debug.clicked.connect(self._open_debug)
-        buttons.addButton(self.btn_debug,
-                          QtWidgets.QDialogButtonBox.ButtonRole.HelpRole)
-        self._update_debug_badge()
         root.addWidget(buttons)
 
         self._before = settings.snapshot()
@@ -258,12 +260,9 @@ class SettingsDialog(QtWidgets.QDialog):
             row += 1
         return box
 
-    def _open_about(self) -> None:
-        self._show(AboutDialog(self))
-
     def _open_debug(self) -> None:
         dialog = self._show(DebugDialog(self))
-        dialog.finished.connect(self._update_debug_badge)
+        dialog.finished.connect(self.info.update_debug_badge)
 
     @staticmethod
     def _show(dialog: QtWidgets.QDialog) -> QtWidgets.QDialog:
@@ -274,44 +273,45 @@ class SettingsDialog(QtWidgets.QDialog):
         dialog.raise_()
         return dialog
 
-    def _update_debug_badge(self) -> None:
-        errors = sum(1 for record in debuglog.RECORDS
-                     if record[1] in ("ERROR", "CRITICAL"))
-        self.btn_debug.setText("🐞  " + i18n.t("debug")
-                               + (f"  ({errors})" if errors else ""))
-        self.btn_debug.setStyleSheet(f"color: {NORD['red']};" if errors else "")
-
     # -- Vorlagen --------------------------------------------------------
 
     def _refresh_templates(self, select: str | None = None) -> None:
+        """Der Schluessel steht in den Daten, der Name nur in der Anzeige.
+
+        Nur so heisst eine eingebaute Vorlage in der englischen Oberflaeche
+        auch englisch und die Konfiguration bleibt trotzdem lesbar.
+        """
         self._loading = True
         self.template_box.clear()
-        self.template_box.addItem(CUSTOM_LABEL())
+        self.template_box.addItem(CUSTOM_LABEL(), "")
         for name in settings.all_templates():
-            self.template_box.addItem(name)
+            self.template_box.addItem(settings.template_label(name), name)
         target = select or settings.active_template()
-        idx = self.template_box.findText(target)
+        idx = self.template_box.findData(target)
         self.template_box.setCurrentIndex(idx if idx >= 0 else 0)
         self._loading = False
         self._update_delete_state()
 
+    def _current_template(self) -> str:
+        return self.template_box.currentData() or ""
+
     def _update_delete_state(self) -> None:
-        name = self.template_box.currentText()
+        name = self._current_template()
         self.btn_delete.setEnabled(
-            name != CUSTOM_LABEL() and not settings.is_builtin(name))
+            bool(name) and not settings.is_builtin(name))
 
     def _template_chosen(self) -> None:
         self._update_delete_state()
         if self._loading:
             return
-        name = self.template_box.currentText()
+        name = self._current_template()
         template = settings.all_templates().get(name)
         if template is not None:
             self._load_values(template)
 
     def _save_template(self) -> None:
-        current = self.template_box.currentText()
-        suggestion = "" if current == CUSTOM_LABEL() or settings.is_builtin(current) else current
+        current = self._current_template()
+        suggestion = "" if not current or settings.is_builtin(current) else current
         name, ok = QtWidgets.QInputDialog.getText(
             self, i18n.t("template_save_title"), i18n.t("name"), text=suggestion)
         name = name.strip()
@@ -325,15 +325,15 @@ class SettingsDialog(QtWidgets.QDialog):
         self._refresh_templates(select=name)
 
     def _delete_template(self) -> None:
-        name = self.template_box.currentText()
-        if settings.is_builtin(name) or name == CUSTOM_LABEL():
+        name = self._current_template()
+        if not name or settings.is_builtin(name):
             return
         answer = QtWidgets.QMessageBox.question(
             self, i18n.t("template_delete_title"),
             i18n.t("template_delete_body", name=name))
         if answer == QtWidgets.QMessageBox.StandardButton.Yes:
             settings.delete_template(name)
-            self._refresh_templates(select="Standard")
+            self._refresh_templates(select=settings.DEFAULT_TEMPLATE)
 
     # -- Werte -----------------------------------------------------------
 
@@ -351,7 +351,7 @@ class SettingsDialog(QtWidgets.QDialog):
         if self._loading:
             return
         # Handbearbeitung loest die Vorlagenbindung.
-        name = self.template_box.currentText()
+        name = self._current_template()
         template = settings.all_templates().get(name)
         if template is not None and asdict(template) != asdict(self._collect()):
             self._loading = True
@@ -364,7 +364,7 @@ class SettingsDialog(QtWidgets.QDialog):
     def _apply(self) -> None:
         values = self._collect()
         settings.apply(values)
-        settings.set_active_template(self.template_box.currentText())
+        settings.set_active_template(self._current_template())
         settings.save()
         self._load_values(settings.snapshot())
         self.applied.emit()
@@ -1281,21 +1281,44 @@ class FilterDialog(QtWidgets.QDialog):
 
 # ------------------------------------------------------------- Infofenster
 
-class AboutDialog(QtWidgets.QDialog):
+class InfoPage(QtWidgets.QWidget):
     """Version, Lizenz, Links und der gesundheitliche Hinweis.
 
-    Bewusst ohne Aktualisierungsprüfung: das Programm baut keine
+    Sitzt als Reiter in den Einstellungen statt in einem eigenen Fenster:
+    es ist Nachschlagestoff, kein Dialog, der etwas von einem will.
+
+    Bewusst ohne Aktualisierungsprüfung — das Programm baut keine
     Netzwerkverbindungen auf, und dabei soll es bleiben.
     """
 
+    intro_requested = QtCore.Signal()
+    debug_requested = QtCore.Signal()
+
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle(i18n.t("about_title"))
-        self.setMinimumWidth(560)
 
         root = QtWidgets.QVBoxLayout(self)
+        root.setContentsMargins(0, 8, 0, 0)
         root.setSpacing(14)
         root.addLayout(self._build_head())
+
+        # Ganz oben, weil es die Handlung ist und nicht die Lektüre.
+        actions = QtWidgets.QHBoxLayout()
+        self.btn_intro = QtWidgets.QPushButton("▶  " + i18n.t("intro_restart"))
+        self.btn_intro.setObjectName("primary")
+        self.btn_intro.clicked.connect(self.intro_requested)
+        self.btn_debug = QtWidgets.QPushButton("🐞  " + i18n.t("debug"))
+        self.btn_debug.clicked.connect(self.debug_requested)
+        copy = QtWidgets.QPushButton(i18n.t("copy_env"))
+        copy.clicked.connect(self._copy_environment)
+        folder = QtWidgets.QPushButton(i18n.t("open_folder"))
+        folder.clicked.connect(
+            lambda: QtGui.QDesktopServices.openUrl(
+                QtCore.QUrl.fromLocalFile(str(paths.CONFIG_DIR))))
+        for widget in (self.btn_intro, self.btn_debug, copy, folder):
+            actions.addWidget(widget)
+        actions.addStretch(1)
+        root.addLayout(actions)
 
         scroll = QtWidgets.QScrollArea()
         scroll.setWidgetResizable(True)
@@ -1305,21 +1328,15 @@ class AboutDialog(QtWidgets.QDialog):
         scroll.setWidget(self._build_body())
         root.addWidget(scroll, 1)
 
-        row = QtWidgets.QHBoxLayout()
-        copy = QtWidgets.QPushButton(i18n.t("copy_env"))
-        copy.clicked.connect(self._copy_environment)
-        folder = QtWidgets.QPushButton(i18n.t("open_folder"))
-        folder.clicked.connect(
-            lambda: QtGui.QDesktopServices.openUrl(
-                QtCore.QUrl.fromLocalFile(str(paths.CONFIG_DIR))))
-        close = QtWidgets.QPushButton(i18n.t("close"))
-        close.setObjectName("primary")
-        close.clicked.connect(self.accept)
-        row.addWidget(copy)
-        row.addWidget(folder)
-        row.addStretch(1)
-        row.addWidget(close)
-        root.addLayout(row)
+        self.update_debug_badge()
+
+    def update_debug_badge(self) -> None:
+        errors = sum(1 for record in debuglog.RECORDS
+                     if record[1] in ("ERROR", "CRITICAL"))
+        self.btn_debug.setText("🐞  " + i18n.t("debug")
+                               + (f"  ({errors})" if errors else ""))
+        self.btn_debug.setStyleSheet(
+            f"color: {NORD['red']};" if errors else "")
 
     def _build_head(self) -> QtWidgets.QHBoxLayout:
         row = QtWidgets.QHBoxLayout()
@@ -1410,223 +1427,6 @@ class AboutDialog(QtWidgets.QDialog):
         QtWidgets.QApplication.clipboard().setText(
             "\n".join(debuglog.environment()))
         QtWidgets.QToolTip.showText(QtGui.QCursor.pos(), i18n.t("copied"), self)
-
-
-# --------------------------------------------------------- Gefuehrter Ablauf
-
-class GuidedPanel(QtWidgets.QWidget):
-    """Fuehrt durch Summen, /a/, /i/ und /u/ — als schmale Leiste im
-    Live-Reiter statt als Fenster.
-
-    Ein Popup mitten im Blickfeld reisst einen beim Halten eines Lautes
-    heraus. Deshalb bleibt hier alles an einer Stelle sichtbar, die
-    Kennzahlen und das Spektrogramm daneben laufen weiter.
-
-    Jede Aufnahme wird auf ihre stabile Mitte gekuerzt — der Schritt, den man
-    sonst von Hand im erweiterten Modus macht und deshalb meistens sein laesst.
-    """
-
-    finished = QtCore.Signal()
-
-    COUNTDOWN = 3
-
-    def __init__(self, engine, store, parent=None):
-        super().__init__(parent)
-        self.engine = engine
-        self.store = store
-        self.steps = [rectypes.get(key) for key in rectypes.GUIDED]
-        self.index = 0
-        self.saved = 0
-        self.phase = "idle"
-        self.remaining = 0.0
-
-        # Wie die anderen Bereiche ein Kasten mit Ueberschrift, damit die
-        # Leiste nicht zwischen Diagramm und Uebungstext eingequetscht wirkt.
-        outer = QtWidgets.QVBoxLayout(self)
-        outer.setContentsMargins(0, 0, 0, 0)
-        box = QtWidgets.QGroupBox(i18n.t("guided_title"))
-        outer.addWidget(box)
-
-        inner = QtWidgets.QVBoxLayout(box)
-        inner.setContentsMargins(14, 10, 14, 12)
-        inner.setSpacing(10)
-
-        row = QtWidgets.QHBoxLayout()
-        row.setSpacing(16)
-
-        self.step_label = QtWidgets.QLabel("")
-        self.step_label.setStyleSheet(
-            f"color: {NORD['dim']}; font-size: 10px; letter-spacing: 1px;")
-
-        self.title = QtWidgets.QLabel("")
-        font = self.title.font()
-        font.setPointSize(font.pointSize() + 6)
-        font.setWeight(QtGui.QFont.Weight.DemiBold)
-        self.title.setFont(font)
-        self.title.setStyleSheet(f"color: {NORD['accent']};")
-
-        heading = QtWidgets.QVBoxLayout()
-        heading.setSpacing(1)
-        heading.addWidget(self.step_label)
-        heading.addWidget(self.title)
-        row.addLayout(heading)
-
-        self.state = QtWidgets.QLabel("")
-        font = self.state.font()
-        font.setPointSize(font.pointSize() + 1)
-        self.state.setFont(font)
-        self.state.setStyleSheet(f"color: {NORD['green']};")
-        row.addSpacing(8)
-        row.addWidget(self.state, 1)
-
-        self.bar = QtWidgets.QProgressBar()
-        self.bar.setTextVisible(False)
-        self.bar.setFixedHeight(10)
-        self.bar.setMinimumWidth(200)
-        row.addWidget(self.bar)
-
-        self.btn_go = QtWidgets.QPushButton(i18n.t("guided_next"))
-        self.btn_go.setObjectName("primary")
-        self.btn_go.setMinimumWidth(110)
-        self.btn_go.clicked.connect(self._start_step)
-        self.btn_skip = QtWidgets.QPushButton(i18n.t("guided_skip"))
-        self.btn_skip.clicked.connect(self._next_step)
-        row.addSpacing(8)
-        row.addWidget(self.btn_go)
-        row.addWidget(self.btn_skip)
-        inner.addLayout(row)
-
-        self.hint = QtWidgets.QLabel("")
-        self.hint.setWordWrap(True)
-        self.hint.setStyleSheet(f"color: {NORD['dim']}; font-size: 11px;")
-        inner.addWidget(self.hint)
-
-        self.timer = QtCore.QTimer(self)
-        self.timer.setInterval(100)
-        self.timer.timeout.connect(self._tick)
-        self.reset()
-
-    # -- Ablauf ----------------------------------------------------------
-
-    def reset(self) -> None:
-        self.timer.stop()
-        if self.engine.is_recording:
-            self.engine.stop_recording()
-        self.phase = "idle"
-        self.index = 0
-        self.saved = 0
-        self.btn_go.setEnabled(True)
-        self.btn_skip.setEnabled(True)
-        self._show_step()
-
-    def _show_step(self) -> None:
-        if self.index >= len(self.steps):
-            self.step_label.setText("")
-            self.title.setText("")
-            self.hint.setText(i18n.t("guided_intro"))
-            self.state.setText(i18n.t("guided_done", count=self.saved))
-            self.bar.setValue(0)
-            self.btn_go.setEnabled(False)
-            self.btn_skip.setEnabled(False)
-            return
-
-        step = self.steps[self.index]
-        self.step_label.setText(i18n.t("guided_step", step=self.index + 1,
-                                       total=len(self.steps)))
-        self.title.setText(step.label)
-        self.hint.setText(f"{step.hint}  {i18n.t('guided_ready')}")
-        self.state.setText("")
-        self.bar.setValue(0)
-
-    def _start_step(self) -> None:
-        if self.index >= len(self.steps):
-            return
-        self.btn_go.setEnabled(False)
-        self.btn_skip.setEnabled(False)
-        self.phase = "countdown"
-        self.remaining = float(self.COUNTDOWN)
-        self.bar.setRange(0, int(self.COUNTDOWN * 10))
-        self.timer.start()
-
-    def _tick(self) -> None:
-        self.remaining -= 0.1
-
-        if self.phase == "countdown":
-            self.state.setText(i18n.t("guided_get_ready",
-                                      seconds=max(0, int(self.remaining) + 1)))
-            self.bar.setValue(int((self.COUNTDOWN - self.remaining) * 10))
-            if self.remaining <= 0.0:
-                self._begin_recording()
-            return
-
-        if self.phase == "recording":
-            self.engine.pump()
-            step = self.steps[self.index]
-            total = step.seconds or 3.0
-            self.state.setText(i18n.t("guided_recording",
-                                      seconds=max(0, int(self.remaining) + 1)))
-            self.bar.setValue(int((total - self.remaining) * 10))
-            if self.remaining <= 0.0:
-                self._finish_recording()
-
-    def _begin_recording(self) -> None:
-        step = self.steps[self.index]
-        self.phase = "recording"
-        self.remaining = step.seconds or 3.0
-        self.bar.setRange(0, int(self.remaining * 10))
-        self.engine.pump()
-        self.engine.start_recording()
-
-    def _finish_recording(self) -> None:
-        self.timer.stop()
-        self.phase = "idle"
-        self.engine.pump()
-        samples = self.engine.stop_recording()
-        step = self.steps[self.index]
-
-        rate = self.engine.samplerate
-        if samples.size < int(0.5 * rate):
-            self.state.setText(i18n.t("too_short"))
-            self.btn_go.setEnabled(True)
-            self.btn_skip.setEnabled(True)
-            return
-
-        span = None
-        if step.sustained:
-            target = max(1.5, (step.seconds or 3.0) - 1.2)
-            begin, end = analysis.stable_span(samples.astype(np.float64),
-                                              rate, target)
-            if end > begin:
-                span = (begin / rate, end / rate)
-                samples = samples[begin:end]
-
-        QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.CursorShape.WaitCursor)
-        try:
-            self.store(samples, step.key, span)
-        finally:
-            QtWidgets.QApplication.restoreOverrideCursor()
-
-        self.saved += 1
-        self.state.setText(i18n.t("guided_saved", length=samples.size / rate))
-        QtCore.QTimer.singleShot(900, self._next_step)
-
-    def _next_step(self) -> None:
-        self.timer.stop()
-        if self.engine.is_recording:
-            self.engine.stop_recording()
-        self.phase = "idle"
-        self.index += 1
-        self.btn_go.setEnabled(True)
-        self.btn_skip.setEnabled(True)
-        self._show_step()
-        if self.index >= len(self.steps):
-            self.finished.emit()
-
-    def stop(self) -> None:
-        self.timer.stop()
-        if self.engine.is_recording:
-            self.engine.stop_recording()
-        self.phase = "idle"
 
 
 # ------------------------------------------------------- Zielprofil-Editor
@@ -2324,3 +2124,581 @@ b {{ color: {NORD['fg']}; }}
 code {{ color: {NORD['accent']}; }}
 </style></head><body>{body}</body></html>
 """
+
+
+# -------------------------------------------------------------- Wegweiser
+
+# Bewusst kein Themenwert: die Marke soll in jedem Farbschema als dasselbe
+# goldene ⓘ erkennbar sein, sonst sucht man beim Themenwechsel neu.
+GOLD = "#f0c14e"
+GOLD_TEXT = "#2b2b2b"
+
+
+class Spotlight(QtWidgets.QWidget):
+    """Pulsierendes goldenes ⓘ, das auf ein Bedienelement zeigt.
+
+    Eine Anleitung, die nur beschreibt, wo etwas liegt, laesst einen suchen.
+    Diese Marke haengt entweder am echten Knopf im Hauptfenster oder an einer
+    Stelle in einem Bildschirmfoto und pulst, solange der Schritt laeuft.
+
+    Sie nimmt keine Mausklicks an — sonst waere ausgerechnet der Knopf
+    blockiert, auf den sie zeigt.
+    """
+
+    SIZE = 22                      # Durchmesser des Kerns
+    HALO = 10                      # zusaetzlicher Rand fuer den Schein
+    STEP_MS = 40                   # 25 Bilder je Sekunde reichen dafuer
+    PERIOD_MS = 1500
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setAttribute(
+            QtCore.Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        self.setFixedSize(self.SIZE + 2 * self.HALO, self.SIZE + 2 * self.HALO)
+        self._phase = 0.0
+        self._target = None
+        self._anchor = None
+        self._timer = QtCore.QTimer(self)
+        self._timer.setInterval(self.STEP_MS)
+        self._timer.timeout.connect(self._step)
+        self.hide()
+
+    # -- Anhaengen -------------------------------------------------------
+
+    def attach(self, target: QtWidgets.QWidget, anchor=None) -> None:
+        """An ein echtes Bedienelement haengen.
+
+        `anchor` liefert den Punkt im Koordinatensystem des Ziels, auf den
+        die Marke zeigen soll; ohne Angabe der linke Rand, damit sie das
+        Element selbst nicht verdeckt.
+        """
+        self._target = target
+        self._anchor = anchor
+        self._follow()
+        self._timer.start()
+
+    def place(self, centre: QtCore.QPoint) -> None:
+        """Feste Stelle, etwa auf einem Bildschirmfoto."""
+        self._target = None
+        self.move(centre.x() - self.width() // 2,
+                  centre.y() - self.height() // 2)
+        self.show()
+        self.raise_()
+
+    def detach(self) -> None:
+        self._timer.stop()
+        self._target = None
+        self.hide()
+
+    # -- Ablauf ----------------------------------------------------------
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        self._timer.start()
+
+    def hideEvent(self, event):
+        self._timer.stop()
+        super().hideEvent(event)
+
+    def _step(self) -> None:
+        self._phase = (self._phase + self.STEP_MS / self.PERIOD_MS) % 1.0
+        if self._target is not None:
+            self._follow()
+        self.update()
+
+    def _follow(self) -> None:
+        parent = self.parentWidget()
+        target = self._target
+        if parent is None or target is None:
+            return
+        try:
+            if not target.isVisible():
+                self.hide()
+                return
+            point = (self._anchor(target) if self._anchor is not None
+                     else QtCore.QPoint(-10, target.height() // 2))
+            # Ueber den Bildschirm rechnen: dann muss das Ziel kein
+            # Nachfahre der Marke sein und ein Reiterwechsel stoert nicht.
+            centre = parent.mapFromGlobal(target.mapToGlobal(point))
+        except RuntimeError:
+            # Das Ziel wurde beim Neuaufbau der Oberflaeche geloescht.
+            self.detach()
+            return
+        self.move(centre.x() - self.width() // 2,
+                  centre.y() - self.height() // 2)
+        if not self.isVisible():
+            self.show()
+        self.raise_()
+
+    def paintEvent(self, event):
+        pulse = 0.5 - 0.5 * math.cos(2 * math.pi * self._phase)
+
+        painter = QtGui.QPainter(self)
+        painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
+        centre = QtCore.QPointF(self.width() / 2, self.height() / 2)
+        core = self.SIZE / 2
+
+        painter.setPen(QtCore.Qt.PenStyle.NoPen)
+        glow = QtGui.QColor(GOLD)
+        glow.setAlpha(int(120 * (1.0 - pulse)))
+        painter.setBrush(glow)
+        radius = core + self.HALO * pulse
+        painter.drawEllipse(centre, radius, radius)
+
+        painter.setBrush(QtGui.QColor(GOLD))
+        painter.drawEllipse(centre, core, core)
+
+        painter.setPen(QtGui.QColor(GOLD_TEXT))
+        font = painter.font()
+        font.setBold(True)
+        font.setPointSize(max(8, self.SIZE // 2))
+        painter.setFont(font)
+        painter.drawText(self.rect(),
+                         QtCore.Qt.AlignmentFlag.AlignCenter, "i")
+
+
+_SPOT_CACHE: dict | None = None
+
+
+def _shot_spots() -> dict:
+    """Markenstellen aus assets/intro/shots.json, einmal gelesen."""
+    global _SPOT_CACHE
+    if _SPOT_CACHE is None:
+        _SPOT_CACHE = {}
+        path = paths.intro_shot("shots.json")
+        if path is not None:
+            try:
+                _SPOT_CACHE = json.loads(path.read_text(encoding="utf-8"))
+            except Exception:
+                _SPOT_CACHE = {}
+    return _SPOT_CACHE
+
+
+class ShotView(QtWidgets.QLabel):
+    """Bildschirmfoto mit Marken an festen Stellen.
+
+    Die Stellen stehen als Anteil der Bildgroesse in den Seitendaten, damit
+    ein neu aufgenommenes Foto nur ausgetauscht werden muss.
+    """
+
+    def __init__(self, pixmap: QtGui.QPixmap, spots, parent=None):
+        super().__init__(parent)
+        self.setPixmap(pixmap)
+        self.setFixedSize(pixmap.size())
+        self.setStyleSheet(f"border: 1px solid {NORD['bg3']};")
+        self.spots = []
+        for share_x, share_y in spots:
+            spot = Spotlight(self)
+            spot.place(QtCore.QPoint(round(share_x * pixmap.width()),
+                                     round(share_y * pixmap.height())))
+            self.spots.append(spot)
+
+
+# ---------------------------------------------------------- Erster Start
+
+class IntroDialog(QtWidgets.QDialog):
+    """Sprachwahl und kurze Einfuehrung beim ersten Start.
+
+    Laesst sich jederzeit ueber die Einstellungen erneut aufrufen. Nicht
+    modal, damit man nebenher schon das Mikrofon einstellen kann — genau
+    darum geht es auf der zweiten Seite.
+    """
+
+    language_chosen = QtCore.Signal(str)
+    finished_intro = QtCore.Signal()
+    # Welches Bedienelement im Hauptfenster gerade markiert werden soll,
+    # leer heisst keins. Das Hauptfenster kennt seine Knoepfe selbst.
+    spotlight = QtCore.Signal(str)
+
+    PAGES = [
+        ("intro_level_title", "intro_level_body"),
+        ("intro_record_title", "intro_record_body"),
+        ("intro_first_title", "intro_first_body"),
+        ("intro_help_title", "intro_help_body"),
+        ("intro_sessions_title", "intro_sessions_body"),
+        ("intro_advanced_title", "intro_advanced_body"),
+        ("intro_columns_title", "intro_columns_body"),
+        ("intro_settings_title", "intro_settings_body"),
+        ("intro_safety_title", "intro_safety_body"),
+    ]
+
+    # Bildschirmfoto je Seite. Die Dateien heissen <name>.<sprache>.png und
+    # entstehen mit packaging/make-intro-shots.py aus der echten Oberflaeche;
+    # die Stellen der Marken stehen daneben in shots.json.
+    SHOTS = {
+        "intro_help_body": "detail",
+        "intro_sessions_body": "sessions",
+        "intro_advanced_body": "advanced",
+    }
+
+    # Falls shots.json fehlt: grobe Stellen, damit die Marken nicht in der
+    # Ecke kleben.
+    FALLBACK_SPOTS = {
+        "detail": [[0.033, 0.236]],
+        "sessions": [[0.112, 0.143], [0.835, 0.565]],
+        "advanced": [[0.107, 0.052], [0.300, 0.240], [0.030, 0.932]],
+    }
+
+    # Echtes Bedienelement im Hauptfenster, auf das die Seite zeigt.
+    POINTS_AT = {
+        "intro_level_body": "microphone",
+        "intro_record_body": "type",
+        "intro_first_body": "type",
+        "intro_help_body": "help",
+        "intro_sessions_body": "sessions",
+        "intro_columns_body": "filter",
+        "intro_settings_body": "settings",
+    }
+
+    # Lesbare Zeilenlaenge, unabhaengig von der Fensterbreite.
+    TEXT_WIDTH = 700
+    # Rand um den Inhalt: Schrittzeile, Knopfreihe, Raender, Bildlaufleiste.
+    CHROME_H = 120
+    CHROME_W = 60
+
+    def __init__(self, parent=None, ask_language: bool = True):
+        super().__init__(parent)
+        self.ask_language = ask_language
+        self.preferred_size = QtCore.QSize(0, 0)
+        self.setWindowTitle(i18n.t("intro_title"))
+        # Klein genug fuer eine reine Textseite; die tatsaechliche Groesse
+        # richtet sich in _fit_to_page nach dem, was auf der Seite steht.
+        self.setMinimumSize(560, 340)
+
+        root = QtWidgets.QVBoxLayout(self)
+        root.setSpacing(12)
+
+        self.step_label = QtWidgets.QLabel("")
+        self.step_label.setStyleSheet(
+            f"color: {NORD['dim']}; font-size: 10px; letter-spacing: 1px;")
+        root.addWidget(self.step_label)
+
+        self.stack = QtWidgets.QStackedWidget()
+        if ask_language:
+            self.stack.addWidget(self._language_page())
+        for title_key, body_key in self.PAGES:
+            self.stack.addWidget(self._text_page(title_key, body_key))
+        # Ohne das richtet sich der Stapel nach seiner groessten Seite und
+        # eine Textseite bekaeme das Fenster der Bildseite.
+        for index in range(self.stack.count()):
+            self.stack.widget(index).setSizePolicy(
+                QtWidgets.QSizePolicy.Policy.Ignored,
+                QtWidgets.QSizePolicy.Policy.Ignored)
+        root.addWidget(self.stack, 1)
+
+        row = QtWidgets.QHBoxLayout()
+        self.btn_skip = QtWidgets.QPushButton(i18n.t("intro_skip"))
+        self.btn_skip.clicked.connect(self._finish)
+        self.btn_back = QtWidgets.QPushButton(i18n.t("intro_back"))
+        self.btn_back.clicked.connect(self._back)
+        self.btn_next = QtWidgets.QPushButton(i18n.t("intro_next"))
+        self.btn_next.setObjectName("primary")
+        self.btn_next.setMinimumWidth(130)
+        self.btn_next.clicked.connect(self._next)
+        row.addWidget(self.btn_skip)
+        row.addStretch(1)
+        row.addWidget(self.btn_back)
+        row.addWidget(self.btn_next)
+        root.addLayout(row)
+
+        self._update()
+
+    # -- Seiten ----------------------------------------------------------
+
+    def _language_page(self) -> QtWidgets.QWidget:
+        page = QtWidgets.QWidget()
+        lay = QtWidgets.QVBoxLayout(page)
+        lay.setSpacing(16)
+        lay.addStretch(1)
+
+        icon_path = paths.icon_file()
+        if icon_path is not None:
+            icon = QtWidgets.QLabel()
+            icon.setPixmap(QtGui.QIcon(str(icon_path)).pixmap(96, 96))
+            icon.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+            lay.addWidget(icon)
+
+        name = QtWidgets.QLabel(paths.APP_NAME)
+        font = name.font()
+        font.setPointSize(font.pointSize() + 8)
+        font.setWeight(QtGui.QFont.Weight.DemiBold)
+        name.setFont(font)
+        name.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        lay.addWidget(name)
+
+        self.language_title = QtWidgets.QLabel(i18n.t("intro_language"))
+        self.language_title.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        lay.addWidget(self.language_title)
+
+        buttons = QtWidgets.QHBoxLayout()
+        buttons.addStretch(1)
+        self.language_buttons = {}
+        for code, label in (("en", "English"), ("de", "Deutsch")):
+            button = QtWidgets.QPushButton(label)
+            button.setCheckable(True)
+            button.setMinimumSize(160, 46)
+            button.setChecked(i18n.LANG == code)
+            if i18n.LANG == code:
+                button.setObjectName("primary")
+            button.clicked.connect(lambda _=False, c=code: self._pick_language(c))
+            self.language_buttons[code] = button
+            buttons.addWidget(button)
+        buttons.addStretch(1)
+        lay.addLayout(buttons)
+
+        self.language_note = QtWidgets.QLabel(i18n.t("intro_language_body"))
+        self.language_note.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        self.language_note.setWordWrap(True)
+        self.language_note.setStyleSheet(
+            f"color: {NORD['dim']}; font-size: 11px;")
+        lay.addWidget(self.language_note)
+        lay.addStretch(1)
+        return page
+
+    def _text_page(self, title_key: str, body_key: str) -> QtWidgets.QWidget:
+        """Ueberschrift, Text und — wo vorhanden — ein Bildschirmfoto.
+
+        Der Text steht in einem Label statt in einem Textfenster, damit das
+        Foto darunter im selben Bildlauf haengt und nicht in einem zweiten.
+        """
+        page = QtWidgets.QWidget()
+        outer = QtWidgets.QVBoxLayout(page)
+        outer.setContentsMargins(0, 0, 0, 0)
+
+        area = QtWidgets.QScrollArea()
+        area.setWidgetResizable(True)
+        area.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
+        area.setHorizontalScrollBarPolicy(
+            QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        outer.addWidget(area)
+
+        inner = QtWidgets.QWidget()
+        lay = QtWidgets.QVBoxLayout(inner)
+        lay.setContentsMargins(0, 0, 10, 0)
+        lay.setSpacing(10)
+        area.setWidget(inner)
+
+        # Text und Ueberschrift stehen in einer eigenen Spalte: so bleibt die
+        # Zeilenlaenge lesbar, auch wenn darunter ein breites Bild haengt.
+        # Eine Breitenbegrenzung am Label selbst reicht nicht — die Hoehe
+        # wuerde dann fuer die volle Fensterbreite berechnet und der Text
+        # unten abgeschnitten.
+        column = QtWidgets.QWidget()
+        column.setMaximumWidth(self.TEXT_WIDTH)
+        text_lay = QtWidgets.QVBoxLayout(column)
+        text_lay.setContentsMargins(0, 0, 0, 0)
+        text_lay.setSpacing(10)
+        lay.addWidget(column)
+
+        title = QtWidgets.QLabel(i18n.t(title_key))
+        title.setObjectName("introtitle")
+        font = title.font()
+        font.setPointSize(font.pointSize() + 5)
+        font.setWeight(QtGui.QFont.Weight.DemiBold)
+        title.setFont(font)
+        title.setStyleSheet(f"color: {NORD['accent']};")
+        title.setWordWrap(True)
+        text_lay.addWidget(title)
+
+        body = QtWidgets.QLabel(i18n.t(body_key))
+        body.setObjectName("introbody")
+        body.setTextFormat(QtCore.Qt.TextFormat.RichText)
+        body.setWordWrap(True)
+        body.setOpenExternalLinks(True)
+        body.setTextInteractionFlags(
+            QtCore.Qt.TextInteractionFlag.TextBrowserInteraction)
+        body.setStyleSheet(f"color: {NORD['fg']}; font-size: 13px;")
+        body.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeft
+                          | QtCore.Qt.AlignmentFlag.AlignTop)
+        text_lay.addWidget(body)
+
+        shot = self._shot(body_key)
+        if shot is not None:
+            lay.addWidget(shot, 0, QtCore.Qt.AlignmentFlag.AlignLeft)
+        lay.addStretch(1)
+
+        page.setProperty("title_key", title_key)
+        page.setProperty("body_key", body_key)
+        return page
+
+    def _shot(self, body_key: str) -> QtWidgets.QWidget | None:
+        """Bildschirmfoto mit Marken, sofern die Datei mitgeliefert wurde.
+
+        Fehlt sie — etwa in einem Paket, das nur die .py-Dateien mitnimmt —,
+        bleibt die Seite ohne Bild lesbar, statt beim Start zu scheitern.
+        """
+        name = self.SHOTS.get(body_key)
+        if name is None:
+            return None
+        # Erst die aktuelle Sprache, dann Englisch, dann irgendeine: ein Foto
+        # in der falschen Sprache ist besser als gar keins.
+        path = None
+        for candidate in (f"{name}.{i18n.LANG}.png", f"{name}.en.png",
+                          f"{name}.de.png", f"{name}.png"):
+            path = paths.intro_shot(candidate)
+            if path is not None:
+                break
+        if path is None:
+            return None
+        pixmap = QtGui.QPixmap(str(path))
+        if pixmap.isNull():
+            return None
+        return ShotView(pixmap, self._spots(name))
+
+    def _spots(self, name: str) -> list:
+        by_language = _shot_spots().get(name, {})
+        return (by_language.get(i18n.LANG) or by_language.get("en")
+                or self.FALLBACK_SPOTS.get(name, []))
+
+    # -- Ablauf ----------------------------------------------------------
+
+    def _pick_language(self, code: str) -> None:
+        i18n.set_language(code)
+        settings.set_language(code)
+        for key, button in self.language_buttons.items():
+            button.setChecked(key == code)
+            button.setObjectName("primary" if key == code else "")
+        self.language_chosen.emit(code)
+        self._retranslate()
+
+        # Die Sprachwahl ist die ganze Aufgabe dieser Seite. Wer sie
+        # getroffen hat, will nicht noch auf "Weiter" drucken — der kurze
+        # Verzug laesst den Knopf einmal aufleuchten, damit die Auswahl
+        # sichtbar ankommt.
+        if self.stack.currentIndex() == 0:
+            QtCore.QTimer.singleShot(220, self._advance_from_language)
+
+    def _advance_from_language(self) -> None:
+        if self.stack.currentIndex() == 0 and self.isVisible():
+            self._next()
+
+    def _retranslate(self) -> None:
+        """Ohne Neuaufbau: nur die sichtbaren Texte tauschen."""
+        self.setWindowTitle(i18n.t("intro_title"))
+        self.btn_skip.setText(i18n.t("intro_skip"))
+        self.btn_back.setText(i18n.t("intro_back"))
+        if self.ask_language:
+            self.language_title.setText(i18n.t("intro_language"))
+            self.language_note.setText(i18n.t("intro_language_body"))
+
+        offset = 1 if self.ask_language else 0
+        for index, (title_key, body_key) in enumerate(self.PAGES):
+            page = self.stack.widget(index + offset)
+            title = page.findChild(QtWidgets.QLabel, "introtitle")
+            body = page.findChild(QtWidgets.QLabel, "introbody")
+            if title is not None:
+                title.setText(i18n.t(title_key))
+            if body is not None:
+                body.setText(i18n.t(body_key))
+
+            # Das Foto zeigt eine Oberflaeche in der alten Sprache, sobald
+            # umgeschaltet wird — also gegen das der neuen tauschen.
+            old_shot = page.findChild(ShotView)
+            if old_shot is not None:
+                new_shot = self._shot(body_key)
+                layout = old_shot.parentWidget().layout()
+                if new_shot is not None and layout is not None:
+                    layout.replaceWidget(old_shot, new_shot)
+                    old_shot.setParent(None)
+                    old_shot.deleteLater()
+        self._update()
+
+    def _update(self) -> None:
+        index = self.stack.currentIndex()
+        total = self.stack.count()
+        self.step_label.setText(
+            i18n.t("intro_step", step=index + 1, total=total).upper())
+        self.btn_back.setEnabled(index > 0)
+        last = index == total - 1
+        self.btn_next.setText(
+            i18n.t("intro_done") if last else i18n.t("intro_next"))
+        self.btn_skip.setVisible(not last)
+        # Das Stylesheet muss nach einer Namensaenderung neu greifen.
+        self.btn_next.setStyleSheet(self.btn_next.styleSheet())
+
+        page = self.stack.currentWidget()
+        body_key = page.property("body_key") if page is not None else None
+        self.spotlight.emit(self.POINTS_AT.get(body_key or "", ""))
+        self._fit_to_page()
+
+    # -- Groesse ---------------------------------------------------------
+
+    def _fit_to_page(self) -> None:
+        """Das Fenster an die aktuelle Seite anpassen.
+
+        Eine reine Textseite in einem Fenster, das fuer ein Bildschirmfoto
+        gebaut wurde, ist zu drei Vierteln leer. Statt einer festen Groesse
+        fuer alle rechnet jede Seite ihre eigene aus.
+        """
+        page = self.stack.currentWidget()
+        if page is None:
+            return
+
+        shot = page.findChild(ShotView)
+        width = self.TEXT_WIDTH if shot is None else max(self.TEXT_WIDTH,
+                                                         shot.width())
+        width += self.CHROME_W
+
+        inner = width - self.CHROME_W
+        height = self.CHROME_H
+        for name in ("introtitle", "introbody"):
+            label = page.findChild(QtWidgets.QLabel, name)
+            if label is not None:
+                height += self._text_height(
+                    label, min(inner, self.TEXT_WIDTH)) + 10
+        if shot is not None:
+            height += shot.height() + 10
+        if not self.PAGES or page.property("body_key") is None:
+            # Die Sprachseite lebt von ihrem Weissraum.
+            width, height = self.TEXT_WIDTH, 520
+
+        width = max(width, self.minimumWidth())
+        height = max(height, self.minimumHeight())
+        # Was die Seite braucht, unabhaengig vom Bildschirm — daran haengt
+        # der Test, der prueft, dass Textseiten kleiner ausfallen.
+        self.preferred_size = QtCore.QSize(width, height)
+
+        screen = self.screen() or QtGui.QGuiApplication.primaryScreen()
+        if screen is not None:
+            free = screen.availableGeometry()
+            width = min(width, int(free.width() * 0.95))
+            height = min(height, int(free.height() * 0.92))
+        self.resize(width, height)
+
+    @staticmethod
+    def _text_height(label: QtWidgets.QLabel, width: int) -> int:
+        """Hoehe eines umgebrochenen Labels.
+
+        heightForWidth() liefert bei formatiertem Text mit Aufzaehlungen zu
+        kleine Werte, deshalb wird derselbe Text hier einmal richtig
+        gesetzt und ausgemessen.
+        """
+        doc = QtGui.QTextDocument()
+        doc.setDefaultFont(label.font())
+        doc.setHtml(label.text())
+        doc.setTextWidth(max(200, width))
+        return int(doc.size().height())
+
+    def _next(self) -> None:
+        if self.stack.currentIndex() >= self.stack.count() - 1:
+            self._finish()
+            return
+        self.stack.setCurrentIndex(self.stack.currentIndex() + 1)
+        self._update()
+
+    def _back(self) -> None:
+        self.stack.setCurrentIndex(max(0, self.stack.currentIndex() - 1))
+        self._update()
+
+    def _finish(self) -> None:
+        settings.set_intro_done(True)
+        self.spotlight.emit("")
+        self.finished_intro.emit()
+        self.accept()
+
+    def closeEvent(self, event):
+        # Auch das Wegklicken zaehlt als gesehen, sonst kommt es bei jedem
+        # Start wieder.
+        settings.set_intro_done(True)
+        self.spotlight.emit("")
+        super().closeEvent(event)

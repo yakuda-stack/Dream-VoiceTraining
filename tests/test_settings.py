@@ -44,7 +44,7 @@ def test_eigene_vorlage_speichern_und_loeschen():
 
 
 def test_eingebaute_vorlage_ist_nicht_loeschbar():
-    assert settings.delete_template("Standard") is False
+    assert settings.delete_template(settings.DEFAULT_TEMPLATE) is False
 
 
 def test_persistenz_ueber_einen_neustart(tmp_path, monkeypatch):

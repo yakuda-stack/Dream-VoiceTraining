@@ -123,3 +123,24 @@ def qt_table(monkeypatch):
 
     yield table, fill
     table.deleteLater()
+
+
+@pytest.fixture
+def qt_app():
+    """Eine QApplication fuer Tests, die echte Widgets brauchen."""
+    QtWidgets = pytest.importorskip("PySide6.QtWidgets")
+    import os
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    return QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+
+
+@pytest.fixture
+def intro_window(qt_app):
+    """Hauptfenster, damit die Marken ein echtes Ziel haben."""
+    import main
+    window = main.MainWindow()
+    window.show()
+    qt_app.processEvents()
+    yield window
+    window.show_spotlight("")
+    window.close()
