@@ -4,7 +4,7 @@ Notable changes per release. Format follows
 [Keep a Changelog](https://keepachangelog.com/), versions follow
 [Semantic Versioning](https://semver.org/).
 
-## [1.0.8] — unreleased
+## [1.0.8] — 2026-09-03
 
 ### Added
 
