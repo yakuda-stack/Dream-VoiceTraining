@@ -226,10 +226,26 @@ bash install.sh --uninstall
 Useful flags: `--no-deps` skips the system packages, `PREFIX=/somewhere` moves
 the installation.
 
-### Arch, CachyOS, EndeavourOS — as a package
+### Arch, CachyOS, EndeavourOS — from the AUR
 
-`praat-parselmouth` is not in the AUR yet, so it is built first. This compiles
-the bundled Praat sources and takes a few minutes.
+```sh
+paru -S dream-voicetraining         # or yay, or any other AUR helper
+```
+
+That is the whole thing. The helper pulls the dependencies from the AUR as
+well, and updates arrive with your usual `paru -Syu`.
+
+Expect a few minutes on the first install: `praat-parselmouth` compiles the
+bundled Praat sources. If that build fails after a Python version bump in
+Arch, install `python-praat-parselmouth-bin` first — it takes the official
+wheel and needs no compiler:
+
+```sh
+paru -S python-praat-parselmouth-bin dream-voicetraining
+```
+
+<details>
+<summary>Building the packages yourself from this repository</summary>
 
 ```sh
 git clone https://github.com/yakuda-stack/Dream-VoiceTraining
@@ -241,9 +257,7 @@ paru -Ui
 `paru` rather than `makepkg` for the second step: `python-sounddevice` lives
 in the AUR, and `makepkg` only knows pacman. With yay: `yay -Bi .`
 
-If building Praat fails after a Python version bump in Arch, use
-`PKGBUILD.python-praat-parselmouth-bin` instead — it installs the official
-wheel and needs no compiler.
+</details>
 
 ### Windows
 
@@ -465,7 +479,13 @@ than this tool.
 
 ## Note on how this was built
 
-Parts of this code were written with AI assistance. Review, testing and
-maintenance are mine. Every bug fixed in this repository was found by
+Parts of this code were written with Claude, Anthropic's AI assistant — that
+includes code, tests, packaging and parts of this README. I say so plainly
+because you deserve to know what you are installing, and because a repository
+that hides it invites you to guess.
+
+What that does not change: every line here has been read, run and tested by
+me before it shipped. Review, testing and maintenance are mine, and so is
+responsibility for anything that goes wrong. Every bug fixed in this repository was found by
 measuring, not by guessing, and the diagnostic script and the test suite exist
 so that stays true.
