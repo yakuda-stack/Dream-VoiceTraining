@@ -88,3 +88,16 @@ def test_defekte_konfiguration_kippt_das_programm_nicht(tmp_path, monkeypatch):
     monkeypatch.delenv("DREAM_VOICETRAINING_HOME")
     importlib.reload(paths)
     importlib.reload(settings)
+
+
+def test_frage_nach_einrichtung_wird_nur_einmal_gestellt(tmp_path, monkeypatch):
+    """Ein Nein muss genauso zaehlen wie ein Ja, sonst nervt es bei jedem Start."""
+    assert settings.get_install_asked() is False
+    settings.set_install_asked(True)
+    settings.save()
+
+    settings._state["install_asked"] = False
+    settings.load()
+    assert settings.get_install_asked() is True
+    settings.set_install_asked(False)
+    settings.save()

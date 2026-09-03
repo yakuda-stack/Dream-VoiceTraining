@@ -123,7 +123,7 @@ LEGACY_TEMPLATES = {
 CFG = Settings()
 
 _state = {"active_template": DEFAULT_TEMPLATE, "user_templates": {}, "device": None, "language": "en", "profile": "feminin", "live_profile": "none",
-          "view": {}, "user_profiles": {}, "theme": {}, "intro_done": False,
+          "view": {}, "user_profiles": {}, "theme": {}, "intro_done": False, "install_asked": False,
           "builtin_overrides": {},
           "warn_low_level": True, "recording_type": "reading"}
 
@@ -255,6 +255,19 @@ def get_intro_done() -> bool:
     return bool(_state["intro_done"])
 
 
+def get_install_asked() -> bool:
+    """Ob die Windows-Frage nach Umzug und Verknuepfung schon gestellt war.
+
+    Eine Frage, die bei jedem Start wiederkommt, ist eine Zumutung — auch
+    ein Nein wird hier vermerkt.
+    """
+    return bool(_state["install_asked"])
+
+
+def set_install_asked(asked: bool) -> None:
+    _state["install_asked"] = bool(asked)
+
+
 def set_intro_done(done: bool) -> None:
     if _state["intro_done"] != bool(done):
         _state["intro_done"] = bool(done)
@@ -351,6 +364,7 @@ def load() -> None:
     stored = raw.get("view")
     _state["view"] = stored if isinstance(stored, dict) else {}
     _state["intro_done"] = bool(raw.get("intro_done", False))
+    _state["install_asked"] = bool(raw.get("install_asked", False))
     theme = raw.get("theme")
     _state["theme"] = theme if isinstance(theme, dict) else {}
     profiles = raw.get("user_profiles")
@@ -379,6 +393,7 @@ def save() -> None:
         "user_profiles": _state["user_profiles"],
         "theme": _state["theme"],
         "intro_done": _state["intro_done"],
+        "install_asked": _state["install_asked"],
         "builtin_overrides": _state["builtin_overrides"],
         "warn_low_level": _state["warn_low_level"],
         "recording_type": _state["recording_type"],

@@ -250,8 +250,14 @@ wheel and needs no compiler.
 Two single files on the
 [Releases](https://github.com/yakuda-stack/Dream-VoiceTraining/releases) page:
 
-- **`Dream-VoiceTraining-<version>-setup.exe`** — installs into your user
-  profile, adds a start menu entry, needs no administrator rights.
+- **`Dream-VoiceTraining-<version>-setup.exe`** — a plain wizard, installs to
+  `C:\Program Files\Dream-VoiceTraining`, asks once for administrator rights,
+  and offers the desktop icon and start menu entry as tick boxes. Uninstalling
+  works from Settings like any other program and leaves your recordings
+  alone.
+- Prefer the single executable? Take it and run it. On the first start it asks
+  once whether it should move into its own folder and add a shortcut; say no
+  and it keeps running from wherever it sits.
 - **`Dream-VoiceTraining-Portable.exe`** — run it from anywhere. Settings and
   recordings land in a `Dream-VoiceTraining-Data` folder next to the
   executable, so a USB stick keeps everything together.

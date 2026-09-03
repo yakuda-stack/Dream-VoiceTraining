@@ -47,7 +47,7 @@ BUNDLE_DIR = Path(getattr(sys, "_MEIPASS", "")) if FROZEN else None
 
 APP_ID = "dream-voicetraining"
 APP_NAME = "Dream-VoiceTraining"
-APP_VERSION = "1.0.8"
+APP_VERSION = "1.0.9"
 
 APP_URL = "https://github.com/yakuda-stack/Dream-VoiceTraining"
 ISSUES_URL = APP_URL + "/issues"
@@ -136,20 +136,33 @@ def _windows_dir(variable: str, fallback: str) -> Path:
     return Path(base) if base else Path.home() / "AppData" / fallback
 
 
+PORTABLE_MARKER = "portable.txt"
+
+
+def looks_portable(executable: Path | None = None) -> bool:
+    """Ob diese EXE portabel gemeint ist.
+
+    Erkannt an einer Datei "portable.txt" neben der EXE oder daran, dass
+    "portable" im Dateinamen steht. Ohne Nebenwirkungen, damit auch die
+    Selbstinstallation danach fragen kann, ohne einen Datenordner anzulegen.
+    """
+    executable = Path(executable or sys.executable).resolve()
+    return ((executable.parent / PORTABLE_MARKER).is_file()
+            or "portable" in executable.stem.lower())
+
+
 def _portable_root() -> Path | None:
     """Ordner neben der EXE, wenn portabel gestartet.
 
-    Erkannt an einer Datei "portable.txt" neben der EXE oder daran, dass der
-    Dateiname auf "portable" endet. Laesst sich der Ordner nicht beschreiben —
-    schreibgeschuetzter Datentraeger, Programme-Verzeichnis —, faellt alles
-    auf die normalen Benutzerordner zurueck, statt beim Start zu scheitern.
+    Laesst sich der Ordner nicht beschreiben — schreibgeschuetzter
+    Datentraeger, Programme-Verzeichnis —, faellt alles auf die normalen
+    Benutzerordner zurueck, statt beim Start zu scheitern.
     """
     if not FROZEN:
         return None
 
     executable = Path(sys.executable).resolve()
-    marker = executable.parent / "portable.txt"
-    if not (marker.is_file() or "portable" in executable.stem.lower()):
+    if not looks_portable(executable):
         return None
 
     root = executable.parent / f"{APP_NAME}-Data"

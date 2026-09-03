@@ -62,6 +62,7 @@ from audio import DEFAULT_KEY, AudioEngine, write_wav
 from dialogs import (FilterDialog, HelpDialog, IntroDialog, SessionDetailDialog,
                      SettingsDialog, Spotlight, ask_export_language,
                      export_language)
+import wininstall
 from settings import CFG
 
 APP_DIR = Path(__file__).resolve().parent
@@ -1489,6 +1490,46 @@ class MainWindow(QtWidgets.QMainWindow):
         self._fill_session_table()
         return entry
 
+    # -- Erster Start unter Windows ---------------------------------------
+
+    def start_first_run(self, offer_install: bool, with_intro: bool) -> None:
+        """Frage und Einfuehrung nacheinander, nicht uebereinander.
+
+        Beides mit einem Zeitgeber zu starten legt die Einfuehrung hinter
+        den modalen Dialog — von dort holt sie niemand hervor.
+        """
+        if offer_install and self._offer_install():
+            return                      # startet vom neuen Ort neu
+        if with_intro:
+            self.show_intro()
+
+    def _offer_install(self) -> bool:
+        """Anbieten, sich einzurichten. True, wenn ein Neustart laeuft."""
+        answer = QtWidgets.QMessageBox.question(
+            self, i18n.t("install_offer_title"),
+            i18n.t("install_offer_body", folder=str(wininstall.target_dir())),
+            QtWidgets.QMessageBox.StandardButton.Yes
+            | QtWidgets.QMessageBox.StandardButton.No,
+            QtWidgets.QMessageBox.StandardButton.Yes)
+
+        # Auch ein Nein wird vermerkt: die Frage kommt nur einmal.
+        settings.set_install_asked(True)
+        settings.save()
+        if answer != QtWidgets.QMessageBox.StandardButton.Yes:
+            return False
+
+        try:
+            destination = wininstall.install()
+        except OSError as error:
+            QtWidgets.QMessageBox.warning(
+                self, i18n.t("install_offer_title"),
+                i18n.t("install_failed", error=str(error)))
+            return False
+
+        wininstall.relaunch(destination, Path(sys.executable).resolve())
+        QtCore.QTimer.singleShot(0, QtWidgets.QApplication.quit)
+        return True
+
     def _load_sessions(self) -> list[dict]:
         if not SESSION_INDEX.exists():
             return []
@@ -1543,9 +1584,19 @@ def main() -> int:
         win.status.showMessage(
             f"{len(moved)} file(s) moved to {paths.CONFIG_DIR}")
     win.show()
-    if first_run:
+
+    # Die vom alten Ort zurueckgelassene EXE entfernen, falls sich das
+    # Programm gerade selbst eingerichtet hat.
+    leftover = wininstall.handover_path()
+    if leftover is not None:
+        QtCore.QTimer.singleShot(
+            1200, lambda: wininstall.delete_leftover(leftover))
+
+    offer = wininstall.should_offer()
+    if first_run or offer:
         # Erst nach show(), sonst steht der Assistent hinter dem Fenster.
-        QtCore.QTimer.singleShot(0, win.show_intro)
+        QtCore.QTimer.singleShot(
+            0, lambda: win.start_first_run(offer, first_run))
     return app.exec()
 
 

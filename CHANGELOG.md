@@ -4,7 +4,34 @@ Notable changes per release. Format follows
 [Keep a Changelog](https://keepachangelog.com/), versions follow
 [Semantic Versioning](https://semver.org/).
 
-## [1.0.8] — 2026-09-03
+## [1.0.9] — 2026-09-03
+
+### Added
+
+- **A downloaded EXE offers to set itself up on the first start.** Anyone who
+  takes the plain executable instead of the setup runs it out of the download
+  folder, ends up without an icon anywhere, and loses the program the next
+  time that folder gets tidied. It now asks once — the answer, yes or no, is
+  remembered — and on yes copies itself to
+  `%LOCALAPPDATA%\Programs\Dream-VoiceTraining`, puts an icon on the desktop
+  and an entry in the start menu, registers under *Apps & features*, and
+  restarts from the new location. The file left behind in the download folder
+  is deleted by the restarted copy, because Windows will not let a running
+  program delete itself.
+- The question is deliberately not asked for the portable build (it is meant
+  to stay where it is), for a copy already under Program Files (the setup did
+  all of this), or when running from source.
+
+### Changed
+
+- **The setup now installs to `C:\Program Files\Dream-VoiceTraining`** and
+  asks for administrator rights once, instead of installing per user. The
+  wizard has a page for the desktop icon and the start menu entry, both ticked
+  by default, and puts an *Uninstall* entry in the start menu beside the
+  program. Recordings and settings stay where they are on uninstall — they are
+  in `%APPDATA%` and `%LOCALAPPDATA%`, never in the install folder.
+
+## [1.0.8] — unreleased
 
 ### Added
 

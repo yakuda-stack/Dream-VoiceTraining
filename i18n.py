@@ -536,6 +536,31 @@ STRINGS: dict[str, dict[str, str]] = {
         "de": "In welcher Sprache soll die Datei geschrieben werden?"},
     "language_de": {"en": "German", "de": "Deutsch"},
     "language_en": {"en": "English", "de": "Englisch"},
+    "install_offer_title": {"en": "Set up Dream-VoiceTraining?",
+                            "de": "Dream-VoiceTraining einrichten?"},
+    "install_offer_body": {
+        "en": "<p>Right now the program is running from wherever you saved "
+              "it. Shall it move to its own folder and add a shortcut?</p>"
+              "<p>It would copy itself to<br><code>{folder}</code><br>put an "
+              "icon on the desktop and an entry in the start menu, and show "
+              "up under Apps &amp; features like any other program. Then it "
+              "restarts from there.</p>"
+              "<p>Your recordings and settings are not affected either way. "
+              "This is asked once.</p>",
+        "de": "<p>Das Programm läuft gerade von dort, wo du es gespeichert "
+              "hast. Soll es in seinen eigenen Ordner umziehen und eine "
+              "Verknüpfung anlegen?</p>"
+              "<p>Es kopiert sich dann nach<br><code>{folder}</code><br>legt "
+              "ein Symbol auf den Schreibtisch und einen Eintrag ins "
+              "Startmenü und erscheint unter „Apps und Features“ wie jedes "
+              "andere Programm. Danach startet es von dort neu.</p>"
+              "<p>Aufnahmen und Einstellungen sind so oder so nicht "
+              "betroffen. Die Frage kommt nur einmal.</p>"},
+    "install_failed": {
+        "en": "Copying failed, so nothing was changed:\n\n{error}",
+        "de": "Das Kopieren ist gescheitert, es wurde nichts geändert:"
+              "\n\n{error}"},
+
     "intro_title": {"en": "Welcome", "de": "Willkommen"},
     "intro_language": {"en": "Choose your language",
                        "de": "Sprache wählen"},
