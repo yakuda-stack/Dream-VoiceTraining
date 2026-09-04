@@ -191,3 +191,38 @@ def test_ohne_pactl_kein_pulse_routing(windows_audio):
     for source in audio.enumerate_sources():
         assert source.pulse_source is None
         assert source.pa_index is not None
+
+
+def test_gleich_benannte_quellen_werden_unterscheidbar():
+    """Zwei Eingaenge derselben Karte heissen gleich — das ist kein Fehler.
+
+    Sie zu verstecken waere falsch, also bekommen sie den Teil des
+    technischen Namens angehaengt, in dem sie sich unterscheiden.
+    """
+    items = [
+        audio.Source(name="a", label="USB Audio Device",
+                     detail="alsa_input.usb-Sound-00.analog-stereo"),
+        audio.Source(name="b", label="USB Audio Device",
+                     detail="alsa_input.usb-Sound-01.analog-stereo"),
+        audio.Source(name="c", label="Line Input", detail="alsa_input.line"),
+    ]
+    audio.disambiguate(items)
+    assert items[0].label == "USB Audio Device  (0)"
+    assert items[1].label == "USB Audio Device  (1)"
+    # Wer schon eindeutig war, bleibt unberuehrt.
+    assert items[2].label == "Line Input"
+
+
+def test_ohne_unterschied_im_namen_wird_durchnummeriert():
+    items = [audio.Source(name=f"n{i}", label="Mikrofon", detail="gleich")
+             for i in range(3)]
+    audio.disambiguate(items)
+    assert [item.label for item in items] == [
+        "Mikrofon  (1)", "Mikrofon  (2)", "Mikrofon  (3)"]
+
+
+def test_einzelne_quelle_bleibt_wie_sie_ist():
+    only = [audio.Source(name="a", label="Mikrofon", detail="x")]
+    audio.disambiguate(only)
+    assert only[0].label == "Mikrofon"
+    audio.disambiguate([])

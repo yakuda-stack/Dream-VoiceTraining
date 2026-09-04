@@ -63,6 +63,31 @@ STRINGS: dict[str, dict[str, str]] = {
     },
 
     # --- Geraeteliste ---
+    "mic_pick_tip": {"en": "Choose a microphone from a bigger list",
+                     "de": "Mikrofon aus einer großen Liste wählen"},
+    "mic_pick_title": {"en": "Choose an input", "de": "Eingang wählen"},
+    "mic_pick_intro": {
+        "en": "Pick the input to record from. The technical name of the "
+              "selected entry is shown underneath.",
+        "de": "Wähle den Eingang, von dem aufgenommen wird. Der technische "
+              "Name des markierten Eintrags steht darunter."},
+    "mic_pick_use": {"en": "Use this input", "de": "Diesen Eingang benutzen"},
+    "mic_pick_default_detail": {
+        "en": "Whatever the system currently has set as the default input.",
+        "de": "Was im System gerade als Standardeingang eingestellt ist."},
+    "mic_pick_note": {
+        "en": "The same name twice is not a mistake: a sound card with two "
+              "capture inputs reports both under one description, and each "
+              "output has its own monitor source. The part in brackets is the "
+              "piece of the technical name that tells them apart. If in doubt, "
+              "try one, speak, and watch the level card.",
+        "de": "Derselbe Name zweimal ist kein Fehler: eine Soundkarte mit zwei "
+              "Eingängen meldet beide unter einer Beschreibung, und jeder "
+              "Ausgang hat seine eigene Mitschnitt-Quelle. Der Teil in "
+              "Klammern ist das Stück des technischen Namens, in dem sie sich "
+              "unterscheiden. Im Zweifel einen nehmen, sprechen und auf die "
+              "Pegelkachel schauen."},
+
     "system_default": {"en": "System default", "de": "Systemstandard"},
     "group_mic": {"en": "— Microphones —", "de": "— Mikrofone —"},
     "group_virtual": {"en": "— Virtual sources —", "de": "— Virtuelle Quellen —"},

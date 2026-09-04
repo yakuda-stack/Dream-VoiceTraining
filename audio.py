@@ -73,6 +73,7 @@ class Source:
     pa_index: int | None = None     # direkt oeffenbares PortAudio-Geraet
     pulse_source: str | None = None # sonst: ueber PULSE_SOURCE geroutet
     is_default: bool = False
+    detail: str = ""                # technischer Name, fuer die Auswahl
 
     @property
     def available(self) -> bool:
@@ -161,7 +162,7 @@ def _pipewire_sources() -> tuple[list[Source], dict[str, dict]] | None:
         else:
             kind = KIND_VIRTUAL
 
-        result.append(Source(name=name, label=label, kind=kind,
+        result.append(Source(name=name, label=label, kind=kind, detail=name,
                              is_default=(name == default_name)))
     return result, {b["Name"]: b["props"] for b in blocks}
 
@@ -266,6 +267,7 @@ def enumerate_sources(remembered: str | None = None) -> list[Source]:
             label = f"{name}  [{api}]" if api else name
             sources.append(Source(name=f"{name}|{api}", label=label,
                                   kind=_fallback_kind(name), pa_index=index,
+                                  detail=api,
                                   is_default=(index == pa_default)))
         sources.sort(key=lambda src: src.label.lower())
     else:
@@ -278,11 +280,54 @@ def enumerate_sources(remembered: str | None = None) -> list[Source]:
                 src.pulse_source = src.name
             sources.append(src)
 
+    disambiguate(sources)
+
     known = {s.name for s in sources}
     if remembered and remembered not in known and remembered != DEFAULT_KEY:
         sources.append(Source(name=remembered, label=remembered,
                               kind=_fallback_kind(remembered)))
     return sources
+
+
+def disambiguate(sources: list[Source]) -> None:
+    """Gleich benannte Quellen unterscheidbar machen.
+
+    Eine Soundkarte mit zwei Eingaengen meldet beide unter derselben
+    Beschreibung, und drei HDMI-Ausgaenge desselben Monitors ergeben drei
+    gleich heissende Mitschnitt-Quellen. Sie zu verstecken waere falsch —
+    es sind verschiedene Eingaenge. Stattdessen bekommt jede den Teil ihres
+    technischen Namens angehaengt, in dem sie sich unterscheiden: aus zwei
+    "USB Audio Device" wird eines mit "00" und eines mit "01".
+    """
+    groups: dict[str, list[Source]] = {}
+    for source in sources:
+        groups.setdefault(source.label.strip().lower(), []).append(source)
+
+    for items in groups.values():
+        if len(items) < 2:
+            continue
+        details = [item.detail or item.name for item in items]
+        head = len(_common_prefix(details))
+        tail = len(_common_prefix([text[::-1] for text in details]))
+        for item, text in zip(items, details):
+            middle = text[head:len(text) - tail].strip(" .-_:")
+            item.label = f"{item.label}  ({middle})" if middle else item.label
+        if len({item.label for item in items}) != len(items):
+            # Der technische Name unterscheidet sich nicht — dann bleibt nur
+            # das Durchnummerieren, damit die Auswahl eindeutig ist.
+            for number, item in enumerate(items, start=1):
+                item.label = f"{item.label}  ({number})"
+
+
+def _common_prefix(values: list[str]) -> str:
+    if not values:
+        return ""
+    first, rest = values[0], values[1:]
+    for index, character in enumerate(first):
+        if any(len(other) <= index or other[index] != character
+               for other in rest):
+            return first[:index]
+    return first
 
 
 def grouped_sources(remembered: str | None = None) -> list[tuple[str, list[Source]]]:

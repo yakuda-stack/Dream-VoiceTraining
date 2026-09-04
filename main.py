@@ -59,9 +59,9 @@ import theming
 from theming import COLORS as NORD
 import audio as audio_mod
 from audio import DEFAULT_KEY, AudioEngine, write_wav
-from dialogs import (FilterDialog, HelpDialog, IntroDialog, SessionDetailDialog,
-                     SettingsDialog, Spotlight, ask_export_language,
-                     export_language)
+from dialogs import (FilterDialog, HelpDialog, IntroDialog, MicrophonePicker,
+                     SessionDetailDialog, SettingsDialog, Spotlight,
+                     ask_export_language, export_language)
 import wininstall
 from settings import CFG
 
@@ -313,6 +313,25 @@ class MainWindow(QtWidgets.QMainWindow):
             lang_lay.addWidget(button)
 
         self.device_box = QtWidgets.QComboBox()
+        self.device_box.setObjectName("device")
+        # Der Text im Klappmenue wird beschnitten, sobald der Name lang ist —
+        # unter Windows der Normalfall. Der ganze Name steht im Tooltip und
+        # in der grossen Auswahl daneben.
+        self.device_box.setSizeAdjustPolicy(
+            QtWidgets.QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+        self.device_box.setMinimumContentsLength(18)
+        self.device_box.setSizePolicy(
+            QtWidgets.QSizePolicy.Policy.Expanding,
+            QtWidgets.QSizePolicy.Policy.Fixed)
+        self.device_box.currentIndexChanged.connect(self._device_tooltip)
+
+        self.btn_pick = QtWidgets.QPushButton()
+        self.btn_pick.setIcon(self.style().standardIcon(
+            QtWidgets.QStyle.StandardPixmap.SP_FileDialogDetailedView))
+        self.btn_pick.setToolTip(i18n.t("mic_pick_tip"))
+        self.btn_pick.setFixedWidth(40)
+        self.btn_pick.clicked.connect(self._pick_device)
+
         self.btn_refresh = QtWidgets.QPushButton()
         self.btn_refresh.setIcon(self.style().standardIcon(
             QtWidgets.QStyle.StandardPixmap.SP_BrowserReload))
@@ -327,6 +346,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.btn_record.setEnabled(False)
         self.btn_record.clicked.connect(self._toggle_record)
         self.type_box = QtWidgets.QComboBox()
+        # "Tonhoehentest (Summen)" ist das laengste Wort und zieht das Feld
+        # sonst auf eine Breite, die "Lesetext" nicht braucht. Der volle Text
+        # steht im Tooltip, der Platz gehoert dem Mikrofonnamen.
+        self.type_box.setMaximumWidth(150)
         for kind in rectypes.TYPES:
             self.type_box.addItem(kind.label, kind.key)
             self.type_box.setItemData(self.type_box.count() - 1, kind.hint,
@@ -337,6 +360,7 @@ class MainWindow(QtWidgets.QMainWindow):
             lambda: settings.set_recording_type(self.type_box.currentData()))
 
         self.profile_box = QtWidgets.QComboBox()
+        self.profile_box.setMaximumWidth(140)
         self._fill_profiles()
         self.profile_box.currentIndexChanged.connect(self._profile_chosen)
 
@@ -353,6 +377,7 @@ class MainWindow(QtWidgets.QMainWindow):
         bar.addSpacing(14)
         bar.addWidget(QtWidgets.QLabel(i18n.t("microphone")))
         bar.addWidget(self.device_box, 1)
+        bar.addWidget(self.btn_pick)
         bar.addWidget(self.btn_refresh)
         bar.addSpacing(10)
         bar.addWidget(self.btn_start)
@@ -1238,6 +1263,27 @@ class MainWindow(QtWidgets.QMainWindow):
                     target = row
                     break
         self.device_box.setCurrentIndex(target)
+        self._device_tooltip()
+
+    def _device_tooltip(self) -> None:
+        """Ganzer Name als Tooltip, weil das Feld ihn beschneidet."""
+        text = self.device_box.currentText().strip()
+        self.device_box.setToolTip(text)
+
+    def _pick_device(self) -> None:
+        """Grosse Auswahl oeffnen und die Entscheidung uebernehmen."""
+        dialog = MicrophonePicker(self._current_device_key(), self)
+        if dialog.exec() != QtWidgets.QDialog.DialogCode.Accepted:
+            return
+        key = dialog.selected_key()
+        if key is None:
+            return
+
+        # Die Liste kann sich im Dialog geaendert haben (Aktualisieren), also
+        # neu aufbauen und danach die Wahl setzen.
+        settings.set_device(key)
+        self._refresh_devices()
+        self._device_tooltip()
 
     def _current_device_key(self):
         model = self.device_box.model()

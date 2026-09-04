@@ -325,7 +325,11 @@ QPushButton#langright {{ border-top-right-radius: 6px; border-bottom-right-radiu
 QPushButton#langleft:checked, QPushButton#langright:checked {{
     background: {c['accent']}; color: {accent_text}; font-weight: 700; }}
 QComboBox {{ background: {inner}; border: none; border-radius: 6px;
-             padding: 7px 26px 7px 10px; min-width: 180px; color: {c['fg']}; }}
+             padding: 7px 26px 7px 10px; min-width: 90px; color: {c['fg']}; }}
+/* Der Mindestwert galt frueher fuer alle Klappfelder und hat "Lesetext" so
+   breit gemacht wie "Tonhoehentest (Summen)" — der Platz fehlte dem
+   Mikrofonnamen. Breite bekommt jetzt, wer sie braucht. */
+QComboBox#device {{ min-width: 220px; }}
 QComboBox QAbstractItemView {{ background: {c['bg2']}; color: {c['fg']};
                                selection-background-color: {c['bg3']}; }}
 QLineEdit {{ background: {inner}; border: 1px solid {c['border']};

@@ -4,7 +4,37 @@ Notable changes per release. Format follows
 [Keep a Changelog](https://keepachangelog.com/), versions follow
 [Semantic Versioning](https://semver.org/).
 
-## [1.0.9] — 2026-09-03
+## [1.1.0] — 2026-09-04
+
+### Added
+
+- **A proper input picker beside the microphone box.** The button next to it
+  opens a wide list with the full name of every input, the technical name of
+  the selected one underneath, and a refresh button. Windows users could not
+  read past the middle of names like *USB Advanced Audio Device Analoges
+  Stereo* in a drop-down that had to share the toolbar with everything else.
+- The microphone box now carries the full name as a tooltip as well.
+
+### Fixed
+
+- **The same microphone appearing twice is now explained instead of puzzling.**
+  It was never a duplicate: a sound card with two capture inputs reports both
+  under one description, and every output has its own monitor source. Entries
+  that share a name now get the piece of their technical name that tells them
+  apart appended — two *USB Audio Device* become *(00)* and *(01)* — and the
+  picker says so in a sentence at the bottom. Where the technical names match
+  too, the entries are numbered, so the list is never ambiguous.
+
+### Changed
+
+- **The recording type and target voice boxes no longer take the width of
+  their longest entry.** A stylesheet rule set a 180 px minimum on every
+  drop-down, so *Reading text* was as wide as *Pitch test (hum)* and the space
+  was missing where it was actually needed. The minimum is now 90 px, the
+  microphone box asks for 220 px and grows with the window, and the two short
+  boxes are capped.
+
+## [1.0.9] — unreleased
 
 ### Added
 

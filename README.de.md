@@ -238,11 +238,26 @@ bash install.sh --uninstall
 Nützliche Schalter: `--no-deps` überspringt die Systempakete, `PREFIX=/wohin`
 verschiebt die Installation.
 
-### Arch, CachyOS, EndeavourOS — als Paket
+### Arch, CachyOS, EndeavourOS — aus dem AUR
 
-`praat-parselmouth` gibt es noch nicht im AUR, also wird es zuerst gebaut.
-Dabei werden die mitgelieferten Praat-Quellen kompiliert, das dauert ein paar
-Minuten.
+```sh
+paru -S dream-voicetraining         # oder yay, oder ein anderer AUR-Helper
+```
+
+Das ist alles. Der Helper holt die Abhängigkeiten ebenfalls aus dem AUR, und
+Aktualisierungen kommen mit dem gewohnten `paru -Syu`.
+
+Beim ersten Mal dauert es ein paar Minuten: `praat-parselmouth` kompiliert die
+mitgelieferten Praat-Quellen. Scheitert das nach einem Python-Sprung in Arch,
+installier vorher `python-praat-parselmouth-bin` — das nimmt das offizielle
+Wheel und braucht keinen Compiler:
+
+```sh
+paru -S python-praat-parselmouth-bin dream-voicetraining
+```
+
+<details>
+<summary>Die Pakete selbst aus diesem Repository bauen</summary>
 
 ```sh
 git clone https://github.com/yakuda-stack/Dream-VoiceTraining
@@ -254,9 +269,7 @@ paru -Ui
 `paru` statt `makepkg` im zweiten Schritt: `python-sounddevice` liegt im AUR,
 und `makepkg` kennt nur pacman. Mit yay: `yay -Bi .`
 
-Scheitert der Praat-Bau nach einem Python-Sprung in Arch, nimm stattdessen
-`PKGBUILD.python-praat-parselmouth-bin` — das installiert das offizielle Wheel
-und braucht keinen Compiler.
+</details>
 
 ### Windows
 
@@ -468,3 +481,9 @@ Parselmouth, nicht dieses Werkzeug.
 * **Dokumentation & Texte:** Ausformuliert und formatiert mit Unterstützung von Google Gemini.
 
 Jede Codezeile und jeder Text wurden vor der Veröffentlichung von mir geprüft, ausgeführt und getestet. KI dient hier als Werkzeug zur Umsetzung – die Verantwortung für Codequalität, Review, Tests und Wartung liegt aber weiterhin komplett bei mir.
+
+Was das nicht ändert: Jede Zeile hier habe ich gelesen, ausgeführt und
+getestet, bevor sie herausging. Review, Tests und Wartung liegen bei mir — und
+die Verantwortung für alles, was schiefgeht, auch. Jeder Fehler in diesem Repository wurde durch Messen
+gefunden, nicht durch Raten — das Diagnoseskript und die Testsuite gibt es,
+damit das so bleibt.

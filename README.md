@@ -479,6 +479,8 @@ than this tool.
 
 ## Note on how this was built
 
+## Note on how this was built
+
 * **Idea, Architecture & System Design:** Concept, functionality, UX/UI, and overall system architecture were fully conceived and designed by me.
 * **Code Implementation:** Written, generated, and refactored using Claude Code (Anthropic).
 * **Documentation & Texts:** Drafted and formatted with assistance from Google Gemini.
