@@ -461,7 +461,10 @@ Parselmouth, nicht dieses Werkzeug.
 
 ## Anmerkung zur Entstehung
 
-Teile dieses Codes sind mit KI-Unterstützung entstanden. Review, Tests und
-Wartung liegen bei mir. Jeder Fehler in diesem Repository wurde durch Messen
-gefunden, nicht durch Raten — das Diagnoseskript und die Testsuite gibt es,
-damit das so bleibt.
+## Hinweises zur Entstehung dieses Projekts
+
+* **Idee, Architektur & Systemdesign:** Das Konzept, die Funktionsweise, UX/UI und die gesamte Systemarchitektur wurden vollständig von mir erdacht und gestaltet.
+* **Code-Implementierung:** Geschrieben, generiert und refactort unter Einsatz von Claude Code (Anthropic).
+* **Dokumentation & Texte:** Ausformuliert und formatiert mit Unterstützung von Google Gemini.
+
+Jede Codezeile und jeder Text wurden vor der Veröffentlichung von mir geprüft, ausgeführt und getestet. KI dient hier als Werkzeug zur Umsetzung – die Verantwortung für Codequalität, Review, Tests und Wartung liegt aber weiterhin komplett bei mir.

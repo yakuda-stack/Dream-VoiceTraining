@@ -479,10 +479,11 @@ than this tool.
 
 ## Note on how this was built
 
-Parts of this code were written with Claude, Anthropic's AI assistant — that
-includes code, tests, packaging and parts of this README. I say so plainly
-because you deserve to know what you are installing, and because a repository
-that hides it invites you to guess.
+* **Idea, Architecture & System Design:** Concept, functionality, UX/UI, and overall system architecture were fully conceived and designed by me.
+* **Code Implementation:** Written, generated, and refactored using Claude Code (Anthropic).
+* **Documentation & Texts:** Drafted and formatted with assistance from Google Gemini.
+
+Every line of code and every generated text has been reviewed, executed, and tested by me before release. AI was used as a tool to realize this project, but final responsibility for code quality, review, testing, and maintenance lies entirely with me.
 
 What that does not change: every line here has been read, run and tested by
 me before it shipped. Review, testing and maintenance are mine, and so is
