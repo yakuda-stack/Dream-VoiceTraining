@@ -56,6 +56,18 @@ TYPES = [
 BY_KEY = {t.key: t for t in TYPES}
 DEFAULT = "reading"
 
+# Kuerzel fuer den Dateinamen. Bewusst fest und englisch: die uebersetzte
+# Beschriftung waere nach einem Sprachwechsel eine andere, und dann hiessen
+# gleichartige Aufnahmen im Ordner unterschiedlich.
+SLUGS = {
+    "reading": "reading",
+    "hum": "hum",
+    "vowel_a": "vowel-a",
+    "vowel_i": "vowel-i",
+    "vowel_u": "vowel-u",
+    "free": "free",
+}
+
 # Empfohlene Reihenfolge fuer die erste Runde: Tonhoehentest, dann die drei
 # Vokale. Alle vier sind gehaltene Laute und damit die Aufnahmen, aus denen
 # ueber Wochen vergleichbare Formant- und Stabilitaetswerte entstehen.
@@ -68,3 +80,8 @@ def get(key: str | None) -> RecordingType:
 
 def label(key: str | None) -> str:
     return get(key).label
+
+
+def slug(key: str | None) -> str:
+    """Kuerzel fuer den Dateinamen."""
+    return SLUGS.get(get(key).key, SLUGS[DEFAULT])

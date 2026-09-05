@@ -4,6 +4,33 @@ Notable changes per release. Format follows
 [Keep a Changelog](https://keepachangelog.com/), versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [1.1.1] — 2026-09-05
+
+### Added
+
+- **A place to say where recordings go.** *Choose folder* sits next to *Open
+  folder* under *Sessions* and opens a small dialog: the folder itself at the
+  top, then a checkbox for one folder per month and one for the recording type
+  in the file name, with a live example of what a new file will be called. An
+  external drive or a synced folder was possible before only by moving the
+  whole data directory with `DREAM_VOICETRAINING_HOME`, which took the settings
+  along with it.
+- **A button that moves what is already there.** At the bottom of the same
+  dialog: existing recordings are moved into the chosen folder and renamed to
+  the chosen scheme. Names given by hand are kept, a file of the same name at
+  the destination is never overwritten, and files that cannot be found are
+  reported instead of dropped from the list. The setting is only stored once
+  the files have actually arrived.
+- Recordings can now live in subfolders. `sessions.json` stores the name
+  relative to the recording folder with forward slashes, so the list stays
+  usable across systems, and it stays in the program data itself — a list that
+  travels with the WAV files onto an external drive is gone the moment the
+  drive is not plugged in. Recordings left behind at the old location are still
+  found and played.
+- The type in the file name uses a fixed English short form — `reading`, `hum`,
+  `vowel-a`, `vowel-i`, `vowel-u`, `free` — so switching the interface language
+  does not rename anything.
+
 ## [1.1.0] — 2026-09-04
 
 ### Added

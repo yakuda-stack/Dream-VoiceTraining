@@ -114,6 +114,67 @@ STRINGS: dict[str, dict[str, str]] = {
     "no_speech": {"en": "no speech signal", "de": "kein Sprachsignal"},
     "quiet": {"en": "quiet", "de": "leise"},
     "open_folder": {"en": "Open folder", "de": "Ordner öffnen"},
+
+    # --- Speicherort ---
+    "choose_folder": {"en": "Choose folder", "de": "Ordner auswählen"},
+    "storage_title": {"en": "Where recordings are stored",
+                      "de": "Ablage der Aufnahmen"},
+    "storage_folder": {"en": "Folder", "de": "Ordner"},
+    "storage_browse": {"en": "Browse…", "de": "Durchsuchen…"},
+    "storage_reset": {"en": "Default", "de": "Standard"},
+    "storage_pick_title": {"en": "Choose a folder for recordings",
+                           "de": "Ordner für die Aufnahmen wählen"},
+    "storage_folder_hint": {
+        "en": "New recordings go here. The session list itself stays in the "
+              "program data, so it is still there when an external drive is "
+              "not plugged in.",
+        "de": "Neue Aufnahmen landen hier. Die Sessionliste selbst bleibt in "
+              "den Programmdaten, damit sie auch dann da ist, wenn eine "
+              "externe Platte nicht steckt."},
+    "storage_not_writable": {
+        "en": "Cannot write to this folder:",
+        "de": "In diesen Ordner lässt sich nicht schreiben:"},
+    "storage_layout": {"en": "Naming", "de": "Benennung"},
+    "storage_month": {"en": "One folder per month",
+                      "de": "Ein Ordner pro Monat"},
+    "storage_month_hint": {
+        "en": "Recordings are filed under 2026-09 and so on, by their date.",
+        "de": "Aufnahmen liegen nach Datum unter 2026-09 und so weiter."},
+    "storage_type": {"en": "Recording type in the file name",
+                     "de": "Aufnahmetyp im Dateinamen"},
+    "storage_type_hint": {
+        "en": "Adds reading, hum, vowel-a, vowel-i, vowel-u or free. The "
+              "short form stays English so a language switch does not rename "
+              "anything.",
+        "de": "Hängt reading, hum, vowel-a, vowel-i, vowel-u oder free an. "
+              "Das Kürzel bleibt englisch, damit ein Sprachwechsel nichts "
+              "umbenennt."},
+    "storage_example": {"en": "Example: {name}", "de": "Beispiel: {name}"},
+    "storage_existing": {"en": "Existing recordings",
+                         "de": "Vorhandene Aufnahmen"},
+    "storage_move": {"en": "Move old files into the new folder",
+                     "de": "Alte Dateien in den neuen Ordner verschieben"},
+    "storage_move_hint": {
+        "en": "Moves everything in the list to the folder and naming above. "
+              "Names you gave a recording yourself are kept as they are.",
+        "de": "Bringt alles aus der Liste in den Ordner und das Schema von "
+              "oben. Selbst vergebene Namen bleiben, wie sie sind."},
+    "storage_move_confirm": {
+        "en": "Move {count} recordings to\n{folder}?",
+        "de": "{count} Aufnahmen nach\n{folder}\nverschieben?"},
+    "storage_move_done": {
+        "en": "{moved} moved, {kept} already in place.",
+        "de": "{moved} verschoben, {kept} lagen schon richtig."},
+    "storage_move_missing": {
+        "en": "{count} files were not found and stay in the list.",
+        "de": "{count} Dateien nicht gefunden, sie bleiben in der Liste."},
+    "storage_move_failed": {"en": "Some files could not be moved:",
+                            "de": "Einige Dateien ließen sich nicht verschieben:"},
+    "storage_elsewhere": {
+        "en": "{count} recordings are still somewhere else.",
+        "de": "{count} Aufnahmen liegen noch woanders."},
+    "storage_all_here": {"en": "Everything is where it belongs.",
+                         "de": "Alles liegt, wo es hingehört."},
     "play": {"en": "Play", "de": "Abspielen"},
     "formant_hint": {
         "en": "Formants are only meaningful on voiced material. For stable F1/F2 "

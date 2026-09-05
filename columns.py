@@ -71,7 +71,9 @@ def display_name(entry: dict) -> str:
     label = entry.get("label")
     if label:
         return str(label)
-    name = entry.get("file", "")
+    # Nur der Dateiname: der Monatsunterordner steht schon in der
+    # Datumsspalte und wuerde die Namensspalte doppelt so breit machen.
+    name = str(entry.get("file", "")).rsplit("/", 1)[-1].rsplit("\\", 1)[-1]
     return name[:-4] if name.lower().endswith(".wav") else name
 
 

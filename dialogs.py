@@ -53,6 +53,7 @@ import i18n
 import paths
 import rectypes
 import settings
+import storage
 import targets
 import theming
 from theming import COLORS as NORD
@@ -960,7 +961,7 @@ class SessionDetailDialog(QtWidgets.QDialog):
         if language is None:
             return
         stem = Path(self.entry.get("file", "session")).stem
-        suggestion = str(self.session_dir / f"{stem}-report.txt")
+        suggestion = str(Path(self.session_dir) / f"{stem}-report.txt")
         path, chosen = QtWidgets.QFileDialog.getSaveFileName(
             self, i18n.t("export_title"), suggestion, i18n.t("export_filter"))
         if not path:
@@ -980,7 +981,7 @@ class SessionDetailDialog(QtWidgets.QDialog):
             self, i18n.t("export_title"), i18n.t("exported", path=path))
 
     def _path(self):
-        return self.session_dir / self.entry.get("file", "")
+        return storage.path_for(self.entry.get("file", ""))
 
     def _play(self) -> None:
         path = self._path()
@@ -1279,6 +1280,207 @@ class FilterDialog(QtWidgets.QDialog):
         }
 
 
+# ------------------------------------------------------------ Speicherort
+
+class StorageDialog(QtWidgets.QDialog):
+    """Ordner, Monatsunterordner und Typ im Dateinamen.
+
+    Der Knopf zum Verschieben wendet die Auswahl sofort an: erst die
+    Dateien umziehen und dann die Einstellung speichern haette einen
+    Zustand hinterlassen, in dem die Liste auf Namen zeigt, die es noch
+    nicht gibt.
+    """
+
+    changed = QtCore.Signal()
+
+    def __init__(self, entries: list[dict], parent=None):
+        super().__init__(parent)
+        self.setWindowTitle(i18n.t("storage_title"))
+        self.setMinimumWidth(620)
+        self.entries = entries
+        self.folder = str(storage.root())
+        self._custom = settings.get_session_dir() is not None
+
+        root = QtWidgets.QVBoxLayout(self)
+        root.addWidget(self._build_folder())
+        root.addWidget(self._build_layout_box())
+        root.addWidget(self._build_move_box())
+
+        buttons = QtWidgets.QDialogButtonBox(
+            QtWidgets.QDialogButtonBox.StandardButton.Ok
+            | QtWidgets.QDialogButtonBox.StandardButton.Cancel)
+        SB = QtWidgets.QDialogButtonBox.StandardButton
+        buttons.button(SB.Ok).setText(i18n.t("ok"))
+        buttons.button(SB.Cancel).setText(i18n.t("cancel"))
+        buttons.accepted.connect(self._accept)
+        buttons.rejected.connect(self.reject)
+        root.addWidget(buttons)
+
+        self._refresh()
+
+    # -- Aufbau ------------------------------------------------------------
+
+    def _build_folder(self) -> QtWidgets.QWidget:
+        box = QtWidgets.QGroupBox(i18n.t("storage_folder"))
+        lay = QtWidgets.QVBoxLayout(box)
+
+        row = QtWidgets.QHBoxLayout()
+        self.path_edit = QtWidgets.QLineEdit(self.folder)
+        self.path_edit.setReadOnly(True)
+        browse = QtWidgets.QPushButton(i18n.t("storage_browse"))
+        browse.clicked.connect(self._browse)
+        reset = QtWidgets.QPushButton(i18n.t("storage_reset"))
+        reset.clicked.connect(self._reset)
+        row.addWidget(self.path_edit, 1)
+        row.addWidget(browse)
+        row.addWidget(reset)
+        lay.addLayout(row)
+
+        hint = QtWidgets.QLabel(i18n.t("storage_folder_hint"))
+        hint.setWordWrap(True)
+        hint.setStyleSheet(f"color: {NORD['dim']}; font-size: 11px;")
+        lay.addWidget(hint)
+        return box
+
+    def _build_layout_box(self) -> QtWidgets.QWidget:
+        box = QtWidgets.QGroupBox(i18n.t("storage_layout"))
+        lay = QtWidgets.QVBoxLayout(box)
+
+        self.month = QtWidgets.QCheckBox(i18n.t("storage_month"))
+        self.month.setChecked(settings.get_month_folders())
+        self.month.toggled.connect(self._refresh)
+        lay.addWidget(self.month)
+        lay.addWidget(self._hint(i18n.t("storage_month_hint")))
+
+        self.typed = QtWidgets.QCheckBox(i18n.t("storage_type"))
+        self.typed.setChecked(settings.get_type_in_name())
+        self.typed.toggled.connect(self._refresh)
+        lay.addWidget(self.typed)
+        lay.addWidget(self._hint(i18n.t("storage_type_hint")))
+
+        self.example = QtWidgets.QLabel("")
+        self.example.setWordWrap(True)
+        self.example.setStyleSheet("font-family: monospace;")
+        lay.addWidget(self.example)
+        return box
+
+    def _build_move_box(self) -> QtWidgets.QWidget:
+        box = QtWidgets.QGroupBox(i18n.t("storage_existing"))
+        lay = QtWidgets.QVBoxLayout(box)
+        lay.addWidget(self._hint(i18n.t("storage_move_hint")))
+
+        self.status = QtWidgets.QLabel("")
+        self.status.setWordWrap(True)
+        lay.addWidget(self.status)
+
+        self.move_button = QtWidgets.QPushButton(i18n.t("storage_move"))
+        self.move_button.clicked.connect(self._move)
+        lay.addWidget(self.move_button)
+        return box
+
+    @staticmethod
+    def _hint(text: str) -> QtWidgets.QLabel:
+        label = QtWidgets.QLabel(text)
+        label.setWordWrap(True)
+        label.setStyleSheet(f"color: {NORD['dim']}; font-size: 11px;")
+        label.setContentsMargins(20, 0, 0, 6)
+        return label
+
+    # -- Zustand -----------------------------------------------------------
+
+    def _refresh(self) -> None:
+        self.path_edit.setText(self.folder)
+        name = storage.relative_name(
+            datetime.now(), settings.get_recording_type(),
+            month=self.month.isChecked(), typed=self.typed.isChecked())
+        self.example.setText(i18n.t("storage_example", name=name))
+
+        pending = storage.elsewhere(self.entries, Path(self.folder),
+                                    self.month.isChecked(),
+                                    self.typed.isChecked())
+        self.status.setText(i18n.t("storage_elsewhere", count=pending)
+                            if pending else i18n.t("storage_all_here"))
+        self.move_button.setEnabled(pending > 0)
+
+    def _browse(self) -> None:
+        chosen = QtWidgets.QFileDialog.getExistingDirectory(
+            self, i18n.t("storage_pick_title"), self.folder)
+        if not chosen:
+            return
+        problem = storage.writable(Path(chosen))
+        if problem:
+            QtWidgets.QMessageBox.warning(
+                self, i18n.t("storage_title"),
+                i18n.t("storage_not_writable") + f"\n\n{problem}")
+            return
+        self.folder = chosen
+        self._custom = True
+        self._refresh()
+
+    def _reset(self) -> None:
+        self.folder = str(storage.DEFAULT_ROOT)
+        self._custom = False
+        self._refresh()
+
+    # -- Anwenden ----------------------------------------------------------
+
+    def _store(self) -> None:
+        settings.set_session_dir(None if not self._custom else self.folder)
+        settings.set_month_folders(self.month.isChecked())
+        settings.set_type_in_name(self.typed.isChecked())
+
+    def _move(self) -> None:
+        target = Path(self.folder)
+        pending = storage.elsewhere(self.entries, target,
+                                    self.month.isChecked(),
+                                    self.typed.isChecked())
+        answer = QtWidgets.QMessageBox.question(
+            self, i18n.t("storage_move"),
+            i18n.t("storage_move_confirm", count=pending, folder=self.folder),
+            QtWidgets.QMessageBox.StandardButton.Yes
+            | QtWidgets.QMessageBox.StandardButton.No,
+            QtWidgets.QMessageBox.StandardButton.Yes)
+        if answer != QtWidgets.QMessageBox.StandardButton.Yes:
+            return
+
+        sources = [storage.root()]
+        QtWidgets.QApplication.setOverrideCursor(
+            QtCore.Qt.CursorShape.WaitCursor)
+        try:
+            result = storage.move_all(self.entries, sources, target,
+                                      self.month.isChecked(),
+                                      self.typed.isChecked())
+        finally:
+            QtWidgets.QApplication.restoreOverrideCursor()
+
+        # Erst jetzt umstellen: die Dateien liegen bereits am neuen Ort.
+        self._store()
+        self.changed.emit()
+        self._refresh()
+
+        lines = [i18n.t("storage_move_done", moved=result["moved"],
+                        kept=result["kept"])]
+        if result["missing"]:
+            lines.append(i18n.t("storage_move_missing", count=result["missing"]))
+        if result["errors"]:
+            lines.append("")
+            lines.append(i18n.t("storage_move_failed"))
+            lines += result["errors"][:10]
+        QtWidgets.QMessageBox.information(
+            self, i18n.t("storage_title"), "\n".join(lines))
+
+    def _accept(self) -> None:
+        problem = storage.writable(Path(self.folder))
+        if problem:
+            QtWidgets.QMessageBox.warning(
+                self, i18n.t("storage_title"),
+                i18n.t("storage_not_writable") + f"\n\n{problem}")
+            return
+        self._store()
+        self.changed.emit()
+        self.accept()
+
+
 # ------------------------------------------------------------- Infofenster
 
 class InfoPage(QtWidgets.QWidget):
@@ -1382,7 +1584,7 @@ class InfoPage(QtWidgets.QWidget):
                                     i18n.t("about_privacy")))
         lay.addWidget(self._section(
             i18n.t("about_paths"),
-            f"{paths.CONFIG_PATH}\n{paths.SESSION_DIR}", mono=True))
+            f"{paths.CONFIG_PATH}\n{storage.root()}", mono=True))
 
         note = QtWidgets.QLabel(i18n.t("about_health"))
         note.setWordWrap(True)

@@ -125,7 +125,8 @@ CFG = Settings()
 _state = {"active_template": DEFAULT_TEMPLATE, "user_templates": {}, "device": None, "language": "en", "profile": "feminin", "live_profile": "none",
           "view": {}, "user_profiles": {}, "theme": {}, "intro_done": False, "install_asked": False,
           "builtin_overrides": {},
-          "warn_low_level": True, "recording_type": "reading"}
+          "warn_low_level": True, "recording_type": "reading",
+          "session_dir": None, "month_folders": False, "type_in_name": False}
 
 
 def apply(new: Settings) -> None:
@@ -248,6 +249,38 @@ def get_recording_type() -> str:
 def set_recording_type(key: str) -> None:
     if _state["recording_type"] != key:
         _state["recording_type"] = key
+        save()
+
+
+def get_session_dir() -> str | None:
+    """Selbst gewaehlter Aufnahmeordner, None fuer den Standardort."""
+    return _state["session_dir"]
+
+
+def set_session_dir(folder: str | None) -> None:
+    value = str(folder) if folder else None
+    if _state["session_dir"] != value:
+        _state["session_dir"] = value
+        save()
+
+
+def get_month_folders() -> bool:
+    return bool(_state["month_folders"])
+
+
+def set_month_folders(enabled: bool) -> None:
+    if _state["month_folders"] != bool(enabled):
+        _state["month_folders"] = bool(enabled)
+        save()
+
+
+def get_type_in_name() -> bool:
+    return bool(_state["type_in_name"])
+
+
+def set_type_in_name(enabled: bool) -> None:
+    if _state["type_in_name"] != bool(enabled):
+        _state["type_in_name"] = bool(enabled)
         save()
 
 
@@ -379,6 +412,10 @@ def load() -> None:
             _state["profile"] = "user:" + LEGACY_PROFILE_NAME
     _state["warn_low_level"] = bool(raw.get("warn_low_level", True))
     _state["recording_type"] = raw.get("recording_type", "reading")
+    folder = raw.get("session_dir")
+    _state["session_dir"] = str(folder) if folder else None
+    _state["month_folders"] = bool(raw.get("month_folders", False))
+    _state["type_in_name"] = bool(raw.get("type_in_name", False))
     i18n.set_language(_state["language"])
 
 
@@ -397,6 +434,9 @@ def save() -> None:
         "builtin_overrides": _state["builtin_overrides"],
         "warn_low_level": _state["warn_low_level"],
         "recording_type": _state["recording_type"],
+        "session_dir": _state["session_dir"],
+        "month_folders": _state["month_folders"],
+        "type_in_name": _state["type_in_name"],
         "values": asdict(CFG),
         "user_templates": {n: asdict(s) for n, s in _state["user_templates"].items()},
     }

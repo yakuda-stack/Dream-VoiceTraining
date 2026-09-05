@@ -403,6 +403,14 @@ Follows the XDG Base Directory Specification:
 useful for testing and for portable setups. Data from earlier versions is
 picked up automatically on first start; existing files are never overwritten.
 
+**Choose folder**, next to *Open folder* under *Sessions*, puts the recordings
+somewhere else — an external drive, a synced folder — and lets you switch on a
+folder per month and the recording type in the file name
+(`2026-09/2026-09-05_18-30-00_vowel-a.wav`). A button at the bottom of that
+dialog moves what is already there into the new folder and naming; names you
+gave a recording yourself are kept. The session list itself stays in the
+program data, so it is still there when the drive is not plugged in.
+
 Everything is plain WAV and JSON. Nothing is uploaded anywhere, there is no
 telemetry, and the program makes no network connections at all.
 

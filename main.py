@@ -54,6 +54,7 @@ import i18n
 import paths
 import rectypes
 import settings
+import storage
 import targets
 import theming
 from theming import COLORS as NORD
@@ -61,7 +62,7 @@ import audio as audio_mod
 from audio import DEFAULT_KEY, AudioEngine, write_wav
 from dialogs import (FilterDialog, HelpDialog, IntroDialog, MicrophonePicker,
                      SessionDetailDialog, SettingsDialog, Spotlight,
-                     ask_export_language, export_language)
+                     StorageDialog, ask_export_language, export_language)
 import wininstall
 from settings import CFG
 
@@ -527,13 +528,14 @@ class MainWindow(QtWidgets.QMainWindow):
         btn_stop = QtWidgets.QPushButton(i18n.t("stop"))
         btn_stop.clicked.connect(lambda: sd.stop())
         btn_dir = QtWidgets.QPushButton(i18n.t("open_folder"))
-        btn_dir.clicked.connect(
-            lambda: QtGui.QDesktopServices.openUrl(
-                QtCore.QUrl.fromLocalFile(str(SESSION_DIR))))
+        btn_dir.clicked.connect(self._open_storage_folder)
+        btn_where = QtWidgets.QPushButton(i18n.t("choose_folder"))
+        btn_where.clicked.connect(self._open_storage)
         row.addWidget(btn_play)
         row.addWidget(btn_stop)
         row.addStretch(1)
         row.addWidget(btn_dir)
+        row.addWidget(btn_where)
         lay.addLayout(row)
 
         hint = QtWidgets.QLabel(i18n.t("formant_hint"))
@@ -712,6 +714,16 @@ class MainWindow(QtWidgets.QMainWindow):
         dialog.applied.connect(self._apply_view)
         self.open_dialog(dialog)
 
+    def _open_storage_folder(self) -> None:
+        folder = storage.ensure_root()
+        QtGui.QDesktopServices.openUrl(
+            QtCore.QUrl.fromLocalFile(str(folder)))
+
+    def _open_storage(self) -> None:
+        dialog = StorageDialog(self.sessions, self)
+        dialog.changed.connect(self._session_changed)
+        self.open_dialog(dialog)
+
     def _apply_view(self, view: dict) -> None:
         self.view = view
         settings.set_view(self.view)
@@ -765,10 +777,13 @@ class MainWindow(QtWidgets.QMainWindow):
             return
 
         old_name = entry.get("file", "")
-        old_path = SESSION_DIR / old_name
+        old_path = storage.path_for(old_name)
         suffix = Path(old_name).suffix or ".wav"
-        new_name = self._safe_filename(name) + suffix
-        new_path = SESSION_DIR / new_name
+        # Der Unterordner bleibt: eine Aufnahme vom Maerz gehoert nicht
+        # deshalb in den September, weil sie einen neuen Namen bekommt.
+        new_name = (storage.folder_part(old_name)
+                    + self._safe_filename(name) + suffix)
+        new_path = old_path.parent / Path(new_name).name
 
         if new_path != old_path:
             if new_path.exists() or any(e.get("file") == new_name
@@ -778,6 +793,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 return
             try:
                 if old_path.exists():
+                    new_path.parent.mkdir(parents=True, exist_ok=True)
                     old_path.rename(new_path)
             except OSError as exc:
                 debuglog.record_exception("main.rename_session", exc)
@@ -902,7 +918,7 @@ class MainWindow(QtWidgets.QMainWindow):
             return
         # Alte Eintraege kennen die neueren Kennwerte noch nicht.
         if "hnr" not in entry and entry.get("quality", "ok") == "ok":
-            path = SESSION_DIR / entry.get("file", "")
+            path = storage.path_for(entry.get("file", ""))
             if path.exists():
                 self.status.showMessage(i18n.t("recalculating"))
                 QtWidgets.QApplication.processEvents()
@@ -914,7 +930,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     debuglog.record_exception("main.open_details", exc)
                 self.status.clearMessage()
 
-        dialog = SessionDetailDialog(entry, list(self._rows), SESSION_DIR, self)
+        dialog = SessionDetailDialog(entry, list(self._rows), storage.root(), self)
         dialog.changed.connect(self._session_changed)
         self.open_dialog(dialog)
 
@@ -932,7 +948,7 @@ class MainWindow(QtWidgets.QMainWindow):
         if answer != QtWidgets.QMessageBox.StandardButton.Yes:
             return
 
-        path = SESSION_DIR / name
+        path = storage.path_for(name)
         try:
             if name and path.exists():
                 path.unlink()
@@ -997,7 +1013,7 @@ class MainWindow(QtWidgets.QMainWindow):
         language = ask_export_language(self)
         if language is None:
             return
-        suggestion = str(SESSION_DIR / "sessions.txt")
+        suggestion = str(storage.root() / "sessions.txt")
         path, chosen = QtWidgets.QFileDialog.getSaveFileName(
             self, i18n.t("export_list_title"), suggestion, i18n.t("export_filter"))
         if not path:
@@ -1018,7 +1034,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self, i18n.t("export_list_title"), i18n.t("exported", path=path))
 
     def _play_entry(self, entry: dict) -> None:
-        path = SESSION_DIR / entry.get("file", "")
+        path = storage.path_for(entry.get("file", ""))
         if not path.exists():
             self.status.showMessage(i18n.t("file_missing"))
             return
@@ -1513,9 +1529,11 @@ class MainWindow(QtWidgets.QMainWindow):
                         span: tuple[float, float] | None = None) -> dict:
         """WAV schreiben, auswerten und in die Historie aufnehmen."""
         stamp = datetime.now()
-        name = stamp.strftime("%Y-%m-%d_%H-%M-%S") + ".wav"
-        path = SESSION_DIR / name
+        name = storage.relative_name(stamp, type_key)
+        path = storage.free_path(storage.root() / name)
+        path.parent.mkdir(parents=True, exist_ok=True)
         write_wav(path, samples, self.sr)
+        name = path.relative_to(storage.root()).as_posix()
 
         # Die vollstaendige Auswertung braucht rund 0,13 s je Sekunde Audio
         # und laeuft im UI-Thread. Wenigstens sichtbar machen, dass gerechnet

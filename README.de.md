@@ -392,6 +392,14 @@ Nach der XDG Base Directory Specification:
 für Tests und portable Varianten. Daten aus früheren Versionen werden beim
 ersten Start automatisch übernommen, vorhandene Dateien nie überschrieben.
 
+**Ordner auswählen** neben *Ordner öffnen* im Reiter *Sessions* legt die
+Aufnahmen woanders ab — externe Platte, synchronisierter Ordner — und schaltet
+auf Wunsch einen Ordner pro Monat und den Aufnahmetyp im Dateinamen dazu
+(`2026-09/2026-09-05_18-30-00_vowel-a.wav`). Ein Knopf unten im Dialog
+verschiebt, was schon da ist, in den neuen Ordner und das neue Schema; selbst
+vergebene Namen bleiben dabei stehen. Die Sessionliste selbst bleibt in den
+Programmdaten, damit sie auch dann da ist, wenn die Platte nicht steckt.
+
 Alles ist reines WAV und JSON. Nichts wird irgendwohin hochgeladen, es gibt
 keine Telemetrie, und das Programm baut überhaupt keine Netzwerkverbindungen
 auf.
