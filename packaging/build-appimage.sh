@@ -59,6 +59,8 @@ python3 -m venv "$APPDIR/usr/python"
 say "Programmdateien kopieren"
 cp "$ROOT"/*.py "$APPDIR/usr/lib/$ID/"
 cp "$ROOT/LICENSE" "$ROOT/THIRD_PARTY_NOTICES.md" "$APPDIR/usr/lib/$ID/"
+# Der Rueckfall des Changelog-Fensters, wenn kein Netz da ist.
+cp "$ROOT/CHANGELOG.md" "$APPDIR/usr/lib/$ID/"
 mkdir -p "$APPDIR/usr/lib/$ID/assets/intro"
 cp "$ROOT/assets/intro"/* "$APPDIR/usr/lib/$ID/assets/intro/"
 

@@ -16,19 +16,18 @@
 
 """Wo die Aufnahmen liegen und wie sie heissen.
 
-Der Ordner ist frei waehlbar, wahlweise mit einem Unterordner je Monat und
-mit dem Aufnahmetyp im Dateinamen. Die sessions.json bleibt dabei immer an
-ihrem Platz in den Programmdaten: eine Liste, die mit den WAV-Dateien auf
-eine externe Platte wandert, ist beim naechsten Start verschwunden, sobald
-die Platte nicht steckt.
+Der Ordner ist frei waehlbar, die Benennung stellt naming.py zusammen:
+Unterordner je Tag, Woche, Monat oder Jahr und ein Dateiname aus frei
+angeordneten Bausteinen. Dieses Modul kuemmert sich nur noch darum, wo das
+Ergebnis landet.
+
+Die sessions.json bleibt dabei immer an ihrem Platz in den Programmdaten:
+eine Liste, die mit den WAV-Dateien auf eine externe Platte wandert, ist
+beim naechsten Start verschwunden, sobald die Platte nicht steckt.
 
 Deshalb steht in "file" ein Name *relativ* zum Aufnahmeordner, mit
 Schraegstrich als Trenner — auch unter Windows, wo Path den akzeptiert. So
 bleibt die Liste zwischen den Systemen austauschbar.
-
-Der Typ steht als fester englischer Kuerzel im Namen, nicht als uebersetzte
-Beschriftung. Sonst hiessen dieselben Aufnahmen nach einem Sprachwechsel
-anders als die Eintraege in der Liste.
 """
 
 from __future__ import annotations
@@ -38,8 +37,8 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 
+import naming
 import paths
-import rectypes
 import settings
 
 DEFAULT_ROOT = paths.SESSION_DIR
@@ -47,11 +46,10 @@ DEFAULT_ROOT = paths.SESSION_DIR
 STAMP_FORMAT = "%Y-%m-%d_%H-%M-%S"
 MONTH_FORMAT = "%Y-%m"
 
-# Von der Aufnahme selbst vergebene Namen. Nur diese werden beim Umziehen
-# umbenannt — an einem selbst vergebenen Namen fasst niemand ungefragt an.
-AUTO_STEM = re.compile(r"^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}$")
-AUTO_TYPED = re.compile(r"^(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2})_([a-z-]+)$")
-MONTH_DIR = re.compile(r"^\d{4}-\d{2}$")
+# Unterordner, die dieses Programm selbst anlegt. Nur die werden beim
+# Aufraeumen wieder entfernt, wenn sie leer sind — ein fremder leerer
+# Ordner im Aufnahmeverzeichnis geht niemanden etwas an.
+AUTO_DIR = re.compile(r"^(?:\d{4}(?:-\d{2}(?:-\d{2})?)?|\d{4}-KW\d{2}|unsorted)$")
 
 
 # ------------------------------------------------------------------ Ordner
@@ -89,6 +87,27 @@ def ensure_root() -> Path:
     return folder
 
 
+# ------------------------------------------------------------------ Zaehler
+
+def peek_counter(scheme: dict, stamp: datetime) -> int:
+    """Welche Nummer die naechste Aufnahme bekaeme — ohne sie zu verbrauchen.
+
+    Getrennt von take_counter(), damit die Vorschau im Optionen-Reiter
+    mitzaehlen kann, ohne den Zaehler bei jedem Tastendruck weiterzudrehen.
+    """
+    period = naming.period_key(naming.normalize(scheme)["counter_reset"], stamp)
+    state = settings.get_name_counter()
+    return 1 if state["period"] != period else state["value"] + 1
+
+
+def take_counter(scheme: dict, stamp: datetime) -> int:
+    """Die naechste Nummer holen und vermerken."""
+    period = naming.period_key(naming.normalize(scheme)["counter_reset"], stamp)
+    number = peek_counter(scheme, stamp)
+    settings.set_name_counter(period, number)
+    return number
+
+
 # ------------------------------------------------------------------ Namen
 
 def month_of(stamp: datetime) -> str:
@@ -97,20 +116,35 @@ def month_of(stamp: datetime) -> str:
 
 def relative_name(stamp: datetime, type_key: str | None = None,
                   stem: str | None = None, suffix: str = ".wav",
-                  month: bool | None = None, typed: bool | None = None) -> str:
+                  month: bool | None = None, typed: bool | None = None,
+                  scheme: dict | None = None,
+                  counter: int | None = None) -> str:
     """Name einer Aufnahme, relativ zum Aufnahmeordner.
 
-    month und typed uebergehen die Einstellung — der Dialog zeigt damit
-    eine Vorschau, ohne schon etwas zu speichern.
-    """
-    month = settings.get_month_folders() if month is None else month
-    typed = settings.get_type_in_name() if typed is None else typed
+    Ohne scheme gilt das eingestellte. month und typed uebergehen es —
+    damit rechnet der Umzug ein anderes Schema durch, ohne es zu speichern.
 
-    base = stem or stamp.strftime(STAMP_FORMAT)
-    if typed and stem is None:
-        base = f"{base}_{rectypes.slug(type_key)}"
-    name = base + suffix
-    return f"{month_of(stamp)}/{name}" if month else name
+    Der Zaehler wird hier nur gelesen, nie weitergedreht. Wer wirklich
+    speichert, nimmt next_name().
+    """
+    scheme = naming.with_legacy(scheme or settings.get_naming(), month, typed)
+    if counter is None:
+        counter = peek_counter(scheme, stamp)
+    return naming.relative(scheme, stamp, type_key, counter, suffix, stem)
+
+
+def next_name(stamp: datetime, type_key: str | None = None,
+              suffix: str = ".wav") -> str:
+    """Name fuer eine Aufnahme, die gleich geschrieben wird.
+
+    Verbraucht die Nummer des fortlaufenden Zaehlers, sofern der Baustein
+    ueberhaupt eingeschaltet ist. Sonst zaehlte er auch dann hoch, wenn ihn
+    niemand haben will, und stuende beim Einschalten schon bei 400.
+    """
+    scheme = settings.get_naming()
+    counter = (take_counter(scheme, stamp) if naming.uses_counter(scheme)
+               else peek_counter(scheme, stamp))
+    return naming.relative(scheme, stamp, type_key, counter, suffix)
 
 
 def path_for(name: str) -> Path:
@@ -158,46 +192,78 @@ def _stamp_of(entry: dict) -> datetime:
     """Zeitpunkt einer Aufnahme, notfalls aus dem Dateinamen.
 
     Ein Eintrag ohne brauchbaren Zeitstempel darf nicht dazu fuehren, dass
-    der ganze Umzug abbricht — er landet dann eben im Ordner "unsortiert".
+    der ganze Umzug abbricht — er landet dann eben im Ordner "unsorted".
     """
     raw = str(entry.get("timestamp", ""))
     try:
         return datetime.fromisoformat(raw)
     except ValueError:
         pass
+
+    # Aelteste Rettung: der Zeitstempel steht vorn im Dateinamen.
     stem = Path(str(entry.get("file", ""))).stem
-    match = AUTO_TYPED.match(stem)
-    head = match.group(1) if match else stem
-    try:
-        return datetime.strptime(head, STAMP_FORMAT)
-    except ValueError:
-        return datetime.min
+    head = stem.split(naming.SEPARATOR)
+    for size in (2, 1):
+        try:
+            return datetime.strptime(naming.SEPARATOR.join(head[:size]),
+                                     STAMP_FORMAT)
+        except ValueError:
+            continue
+    return datetime.min
 
 
-def target_name(entry: dict, month: bool, typed: bool) -> str:
-    """Wohin ein vorhandener Eintrag nach dem gewaehlten Schema gehoert."""
+def target_name(entry: dict, scheme: dict | None = None, *,
+                month: bool | None = None, typed: bool | None = None,
+                counter: int = 1) -> str:
+    """Wohin ein vorhandener Eintrag nach dem gewaehlten Schema gehoert.
+
+    Selbst vergebene Namen behalten ihren Stamm und wandern nur in den
+    passenden Unterordner. Erkannt wird das an den Bausteinen: was sich
+    restlos in Datum, Uhrzeit, Typ und Zaehler zerlegen laesst, stammt vom
+    Programm — alles andere hat sich jemand ueberlegt.
+    """
     old = str(entry.get("file", ""))
     if not old:
         return ""
 
+    scheme = naming.with_legacy(scheme or settings.get_naming(), month, typed)
     base = Path(old).name
     stem = Path(base).stem
     suffix = Path(base).suffix or ".wav"
     stamp = _stamp_of(entry)
 
-    known = set(rectypes.SLUGS.values())
-    match = AUTO_TYPED.match(stem)
-    if match and match.group(2) in known:
-        stem = match.group(1) if not typed else \
-            f"{match.group(1)}_{rectypes.slug(entry.get('type'))}"
-    elif typed and AUTO_STEM.match(stem):
-        stem = f"{stem}_{rectypes.slug(entry.get('type'))}"
+    keep = None if naming.looks_generated(stem, scheme) else stem
+    if stamp == datetime.min:
+        # Ohne Zeitstempel laesst sich kein Name bauen und kein Zeitraum
+        # bestimmen. Der Eintrag bleibt, wie er heisst, und wird eingesammelt.
+        folder = naming.build_folder(scheme, datetime.now())
+        return f"unsorted/{stem}{suffix}" if folder else f"{stem}{suffix}"
 
-    name = stem + suffix
-    if not month:
-        return name
-    folder = "unsorted" if stamp == datetime.min else month_of(stamp)
-    return f"{folder}/{name}"
+    return naming.relative(scheme, stamp, entry.get("type"), counter, suffix,
+                           stem=keep)
+
+
+def _numbered(entries: list[dict], scheme: dict) -> dict[int, int]:
+    """Fortlaufende Nummern fuer einen Umzug, je Zeitraum von vorn.
+
+    Der gespeicherte Zaehler taugt hier nicht: er kennt nur den aktuellen
+    Zeitraum, und ein Umzug bringt Aufnahmen aus Monaten mit, die laengst
+    vorbei sind. Also wird fuer die Liste einmal durchgezaehlt — nach
+    Aufnahmezeitpunkt, damit die Nummern der Reihenfolge folgen.
+    """
+    if not naming.uses_counter(scheme):
+        return {}
+
+    reset = naming.normalize(scheme)["counter_reset"]
+    order = sorted(range(len(entries)), key=lambda i: _stamp_of(entries[i]))
+    seen: dict[str, int] = {}
+    numbers: dict[int, int] = {}
+    for index in order:
+        stamp = _stamp_of(entries[index])
+        period = naming.period_key(reset, stamp)
+        seen[period] = seen.get(period, 0) + 1
+        numbers[index] = seen[period]
+    return numbers
 
 
 def _find(name: str, roots: list[Path]) -> Path | None:
@@ -211,13 +277,16 @@ def _find(name: str, roots: list[Path]) -> Path | None:
 
 
 def move_all(entries: list[dict], sources: list[Path], target: Path,
-             month: bool, typed: bool) -> dict:
+             scheme: dict | None = None, *, month: bool | None = None,
+             typed: bool | None = None) -> dict:
     """Vorhandene Aufnahmen in den neuen Ordner und das neue Schema bringen.
 
     Aendert entry["file"] auf den neuen Namen. Die Liste zu speichern ist
     Sache des Aufrufers — der weiss, wann er das Fenster ohnehin neu
     zeichnet.
     """
+    scheme = naming.with_legacy(scheme or settings.get_naming(), month, typed)
+    numbers = _numbered(entries, scheme)
     target = Path(target).expanduser()
     # Das Ziel steht bewusst hinten: liegt dort schon eine fremde Datei
     # gleichen Namens, soll die echte Quelle gefunden und daneben abgelegt
@@ -231,7 +300,7 @@ def move_all(entries: list[dict], sources: list[Path], target: Path,
             roots.append(base)
 
     result = {"moved": 0, "kept": 0, "missing": 0, "errors": []}
-    for entry in entries:
+    for index, entry in enumerate(entries):
         old = str(entry.get("file", ""))
         if not old:
             continue
@@ -241,7 +310,7 @@ def move_all(entries: list[dict], sources: list[Path], target: Path,
             result["missing"] += 1
             continue
 
-        wanted = target_name(entry, month, typed)
+        wanted = target_name(entry, scheme, counter=numbers.get(index, 1))
         destination = target / wanted
         if source == destination:
             if old != wanted:
@@ -267,13 +336,17 @@ def move_all(entries: list[dict], sources: list[Path], target: Path,
 
 
 def prune_empty(folder: Path) -> None:
-    """Leere Monatsordner wegraeumen, den Ordner selbst stehen lassen."""
+    """Leere selbst angelegte Unterordner wegraeumen, den Ordner selbst nicht.
+
+    Nach einem Wechsel von "pro Monat" auf "pro Tag" bleiben sonst die
+    leeren Monatsordner stehen und der Aufnahmeordner sieht aus wie ein
+    Dachboden.
+    """
     try:
         if not folder.is_dir():
             return
         for item in folder.iterdir():
-            if item.is_dir() and (MONTH_DIR.match(item.name)
-                                  or item.name == "unsorted"):
+            if item.is_dir() and AUTO_DIR.match(item.name):
                 try:
                     item.rmdir()
                 except OSError:
@@ -282,16 +355,19 @@ def prune_empty(folder: Path) -> None:
         pass
 
 
-def elsewhere(entries: list[dict], target: Path, month: bool,
-              typed: bool) -> int:
+def elsewhere(entries: list[dict], target: Path, scheme: dict | None = None,
+              *, month: bool | None = None, typed: bool | None = None) -> int:
     """Wie viele Aufnahmen noch nicht dort liegen, wo sie hin sollen."""
+    scheme = naming.with_legacy(scheme or settings.get_naming(), month, typed)
+    numbers = _numbered(entries, scheme)
     target = Path(target).expanduser()
     count = 0
-    for entry in entries:
+    for index, entry in enumerate(entries):
         old = str(entry.get("file", ""))
         if not old:
             continue
-        wanted = target / target_name(entry, month, typed)
+        wanted = target / target_name(entry, scheme,
+                                      counter=numbers.get(index, 1))
         if wanted.is_file():
             continue
         if _find(old, [target, root(), DEFAULT_ROOT]) is not None:

@@ -404,15 +404,27 @@ useful for testing and for portable setups. Data from earlier versions is
 picked up automatically on first start; existing files are never overwritten.
 
 **Choose folder**, next to *Open folder* under *Sessions*, puts the recordings
-somewhere else — an external drive, a synced folder — and lets you switch on a
-folder per month and the recording type in the file name
-(`2026-09/2026-09-05_18-30-00_vowel-a.wav`). A button at the bottom of that
-dialog moves what is already there into the new folder and naming; names you
-gave a recording yourself are kept. The session list itself stays in the
-program data, so it is still there when the drive is not plugged in.
+somewhere else — an external drive, a synced folder. It opens the folder dialog
+of your system and nothing else.
 
-Everything is plain WAV and JSON. Nothing is uploaded anywhere, there is no
-telemetry, and the program makes no network connections at all.
+How the files are named lives under *Settings → Options*, with a live preview of
+the next file name at the top. Subfolders per day, calendar week, month or year;
+a file name assembled from parts you tick and drag into the order you want:
+custom text front and back, year, month, calendar week, date, time of day (with
+or without seconds), recording type and a running counter that resets never,
+daily, weekly, monthly or yearly. The preview spells the result out in one
+badge per part, and each part carries its own settings in its own row. `Voice-Training_2026-KW37_14-30_vowel-a_001.wav`
+is as valid as the default `2026-09-07_14-30-15.wav`. A button at the bottom of
+that tab moves what is already there into the new folder and naming; names you
+gave a recording yourself are kept. The session list itself stays in the program
+data, so it is still there when the drive is not plugged in.
+
+Everything is plain WAV and JSON. Nothing is uploaded anywhere and there is no
+telemetry. The program makes exactly one network connection, and only when you
+ask for it: **Changelog** under *Settings → Info* fetches the version history
+from the project page on GitHub. It sends nothing but the request, there is no
+update check, and nothing happens in the background. Without a connection the
+window falls back to the copy shipped with your installation.
 
 ---
 

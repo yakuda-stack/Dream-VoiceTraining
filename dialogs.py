@@ -35,6 +35,7 @@ import io
 import json
 import math
 import shutil
+import urllib.request
 import wave
 from datetime import datetime
 from pathlib import Path
@@ -50,6 +51,7 @@ import columns
 import debuglog
 import helptext
 import i18n
+import naming
 import paths
 import rectypes
 import settings
@@ -114,8 +116,9 @@ class SettingsDialog(QtWidgets.QDialog):
     applied = QtCore.Signal()
     theme_changed = QtCore.Signal()
     intro_requested = QtCore.Signal()
+    storage_changed = QtCore.Signal()
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, entries: list[dict] | None = None):
         super().__init__(parent)
         self.setWindowTitle(i18n.t("dlg_settings"))
         self.setMinimumSize(660, 660)
@@ -140,7 +143,22 @@ class SettingsDialog(QtWidgets.QDialog):
         scroll.setWidget(self._build_params_group())
         analysis_lay.addWidget(scroll, 1)
 
+        # Reihenfolge nach Haeufigkeit, mit der man sie braucht: Optionen
+        # und Analyse aendert man gelegentlich, Design einmal, Info liest
+        # man nach. Angezeigt wird trotzdem Info — siehe unten.
         self.tabs = QtWidgets.QTabWidget()
+
+        # Ordner und Dateinamen. Der Reiter ist hoch, also in eine Rolle —
+        # sonst wandert der Umzugsknopf auf kleinen Bildschirmen unter den
+        # unteren Rand des Dialogs.
+        self.options = OptionsPage(entries)
+        self.options.changed.connect(self.storage_changed)
+        options_page = QtWidgets.QScrollArea()
+        options_page.setWidgetResizable(True)
+        options_page.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
+        options_page.setWidget(self.options)
+        self.tabs.addTab(options_page, i18n.t("tab_options"))
+
         self.tabs.addTab(analysis_page, i18n.t("tab_analysis"))
         self.profiles = ProfileEditor()
         self.tabs.addTab(self.profiles, i18n.t("tab_profiles"))
@@ -156,10 +174,15 @@ class SettingsDialog(QtWidgets.QDialog):
         self.info = InfoPage()
         self.info.intro_requested.connect(self.intro_requested)
         self.info.debug_requested.connect(self._open_debug)
+        self.info.changelog_requested.connect(self._open_changelog)
         self.tabs.addTab(self.info, i18n.t("tab_info"))
-        # Info steht vorn: dort liegen Version, Links, Debug und der Knopf,
-        # der die Einfuehrung erneut zeigt — das, was man sucht, wenn man
-        # die Einstellungen ohne bestimmten Parameter im Kopf oeffnet.
+        # Info sitzt hinten, wird aber als erstes gezeigt: dort liegen
+        # Version, Links, Debug und der Knopf, der die Einfuehrung erneut
+        # zeigt — das, was man sucht, wenn man die Einstellungen ohne einen
+        # bestimmten Parameter im Kopf oeffnet. Der Platz in der Leiste
+        # richtet sich danach, wie oft man etwas aendert, die Startseite
+        # danach, was man beim blossen Aufmachen wissen will; das ist
+        # nicht dasselbe.
         self.tabs.setCurrentWidget(self.info)
         root.addWidget(self.tabs, 1)
 
@@ -186,6 +209,7 @@ class SettingsDialog(QtWidgets.QDialog):
 
         self._before = settings.snapshot()
         self._before_template = settings.active_template()
+        self._before_storage = self.options.snapshot()
         self._refresh_templates()
         self._load_values(self._before)
 
@@ -264,6 +288,9 @@ class SettingsDialog(QtWidgets.QDialog):
     def _open_debug(self) -> None:
         dialog = self._show(DebugDialog(self))
         dialog.finished.connect(self.info.update_debug_badge)
+
+    def _open_changelog(self) -> None:
+        self._show(ChangelogDialog(self))
 
     @staticmethod
     def _show(dialog: QtWidgets.QDialog) -> QtWidgets.QDialog:
@@ -362,25 +389,35 @@ class SettingsDialog(QtWidgets.QDialog):
 
     # -- Aktionen --------------------------------------------------------
 
-    def _apply(self) -> None:
+    def _apply(self) -> bool:
+        """False, wenn der gewaehlte Aufnahmeordner nicht beschreibbar ist.
+
+        Dann bleibt der Dialog offen: mit "OK" wegzugehen und die Aufnahmen
+        stillschweigend woanders zu haben, waere die unangenehmere Variante.
+        """
         values = self._collect()
         settings.apply(values)
         settings.set_active_template(self._current_template())
         settings.save()
         self._load_values(settings.snapshot())
         self.applied.emit()
+        return self.options.store()
 
     def _accept(self) -> None:
-        self._apply()
-        self.accept()
+        if self._apply():
+            self.accept()
 
     def _reject(self) -> None:
         # Auch ein zwischenzeitliches "Anwenden" wird zurueckgerollt,
-        # inklusive der bereits geschriebenen config.json.
+        # inklusive der bereits geschriebenen config.json. Der Umzug ist
+        # davon ausgenommen — verschobene Dateien holt niemand zurueck,
+        # deshalb wendet der Umzugsknopf seine Auswahl auch sofort an.
         settings.apply(self._before)
         settings.set_active_template(self._before_template)
         settings.save()
+        self.options.restore(self._before_storage)
         self.applied.emit()
+        self.storage_changed.emit()
         self.reject()
 
 
@@ -1280,94 +1317,481 @@ class FilterDialog(QtWidgets.QDialog):
         }
 
 
-# ------------------------------------------------------------ Speicherort
+# ---------------------------------------------- Speicherort und Namen
 
-class StorageDialog(QtWidgets.QDialog):
-    """Ordner, Monatsunterordner und Typ im Dateinamen.
+# Farbe je Baustein. Aus den Rollen des Farbschemas, damit die Marken in
+# der Vorschau ein Themenwechsel mitnimmt statt sie fest einzubrennen.
+PART_ROLES = {
+    "prefix": "purple", "suffix": "purple",
+    "year": "accent", "month": "accent", "week": "accent", "date": "accent",
+    "time": "green",
+    "type": "yellow",
+    "counter": "red",
+}
 
-    Der Knopf zum Verschieben wendet die Auswahl sofort an: erst die
-    Dateien umziehen und dann die Einstellung speichern haette einen
-    Zustand hinterlassen, in dem die Liste auf Namen zeigt, die es noch
-    nicht gibt.
+# Bausteine mit einem ausfuehrlichen Hinweis. Der steht als Tooltip an
+# einem kleinen (i) statt als grauer Absatz unter dem Feld: neun Absaetze
+# untereinander erklaeren zwar alles, aber man sieht die Liste nicht mehr.
+PART_TIPS = {
+    "prefix": "opt_text_hint", "suffix": "opt_text_hint",
+    "week": "part_week_tip", "time": "opt_seconds_hint",
+    "type": "opt_type_hint", "counter": "opt_counter_hint",
+}
+
+
+def info_icon(tip: str) -> QtWidgets.QLabel:
+    """Ein kleines (i), das seinen Text erst beim Draufzeigen hergibt."""
+    label = QtWidgets.QLabel("ⓘ")
+    label.setToolTip(tip)
+    label.setCursor(QtCore.Qt.CursorShape.WhatsThisCursor)
+    label.setStyleSheet(f"color: {NORD['dim']}; font-size: 13px;")
+    return label
+
+
+class PartRow(QtWidgets.QFrame):
+    """Eine Zeile der Baustein-Liste.
+
+    Oben Griff, Haken, Name, Wert und das (i); darunter bei Bedarf eine
+    Nebenzeile mit den Einstellungen, die nur diesen Baustein betreffen.
+    Die Nebenzeile ist nur zu sehen, wenn der Baustein an ist — Sekunden
+    einzustellen, waehrend die Uhrzeit gar nicht im Namen steht, waere eine
+    Frage ohne Wirkung.
     """
 
     changed = QtCore.Signal()
 
-    def __init__(self, entries: list[dict], parent=None):
+    def __init__(self, key: str, parent=None):
         super().__init__(parent)
-        self.setWindowTitle(i18n.t("storage_title"))
-        self.setMinimumWidth(620)
-        self.entries = entries
+        self.key = key
+        self.setObjectName("partRow")
+
+        outer = QtWidgets.QVBoxLayout(self)
+        outer.setContentsMargins(6, 4, 6, 4)
+        outer.setSpacing(2)
+
+        line = QtWidgets.QHBoxLayout()
+        line.setSpacing(8)
+
+        # Sechs Punkte als Griff. Der Mauszeiger wechselt darueber, damit
+        # niemand raten muss, ob sich die Zeile ziehen laesst.
+        self.grip = QtWidgets.QLabel("⋮⋮")
+        self.grip.setCursor(QtCore.Qt.CursorShape.SizeVerCursor)
+        self.grip.setToolTip(i18n.t("opt_drag_tip"))
+        self.grip.setStyleSheet(
+            f"color: {NORD['dim']}; font-size: 15px; letter-spacing: -3px;")
+        line.addWidget(self.grip)
+
+        self.check = QtWidgets.QCheckBox()
+        self.check.toggled.connect(self._toggled)
+        line.addWidget(self.check)
+
+        self.name = QtWidgets.QLabel(i18n.t(f"part_{key}"))
+        self.name.setMinimumWidth(130)
+        line.addWidget(self.name)
+
+        self.inline: QtWidgets.QWidget | None = None
+        self.badge = QtWidgets.QLabel("")
+        self.badge.setTextFormat(QtCore.Qt.TextFormat.RichText)
+        line.addWidget(self.badge)
+        line.addStretch(1)
+
+        tip = PART_TIPS.get(key)
+        self.info = info_icon(i18n.t(tip)) if tip else None
+        if self.info is not None:
+            line.addWidget(self.info)
+        outer.addLayout(line)
+
+        self._line = line
+        self.sub = QtWidgets.QWidget()
+        sub_lay = QtWidgets.QHBoxLayout(self.sub)
+        sub_lay.setContentsMargins(46, 0, 0, 2)
+        sub_lay.setSpacing(8)
+        self._sub_lay = sub_lay
+        self.sub.hide()
+        outer.addWidget(self.sub)
+
+    # -- Bestueckung -------------------------------------------------------
+
+    def set_inline(self, widget: QtWidgets.QWidget) -> None:
+        """Ein Eingabefeld mitten in die Zeile, statt in eine eigene Sektion."""
+        self.inline = widget
+        self._line.insertWidget(3, widget, 1)
+
+    def add_sub(self, *widgets: QtWidgets.QWidget) -> None:
+        for widget in widgets:
+            self._sub_lay.addWidget(widget)
+        self._sub_lay.addStretch(1)
+
+    def _toggled(self) -> None:
+        self._update_sub()
+        self.changed.emit()
+
+    def _update_sub(self) -> None:
+        has_sub = self._sub_lay.count() > 1
+        self.sub.setVisible(has_sub and self.check.isChecked())
+
+    # -- Zustand -----------------------------------------------------------
+
+    def set_checked(self, on: bool) -> None:
+        self.check.setChecked(bool(on))
+        self._update_sub()
+
+    def is_checked(self) -> bool:
+        return self.check.isChecked()
+
+    def set_value(self, value: str) -> None:
+        """Zeigen, was der Baustein gerade beitraegt — auch abgeschaltet.
+
+        Sonst muesste man einen Baustein erst einschalten, um zu sehen, was
+        er tut, und wieder aus, wenn es doch nicht das war.
+        """
+        if not value:
+            self.badge.setText(f"<span style='color:{NORD['dim']};'>—</span>")
+            return
+        colour = NORD[PART_ROLES.get(self.key, "accent")]
+        self.badge.setText(badge_html(value, colour))
+
+    def set_selected(self, on: bool) -> None:
+        edge = NORD["accent"] if on else "transparent"
+        self.setStyleSheet(
+            f"QFrame#partRow {{ border: 1px solid {edge};"
+            f" border-radius: 6px; }}")
+
+
+def badge_html(text: str, colour: str) -> str:
+    """Ein farbiges Kaestchen um einen Textbaustein.
+
+    Qt kann in Rich Text kein padding an einem span, also uebernehmen
+    geschuetzte Leerzeichen die Luft links und rechts.
+    """
+    ink = theming.contrast_text(colour)
+    text = text.replace("&", "&amp;").replace("<", "&lt;")
+    return (f"<span style='background-color:{colour}; color:{ink};"
+            f" font-family:monospace;'>&nbsp;{text}&nbsp;</span>")
+
+
+class PartList(QtWidgets.QWidget):
+    """Die Bausteine in ihrer Reihenfolge, mit der Maus umsortierbar.
+
+    Bewusst kein QListWidget: dessen internes Verschieben zerstoert die
+    Widgets in den Zeilen, und in den Zeilen stehen hier Eingabefelder.
+    Also eigene Zeilen in einem Layout und das Ziehen selbst gemacht — der
+    Griff nimmt die Maus, und beim Bewegen tauscht die Zeile ihren Platz.
+    """
+
+    changed = QtCore.Signal()
+    reordered = QtCore.Signal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._rows: list[PartRow] = []
+        self._current = 0
+        self._dragging: PartRow | None = None
+
+        self._lay = QtWidgets.QVBoxLayout(self)
+        self._lay.setContentsMargins(0, 0, 0, 0)
+        self._lay.setSpacing(2)
+
+    # -- Zeilen ------------------------------------------------------------
+
+    def add_row(self, row: PartRow) -> None:
+        row.changed.connect(self.changed)
+        row.grip.installEventFilter(self)
+        self._rows.append(row)
+        self._lay.addWidget(row)
+
+    def rows(self) -> list[PartRow]:
+        return list(self._rows)
+
+    def row_for(self, key: str) -> PartRow | None:
+        for row in self._rows:
+            if row.key == key:
+                return row
+        return None
+
+    def order(self) -> list[str]:
+        return [row.key for row in self._rows]
+
+    def set_order(self, keys: list[str]) -> None:
+        ordered = [row for key in keys if (row := self.row_for(key))]
+        ordered += [row for row in self._rows if row not in ordered]
+        for index, row in enumerate(ordered):
+            self._lay.insertWidget(index, row)
+        self._rows = ordered
+        self._show_selection()
+
+    # -- Auswahl (die Pfeilknoepfe brauchen eine) --------------------------
+
+    def currentRow(self) -> int:
+        return self._current
+
+    def setCurrentRow(self, index: int) -> None:
+        if 0 <= index < len(self._rows):
+            self._current = index
+            self._show_selection()
+
+    def _show_selection(self) -> None:
+        for index, row in enumerate(self._rows):
+            row.set_selected(index == self._current)
+
+    def move(self, index: int, target: int) -> bool:
+        if not (0 <= index < len(self._rows) and 0 <= target < len(self._rows)):
+            return False
+        if index == target:
+            return False
+        row = self._rows.pop(index)
+        self._rows.insert(target, row)
+        self._lay.insertWidget(target, row)
+        self._current = target
+        self._show_selection()
+        return True
+
+    # -- Ziehen ------------------------------------------------------------
+
+    def eventFilter(self, obj, event) -> bool:
+        """Der Griff hat die Maus, also kommen die Bewegungen hier an."""
+        kind = event.type()
+        if kind == QtCore.QEvent.Type.MouseButtonPress:
+            self._dragging = obj.parentWidget()
+            if self._dragging in self._rows:
+                self.setCurrentRow(self._rows.index(self._dragging))
+            return False
+        if kind == QtCore.QEvent.Type.MouseMove and self._dragging is not None:
+            self._drag_to(obj.mapTo(self, event.position().toPoint()).y())
+            return False
+        if kind == QtCore.QEvent.Type.MouseButtonRelease and self._dragging:
+            self._dragging = None
+            self.reordered.emit()
+            self.changed.emit()
+            return False
+        return super().eventFilter(obj, event)
+
+    def _drag_to(self, y: int) -> None:
+        """Die gezogene Zeile dorthin setzen, wo die Maus gerade steht.
+
+        Gesucht wird die Einfuegestelle: die erste Zeile, deren Mitte unter
+        dem Mauszeiger liegt. Ein Sprung ueber mehrere Zeilen ist damit in
+        einem Zug erledigt — schrittweises Tauschen mit dem Nachbarn haengt
+        daran, dass Qt die Groessen zwischendurch neu rechnet, und das tut
+        es waehrend eines Zuges nicht zuverlaessig.
+        """
+        row = self._dragging
+        if row not in self._rows:
+            return
+
+        index = self._rows.index(row)
+        target = len(self._rows) - 1
+        for position, other in enumerate(self._rows):
+            if y < other.geometry().center().y():
+                target = position
+                break
+        if target != index:
+            self.move(index, target)
+
+
+class OptionsPage(QtWidgets.QWidget):
+    """Aufnahmeordner, Unterordner und der Aufbau des Dateinamens.
+
+    Frueher ein eigenes Fenster, das beim Klick auf "Ordner auswaehlen"
+    aufging und erst einmal nach dem Schema fragte, obwohl jemand nur einen
+    Ordner suchen wollte. Jetzt ein Reiter in den Einstellungen: wer nur den
+    Ordner wechseln will, bekommt den Dateidialog des Systems und sonst
+    nichts, und wer am Schema schrauben will, findet es dort, wo die
+    anderen Einstellungen auch stehen.
+
+    Zwei Spalten, damit nichts unter den unteren Rand rutscht: links, was
+    den Namen zusammensetzt, rechts, was mit vorhandenen Dateien passiert.
+    Die Vorschau steht ueber beiden — sie gehoert zu allem.
+
+    Sie rechnet bei jeder Aenderung neu und benutzt dabei peek_counter(),
+    dreht den Zaehler also nicht weiter. Sonst stuende er nach einer Minute
+    Herumprobieren bei 50.
+    """
+
+    changed = QtCore.Signal()
+
+    def __init__(self, entries: list[dict] | None = None, parent=None):
+        super().__init__(parent)
+        self.entries = entries if entries is not None else []
         self.folder = str(storage.root())
         self._custom = settings.get_session_dir() is not None
+        self._loading = True
 
         root = QtWidgets.QVBoxLayout(self)
-        root.addWidget(self._build_folder())
-        root.addWidget(self._build_layout_box())
-        root.addWidget(self._build_move_box())
+        root.setContentsMargins(0, 8, 0, 0)
+        root.setSpacing(12)
+        root.addWidget(self._build_preview())
 
-        buttons = QtWidgets.QDialogButtonBox(
-            QtWidgets.QDialogButtonBox.StandardButton.Ok
-            | QtWidgets.QDialogButtonBox.StandardButton.Cancel)
-        SB = QtWidgets.QDialogButtonBox.StandardButton
-        buttons.button(SB.Ok).setText(i18n.t("ok"))
-        buttons.button(SB.Cancel).setText(i18n.t("cancel"))
-        buttons.accepted.connect(self._accept)
-        buttons.rejected.connect(self.reject)
-        root.addWidget(buttons)
+        columns_row = QtWidgets.QHBoxLayout()
+        columns_row.setSpacing(12)
 
+        left = QtWidgets.QVBoxLayout()
+        left.setSpacing(12)
+        left.addWidget(self._build_folder())
+        left.addWidget(self._build_parts())
+        left.addStretch(1)
+
+        right = QtWidgets.QVBoxLayout()
+        right.setSpacing(12)
+        right.addWidget(self._build_move_box())
+        right.addWidget(self._build_counter_box())
+        right.addStretch(1)
+
+        columns_row.addLayout(left, 3)
+        columns_row.addLayout(right, 2)
+        root.addLayout(columns_row)
+        root.addStretch(1)
+
+        self._load(settings.get_naming())
+        self._loading = False
         self._refresh()
 
     # -- Aufbau ------------------------------------------------------------
 
+    def _build_preview(self) -> QtWidgets.QWidget:
+        box = QtWidgets.QFrame()
+        box.setObjectName("previewCard")
+        box.setStyleSheet(
+            f"QFrame#previewCard {{"
+            f" background-color: {theming.mix(NORD['bg2'], NORD['accent'], 0.10)};"
+            f" border: 1px solid {theming.mix(NORD['border'], NORD['accent'], 0.45)};"
+            f" border-radius: 8px; }}")
+        lay = QtWidgets.QVBoxLayout(box)
+        lay.setContentsMargins(14, 10, 14, 12)
+        lay.setSpacing(4)
+
+        head = QtWidgets.QHBoxLayout()
+        title = QtWidgets.QLabel(i18n.t("opt_preview"))
+        title.setStyleSheet(
+            f"color: {NORD['dim']}; font-size: 11px; font-weight: 600;")
+        head.addWidget(title)
+        head.addStretch(1)
+        head.addWidget(info_icon(i18n.t("opt_preview_hint")))
+        lay.addLayout(head)
+
+        # Der Ordner klein und blass darueber, der Name gross darunter: der
+        # Ordner aendert sich selten, der Name bei jedem Handgriff.
+        self.preview_folder = QtWidgets.QLabel("")
+        self.preview_folder.setWordWrap(True)
+        self.preview_folder.setStyleSheet(
+            f"color: {NORD['dim']}; font-family: monospace; font-size: 11px;")
+        lay.addWidget(self.preview_folder)
+
+        self.preview = QtWidgets.QLabel("")
+        self.preview.setWordWrap(True)
+        self.preview.setTextFormat(QtCore.Qt.TextFormat.RichText)
+        self.preview.setTextInteractionFlags(
+            QtCore.Qt.TextInteractionFlag.TextSelectableByMouse)
+        self.preview.setStyleSheet("font-size: 15px; font-weight: 700;")
+        lay.addWidget(self.preview)
+        return box
+
     def _build_folder(self) -> QtWidgets.QWidget:
         box = QtWidgets.QGroupBox(i18n.t("storage_folder"))
         lay = QtWidgets.QVBoxLayout(box)
+        lay.setSpacing(6)
 
         row = QtWidgets.QHBoxLayout()
         self.path_edit = QtWidgets.QLineEdit(self.folder)
         self.path_edit.setReadOnly(True)
-        browse = QtWidgets.QPushButton(i18n.t("storage_browse"))
+        browse = QtWidgets.QPushButton(i18n.t("choose_folder"))
         browse.clicked.connect(self._browse)
         reset = QtWidgets.QPushButton(i18n.t("storage_reset"))
-        reset.clicked.connect(self._reset)
+        reset.clicked.connect(self._reset_folder)
         row.addWidget(self.path_edit, 1)
         row.addWidget(browse)
         row.addWidget(reset)
+        row.addWidget(info_icon(i18n.t("storage_folder_hint")))
         lay.addLayout(row)
 
-        hint = QtWidgets.QLabel(i18n.t("storage_folder_hint"))
-        hint.setWordWrap(True)
-        hint.setStyleSheet(f"color: {NORD['dim']}; font-size: 11px;")
-        lay.addWidget(hint)
+        sub = QtWidgets.QHBoxLayout()
+        sub.addWidget(QtWidgets.QLabel(i18n.t("opt_subfolders")))
+        self.subfolders = QtWidgets.QComboBox()
+        for key in naming.SUBFOLDERS:
+            self.subfolders.addItem(i18n.t(f"opt_sub_{key}"), key)
+        self.subfolders.currentIndexChanged.connect(self._refresh)
+        sub.addWidget(self.subfolders, 1)
+        sub.addWidget(info_icon(i18n.t("opt_sub_hint")))
+        lay.addLayout(sub)
         return box
 
-    def _build_layout_box(self) -> QtWidgets.QWidget:
-        box = QtWidgets.QGroupBox(i18n.t("storage_layout"))
+    def _build_parts(self) -> QtWidgets.QWidget:
+        box = QtWidgets.QGroupBox(i18n.t("opt_parts"))
         lay = QtWidgets.QVBoxLayout(box)
+        lay.setSpacing(6)
 
-        self.month = QtWidgets.QCheckBox(i18n.t("storage_month"))
-        self.month.setChecked(settings.get_month_folders())
-        self.month.toggled.connect(self._refresh)
-        lay.addWidget(self.month)
-        lay.addWidget(self._hint(i18n.t("storage_month_hint")))
+        head = QtWidgets.QHBoxLayout()
+        hint = QtWidgets.QLabel(i18n.t("opt_parts_short"))
+        hint.setStyleSheet(f"color: {NORD['dim']}; font-size: 11px;")
+        head.addWidget(hint)
+        head.addStretch(1)
+        # Nur das Pfeilzeichen, der Rest steht im Tooltip. Die Knoepfe
+        # tragen "stepper", damit die breite Seitenpolsterung der normalen
+        # Knoepfe nicht greift — die frass das Zeichen auf.
+        self.btn_up = QtWidgets.QPushButton("▲")
+        self.btn_up.setObjectName("stepper")
+        self.btn_up.setToolTip(i18n.t("opt_up"))
+        self.btn_up.setFixedWidth(34)
+        self.btn_up.clicked.connect(lambda: self._move_part(-1))
+        self.btn_down = QtWidgets.QPushButton("▼")
+        self.btn_down.setObjectName("stepper")
+        self.btn_down.setToolTip(i18n.t("opt_down"))
+        self.btn_down.setFixedWidth(34)
+        self.btn_down.clicked.connect(lambda: self._move_part(1))
+        head.addWidget(self.btn_up)
+        head.addWidget(self.btn_down)
+        lay.addLayout(head)
 
-        self.typed = QtWidgets.QCheckBox(i18n.t("storage_type"))
-        self.typed.setChecked(settings.get_type_in_name())
-        self.typed.toggled.connect(self._refresh)
-        lay.addWidget(self.typed)
-        lay.addWidget(self._hint(i18n.t("storage_type_hint")))
-
-        self.example = QtWidgets.QLabel("")
-        self.example.setWordWrap(True)
-        self.example.setStyleSheet("font-family: monospace;")
-        lay.addWidget(self.example)
+        self.parts = PartList()
+        self.parts.changed.connect(self._refresh)
+        for key in naming.BLOCKS:
+            self.parts.add_row(self._build_row(key))
+        lay.addWidget(self.parts)
         return box
+
+    def _build_row(self, key: str) -> PartRow:
+        """Eine Baustein-Zeile samt der Einstellungen, die nur sie betreffen."""
+        row = PartRow(key)
+
+        if key in naming.TEXT_BLOCKS:
+            # Das Eingabefeld sitzt in der Zeile selbst. Eine eigene Sektion
+            # "Naming" weiter unten hatte dasselbe getan, nur weiter weg von
+            # dem Haken, der darueber entscheidet, ob es ueberhaupt zaehlt.
+            edit = QtWidgets.QLineEdit()
+            edit.setPlaceholderText(i18n.t("opt_text_placeholder"))
+            edit.setMaxLength(naming.MAX_TEXT)
+            edit.textChanged.connect(self._refresh)
+            row.set_inline(edit)
+            # self.prefix bzw. self.suffix — die Zeile ist beides zugleich.
+            setattr(self, key, edit)
+
+        elif key == "time":
+            self.seconds = QtWidgets.QCheckBox(i18n.t("opt_seconds"))
+            self.seconds.toggled.connect(self._refresh)
+            row.add_sub(self.seconds)
+
+        elif key == "counter":
+            self.digits = QtWidgets.QSpinBox()
+            self.digits.setRange(naming.MIN_DIGITS, naming.MAX_DIGITS)
+            self.digits.setPrefix(i18n.t("opt_digits_prefix"))
+            self.digits.valueChanged.connect(self._refresh)
+            self.reset_box = QtWidgets.QComboBox()
+            for reset in naming.RESETS:
+                self.reset_box.addItem(i18n.t(f"opt_reset_{reset}"), reset)
+            self.reset_box.currentIndexChanged.connect(self._refresh)
+            row.add_sub(self.digits, self.reset_box)
+
+        return row
 
     def _build_move_box(self) -> QtWidgets.QWidget:
         box = QtWidgets.QGroupBox(i18n.t("storage_existing"))
         lay = QtWidgets.QVBoxLayout(box)
-        lay.addWidget(self._hint(i18n.t("storage_move_hint")))
+        lay.setSpacing(6)
+
+        head = QtWidgets.QHBoxLayout()
+        head.addStretch(1)
+        head.addWidget(info_icon(i18n.t("storage_move_hint")))
+        lay.addLayout(head)
 
         self.status = QtWidgets.QLabel("")
         self.status.setWordWrap(True)
@@ -1378,29 +1802,126 @@ class StorageDialog(QtWidgets.QDialog):
         lay.addWidget(self.move_button)
         return box
 
-    @staticmethod
-    def _hint(text: str) -> QtWidgets.QLabel:
-        label = QtWidgets.QLabel(text)
-        label.setWordWrap(True)
-        label.setStyleSheet(f"color: {NORD['dim']}; font-size: 11px;")
-        label.setContentsMargins(20, 0, 0, 6)
-        return label
+    def _build_counter_box(self) -> QtWidgets.QWidget:
+        box = QtWidgets.QGroupBox(i18n.t("part_counter"))
+        lay = QtWidgets.QVBoxLayout(box)
+        lay.setSpacing(6)
+
+        head = QtWidgets.QHBoxLayout()
+        self.counter_state = QtWidgets.QLabel("")
+        self.counter_state.setWordWrap(True)
+        head.addWidget(self.counter_state, 1)
+        head.addWidget(info_icon(i18n.t("opt_counter_hint")))
+        lay.addLayout(head)
+
+        self.btn_counter = QtWidgets.QPushButton(i18n.t("opt_reset_now"))
+        self.btn_counter.clicked.connect(self._reset_counter)
+        lay.addWidget(self.btn_counter)
+        return box
+
+    # -- Bausteine ---------------------------------------------------------
+
+    def _load(self, scheme: dict) -> None:
+        """Widgets aus einem Schema fuellen."""
+        scheme = naming.normalize(scheme)
+        self._loading = True
+
+        index = self.subfolders.findData(scheme["subfolders"])
+        self.subfolders.setCurrentIndex(max(index, 0))
+        index = self.reset_box.findData(scheme["counter_reset"])
+        self.reset_box.setCurrentIndex(max(index, 0))
+
+        self.prefix.setText(scheme["prefix"])
+        self.suffix.setText(scheme["suffix"])
+        self.seconds.setChecked(scheme["seconds"])
+        self.digits.setValue(scheme["counter_digits"])
+
+        self.parts.set_order(scheme["order"])
+        for row in self.parts.rows():
+            row.set_checked(scheme["enabled"].get(row.key, False))
+        self._loading = False
+
+    def _collect(self) -> dict:
+        """Schema aus dem, was gerade in den Widgets steht."""
+        return naming.normalize({
+            "subfolders": self.subfolders.currentData(),
+            "order": self.parts.order(),
+            "enabled": {row.key: row.is_checked() for row in self.parts.rows()},
+            "prefix": self.prefix.text(),
+            "suffix": self.suffix.text(),
+            "seconds": self.seconds.isChecked(),
+            "counter_digits": self.digits.value(),
+            "counter_reset": self.reset_box.currentData(),
+        })
+
+    def _move_part(self, step: int) -> None:
+        index = self.parts.currentRow()
+        if self.parts.move(index, index + step):
+            self._refresh()
 
     # -- Zustand -----------------------------------------------------------
 
     def _refresh(self) -> None:
-        self.path_edit.setText(self.folder)
-        name = storage.relative_name(
-            datetime.now(), settings.get_recording_type(),
-            month=self.month.isChecked(), typed=self.typed.isChecked())
-        self.example.setText(i18n.t("storage_example", name=name))
+        if self._loading:
+            return
 
-        pending = storage.elsewhere(self.entries, Path(self.folder),
-                                    self.month.isChecked(),
-                                    self.typed.isChecked())
+        scheme = self._collect()
+        stamp = datetime.now()
+        type_key = settings.get_recording_type()
+        counter = storage.peek_counter(scheme, stamp)
+
+        self._loading = True
+        for row in self.parts.rows():
+            row.set_value(naming.block_value(row.key, scheme, stamp,
+                                             type_key, counter))
+        self._loading = False
+
+        self.preview_folder.setText(str(Path(self.folder)) + os.sep)
+        self.preview.setText(self._preview_html(scheme, stamp, type_key,
+                                                counter))
+        self.path_edit.setText(self.folder)
+
+        state = settings.get_name_counter()
+        self.counter_state.setText(i18n.t("opt_counter_at", value=counter)
+                                   if state["value"]
+                                   else i18n.t("opt_counter_fresh"))
+        self.btn_counter.setEnabled(bool(state["value"]))
+
+        pending = storage.elsewhere(self.entries, Path(self.folder), scheme)
         self.status.setText(i18n.t("storage_elsewhere", count=pending)
                             if pending else i18n.t("storage_all_here"))
         self.move_button.setEnabled(pending > 0)
+
+    def _preview_html(self, scheme: dict, stamp, type_key: str,
+                      counter: int) -> str:
+        """Der Name in Marken, damit man sieht, welcher Baustein was macht."""
+        def plain(text: str) -> str:
+            return f"<span style='color:{NORD['dim']};'>{text}</span>"
+
+        parts = []
+        folder = naming.build_folder(scheme, stamp)
+        if folder:
+            parts.append(badge_html(folder, NORD["accent"]))
+            parts.append(plain(os.sep))
+
+        pieces = []
+        for key in scheme["order"]:
+            if not scheme["enabled"].get(key):
+                continue
+            value = naming.block_value(key, scheme, stamp, type_key, counter)
+            if value:
+                pieces.append(badge_html(value, NORD[PART_ROLES[key]]))
+
+        if pieces:
+            parts.append(plain(naming.SEPARATOR).join(pieces))
+        else:
+            # Alles abgeschaltet: naming faellt auf den Zeitstempel zurueck,
+            # und das soll die Vorschau auch zeigen statt einer Luecke.
+            parts.append(badge_html(naming.build_stem(scheme, stamp, type_key,
+                                                      counter),
+                                    NORD["accent"]))
+        parts.append(plain(".wav"))
+        return "".join(parts)
 
     def _browse(self) -> None:
         chosen = QtWidgets.QFileDialog.getExistingDirectory(
@@ -1417,23 +1938,52 @@ class StorageDialog(QtWidgets.QDialog):
         self._custom = True
         self._refresh()
 
-    def _reset(self) -> None:
+    def _reset_folder(self) -> None:
         self.folder = str(storage.DEFAULT_ROOT)
         self._custom = False
         self._refresh()
 
+    def _reset_counter(self) -> None:
+        settings.set_name_counter("", 0)
+        self._refresh()
+
     # -- Anwenden ----------------------------------------------------------
 
-    def _store(self) -> None:
+    def store(self) -> bool:
+        """Ordner und Schema uebernehmen. False, wenn der Ordner nicht taugt."""
+        problem = storage.writable(Path(self.folder))
+        if problem:
+            QtWidgets.QMessageBox.warning(
+                self, i18n.t("storage_title"),
+                i18n.t("storage_not_writable") + f"\n\n{problem}")
+            return False
         settings.set_session_dir(None if not self._custom else self.folder)
-        settings.set_month_folders(self.month.isChecked())
-        settings.set_type_in_name(self.typed.isChecked())
+        settings.set_naming(self._collect())
+        self.changed.emit()
+        return True
+
+    def snapshot(self) -> tuple:
+        return settings.get_session_dir(), settings.get_naming()
+
+    def restore(self, state: tuple) -> None:
+        folder, scheme = state
+        settings.set_session_dir(folder)
+        settings.set_naming(scheme)
+        self.folder = str(storage.root())
+        self._custom = folder is not None
+        self._load(scheme)
+        self._refresh()
 
     def _move(self) -> None:
+        """Vorhandene Aufnahmen nachziehen.
+
+        Wendet die Auswahl vorher an: erst die Dateien umziehen und dann
+        die Einstellung speichern hinterliesse einen Zustand, in dem die
+        Liste auf Namen zeigt, die es noch nicht gibt.
+        """
+        scheme = self._collect()
         target = Path(self.folder)
-        pending = storage.elsewhere(self.entries, target,
-                                    self.month.isChecked(),
-                                    self.typed.isChecked())
+        pending = storage.elsewhere(self.entries, target, scheme)
         answer = QtWidgets.QMessageBox.question(
             self, i18n.t("storage_move"),
             i18n.t("storage_move_confirm", count=pending, folder=self.folder),
@@ -1447,15 +1997,11 @@ class StorageDialog(QtWidgets.QDialog):
         QtWidgets.QApplication.setOverrideCursor(
             QtCore.Qt.CursorShape.WaitCursor)
         try:
-            result = storage.move_all(self.entries, sources, target,
-                                      self.month.isChecked(),
-                                      self.typed.isChecked())
+            result = storage.move_all(self.entries, sources, target, scheme)
         finally:
             QtWidgets.QApplication.restoreOverrideCursor()
 
-        # Erst jetzt umstellen: die Dateien liegen bereits am neuen Ort.
-        self._store()
-        self.changed.emit()
+        self.store()
         self._refresh()
 
         lines = [i18n.t("storage_move_done", moved=result["moved"],
@@ -1469,16 +2015,162 @@ class StorageDialog(QtWidgets.QDialog):
         QtWidgets.QMessageBox.information(
             self, i18n.t("storage_title"), "\n".join(lines))
 
-    def _accept(self) -> None:
-        problem = storage.writable(Path(self.folder))
-        if problem:
-            QtWidgets.QMessageBox.warning(
-                self, i18n.t("storage_title"),
-                i18n.t("storage_not_writable") + f"\n\n{problem}")
+
+# ------------------------------------------------------------- Changelog
+
+class ChangelogLoader(QtCore.QThread):
+    """Holt die Versionshistorie, erst aus dem Netz, dann von der Platte.
+
+    In einem eigenen Faden, weil ein hoeflicher Zeitablauf immer noch
+    mehrere Sekunden dauert — und ein Fenster, das beim Aufgehen so lange
+    steht, sieht abgestuerzt aus.
+
+    Das ist die einzige Stelle, an der dieses Programm eine Verbindung nach
+    draussen aufbaut, und sie entsteht nur, wenn jemand den Knopf drueckt.
+    Gesendet wird dabei nichts ausser der Anfrage selbst.
+    """
+
+    #: Text und Herkunft ("online", "local" oder "" fuer nichts gefunden).
+    done = QtCore.Signal(str, str)
+
+    TIMEOUT = 6.0
+    # Der Changelog ist ein paar Dutzend Kilobyte gross. Die Grenze schuetzt
+    # davor, sich an einer Antwort festzulesen, die etwas ganz anderes ist.
+    MAX_BYTES = 512 * 1024
+
+    def __init__(self, online: bool = True, parent=None):
+        super().__init__(parent)
+        self.online = online
+
+    def run(self) -> None:
+        if self.online:
+            text = self._from_web()
+            if text:
+                self.done.emit(text, "online")
+                return
+        text = self._from_disk()
+        self.done.emit(text, "local" if text else "")
+
+    def _from_web(self) -> str:
+        for url in paths.CHANGELOG_URLS:
+            try:
+                request = urllib.request.Request(
+                    url, headers={"User-Agent":
+                                  f"{paths.APP_NAME}/{paths.APP_VERSION}"})
+                with urllib.request.urlopen(request,
+                                            timeout=self.TIMEOUT) as answer:
+                    raw = answer.read(self.MAX_BYTES)
+            except Exception as exc:
+                # Kein Netz ist der Normalfall, nicht der Fehlerfall: das
+                # Fenster hat einen Rueckfall und braucht keinen Alarm.
+                debuglog.log.debug("changelog: %s: %s", url, exc)
+                continue
+            text = raw.decode("utf-8", "replace").strip()
+            # Ein Umleitungsziel oder eine Fehlerseite ist kein Changelog.
+            if text.startswith("#"):
+                return text
+        return ""
+
+    @staticmethod
+    def _from_disk() -> str:
+        path = paths.changelog_file()
+        if path is None:
+            return ""
+        try:
+            return path.read_text(encoding="utf-8").strip()
+        except OSError as exc:
+            debuglog.log.warning("changelog: %s: %s", path, exc)
+            return ""
+
+
+class ChangelogDialog(QtWidgets.QDialog):
+    """Die Versionshistorie als lesbarer Text.
+
+    Qt setzt Markdown selbst, es braucht also kein weiteres Paket dafuer.
+    Der Text kommt bevorzugt aus dem Netz — die mitgelieferte Datei ist so
+    alt wie die installierte Fassung, und wer wissen will, was seit seiner
+    Version passiert ist, erfaehrt daraus nichts.
+    """
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle(i18n.t("changelog_title"))
+        self.resize(760, 640)
+        self.setMinimumSize(480, 360)
+        self._loader: ChangelogLoader | None = None
+
+        root = QtWidgets.QVBoxLayout(self)
+        root.setSpacing(10)
+
+        self.view = QtWidgets.QTextBrowser()
+        self.view.setOpenExternalLinks(True)
+        self.view.setStyleSheet("font-size: 13px;")
+        root.addWidget(self.view, 1)
+
+        row = QtWidgets.QHBoxLayout()
+        self.source = QtWidgets.QLabel("")
+        self.source.setWordWrap(True)
+        self.source.setStyleSheet(f"color: {NORD['dim']}; font-size: 11px;")
+        row.addWidget(self.source, 1)
+
+        self.btn_reload = QtWidgets.QPushButton(i18n.t("changelog_reload"))
+        self.btn_reload.clicked.connect(lambda: self._load(online=True))
+        row.addWidget(self.btn_reload)
+
+        self.btn_web = QtWidgets.QPushButton(i18n.t("changelog_open_web"))
+        self.btn_web.clicked.connect(
+            lambda: QtGui.QDesktopServices.openUrl(
+                QtCore.QUrl(paths.APP_URL + "/blob/main/CHANGELOG.md")))
+        row.addWidget(self.btn_web)
+
+        close = QtWidgets.QPushButton(i18n.t("close"))
+        close.setObjectName("primary")
+        close.clicked.connect(self.close)
+        row.addWidget(close)
+        root.addLayout(row)
+
+        self._load(online=True)
+
+    # -- Laden -------------------------------------------------------------
+
+    def _load(self, online: bool) -> None:
+        if self._loader is not None and self._loader.isRunning():
             return
-        self._store()
-        self.changed.emit()
-        self.accept()
+        self.btn_reload.setEnabled(False)
+        self.source.setText(i18n.t("changelog_loading"))
+        # Solange nichts da ist, schon einmal die Datei von der Platte
+        # zeigen: eine leere Flaeche waehrend des Wartens sieht kaputt aus.
+        if not self.view.toPlainText():
+            local = ChangelogLoader._from_disk()
+            if local:
+                self.view.setMarkdown(local)
+
+        self._loader = ChangelogLoader(online, self)
+        self._loader.done.connect(self._show_text)
+        self._loader.start()
+
+    def _show_text(self, text: str, origin: str) -> None:
+        self.btn_reload.setEnabled(True)
+        if not text:
+            self.view.setMarkdown(i18n.t("changelog_missing"))
+            self.source.setText(i18n.t("changelog_from_nowhere"))
+            return
+
+        self.view.setMarkdown(text)
+        self.view.verticalScrollBar().setValue(0)
+        self.source.setText(i18n.t("changelog_from_web") if origin == "online"
+                            else i18n.t("changelog_from_disk"))
+
+    def closeEvent(self, event) -> None:
+        """Den Faden zu Ende laufen lassen, bevor das Fenster verschwindet.
+
+        Ein noch laufender QThread, dessen Fenster geloescht wird, nimmt das
+        Programm mit.
+        """
+        if self._loader is not None and self._loader.isRunning():
+            self._loader.done.disconnect()
+            self._loader.wait(int(ChangelogLoader.TIMEOUT * 1000) + 500)
+        super().closeEvent(event)
 
 
 # ------------------------------------------------------------- Infofenster
@@ -1489,12 +2181,14 @@ class InfoPage(QtWidgets.QWidget):
     Sitzt als Reiter in den Einstellungen statt in einem eigenen Fenster:
     es ist Nachschlagestoff, kein Dialog, der etwas von einem will.
 
-    Bewusst ohne Aktualisierungsprüfung — das Programm baut keine
-    Netzwerkverbindungen auf, und dabei soll es bleiben.
+    Bewusst ohne Aktualisierungsprüfung. Die einzige Verbindung nach
+    draußen entsteht, wenn jemand hier auf „Changelog“ drückt — nichts
+    läuft im Hintergrund, und gesendet wird dabei nichts außer der Anfrage.
     """
 
     intro_requested = QtCore.Signal()
     debug_requested = QtCore.Signal()
+    changelog_requested = QtCore.Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -1511,13 +2205,18 @@ class InfoPage(QtWidgets.QWidget):
         self.btn_intro.clicked.connect(self.intro_requested)
         self.btn_debug = QtWidgets.QPushButton("🐞  " + i18n.t("debug"))
         self.btn_debug.clicked.connect(self.debug_requested)
+        # Neben der Einfuehrung, weil beides dasselbe beantwortet: was kann
+        # dieses Programm, und was hat sich seit dem letzten Mal geaendert.
+        self.btn_changelog = QtWidgets.QPushButton("🗒  " + i18n.t("changelog"))
+        self.btn_changelog.clicked.connect(self.changelog_requested)
         copy = QtWidgets.QPushButton(i18n.t("copy_env"))
         copy.clicked.connect(self._copy_environment)
         folder = QtWidgets.QPushButton(i18n.t("open_folder"))
         folder.clicked.connect(
             lambda: QtGui.QDesktopServices.openUrl(
                 QtCore.QUrl.fromLocalFile(str(paths.CONFIG_DIR))))
-        for widget in (self.btn_intro, self.btn_debug, copy, folder):
+        for widget in (self.btn_intro, self.btn_changelog, self.btn_debug,
+                       copy, folder):
             actions.addWidget(widget)
         actions.addStretch(1)
         root.addLayout(actions)

@@ -62,7 +62,7 @@ import audio as audio_mod
 from audio import DEFAULT_KEY, AudioEngine, write_wav
 from dialogs import (FilterDialog, HelpDialog, IntroDialog, MicrophonePicker,
                      SessionDetailDialog, SettingsDialog, Spotlight,
-                     StorageDialog, ask_export_language, export_language)
+                     ask_export_language, export_language)
 import wininstall
 from settings import CFG
 
@@ -720,9 +720,29 @@ class MainWindow(QtWidgets.QMainWindow):
             QtCore.QUrl.fromLocalFile(str(folder)))
 
     def _open_storage(self) -> None:
-        dialog = StorageDialog(self.sessions, self)
-        dialog.changed.connect(self._session_changed)
-        self.open_dialog(dialog)
+        """Ordner waehlen — der Dialog des Systems und sonst nichts.
+
+        Frueher ging hier ein eigenes Fenster auf, das erst einmal nach dem
+        Ablageschema fragte, obwohl jemand nur einen Ordner suchen wollte.
+        Das Schema steht jetzt in den Einstellungen unter "Optionen".
+        """
+        chosen = QtWidgets.QFileDialog.getExistingDirectory(
+            self, i18n.t("storage_pick_title"), str(storage.root()))
+        if not chosen:
+            return
+
+        # Vorher ausprobieren: erst beim Speichern zu scheitern hiesse
+        # Aufnahme gemacht, Aufnahme weg.
+        problem = storage.writable(Path(chosen))
+        if problem:
+            QtWidgets.QMessageBox.warning(
+                self, i18n.t("storage_title"),
+                i18n.t("storage_not_writable") + f"\n\n{problem}")
+            return
+
+        settings.set_session_dir(chosen)
+        self._fill_session_table()
+        self.status.showMessage(i18n.t("storage_folder_set", folder=chosen))
 
     def _apply_view(self, view: dict) -> None:
         self.view = view
@@ -1221,10 +1241,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self.open_dialog(HelpDialog(self, topic))
 
     def _open_settings(self) -> None:
-        dialog = SettingsDialog(self)
+        dialog = SettingsDialog(self, entries=self.sessions)
         dialog.applied.connect(self._apply_settings)
         dialog.theme_changed.connect(self.apply_theme)
         dialog.intro_requested.connect(self.show_intro)
+        # Ein Umzug hat entry["file"] veraendert, ein Ordnerwechsel den Ort:
+        # beides muss in die Liste, bevor jemand auf Abspielen drueckt.
+        dialog.storage_changed.connect(self._session_changed)
         self.open_dialog(dialog)
 
     def _apply_settings(self) -> None:
@@ -1529,7 +1552,7 @@ class MainWindow(QtWidgets.QMainWindow):
                         span: tuple[float, float] | None = None) -> dict:
         """WAV schreiben, auswerten und in die Historie aufnehmen."""
         stamp = datetime.now()
-        name = storage.relative_name(stamp, type_key)
+        name = storage.next_name(stamp, type_key)
         path = storage.free_path(storage.root() / name)
         path.parent.mkdir(parents=True, exist_ok=True)
         write_wav(path, samples, self.sr)

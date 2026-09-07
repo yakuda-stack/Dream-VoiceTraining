@@ -135,21 +135,93 @@ STRINGS: dict[str, dict[str, str]] = {
         "en": "Cannot write to this folder:",
         "de": "In diesen Ordner lässt sich nicht schreiben:"},
     "storage_layout": {"en": "Naming", "de": "Benennung"},
-    "storage_month": {"en": "One folder per month",
-                      "de": "Ein Ordner pro Monat"},
-    "storage_month_hint": {
-        "en": "Recordings are filed under 2026-09 and so on, by their date.",
-        "de": "Aufnahmen liegen nach Datum unter 2026-09 und so weiter."},
-    "storage_type": {"en": "Recording type in the file name",
-                     "de": "Aufnahmetyp im Dateinamen"},
-    "storage_type_hint": {
+    "storage_example": {"en": "Example: {name}", "de": "Beispiel: {name}"},
+
+    # --- Optionen: Unterordner ---
+    "opt_subfolders": {"en": "Subfolders", "de": "Unterordner"},
+    "opt_sub_none": {"en": "None", "de": "Keine"},
+    "opt_sub_day": {"en": "One per day", "de": "Pro Tag"},
+    "opt_sub_week": {"en": "One per calendar week", "de": "Pro Kalenderwoche"},
+    "opt_sub_month": {"en": "One per month", "de": "Pro Monat"},
+    "opt_sub_year": {"en": "One per year", "de": "Pro Jahr"},
+    "opt_sub_hint": {
+        "en": "Recordings are filed by their own date, not by the day they "
+              "were moved.",
+        "de": "Aufnahmen werden nach ihrem eigenen Datum einsortiert, nicht "
+              "nach dem Tag des Verschiebens."},
+
+    # --- Optionen: Vorschau ---
+    "opt_preview": {"en": "Preview", "de": "Vorschau"},
+    "opt_preview_hint": {
+        "en": "This is what the next recording will be called.",
+        "de": "So heißt die nächste Aufnahme."},
+
+    # --- Optionen: Bausteine ---
+    "opt_parts": {"en": "File name parts", "de": "Dateibausteine"},
+    "opt_parts_short": {"en": "Tick, then drag into order",
+                        "de": "Anhaken, dann in Reihenfolge ziehen"},
+    "opt_drag_tip": {
+        "en": "Drag this row up or down to change where the part sits in the "
+              "name. The arrow buttons do the same.",
+        "de": "Diese Zeile nach oben oder unten ziehen, um den Platz des "
+              "Bausteins im Namen zu ändern. Die Pfeilknöpfe tun dasselbe."},
+    "part_week_tip": {
+        "en": "Uses the ISO week, so the 1st of January still counts towards "
+              "the last week of the year before. KW stays the same in every "
+              "interface language, so a language switch renames nothing.",
+        "de": "Benutzt die ISO-Woche, der 1. Januar zählt also noch zur "
+              "letzten Woche des Vorjahres. KW bleibt in jeder Sprache "
+              "gleich, damit ein Sprachwechsel nichts umbenennt."},
+    "opt_up": {"en": "Up", "de": "Hoch"},
+    "opt_down": {"en": "Down", "de": "Runter"},
+    "part_prefix": {"en": "Custom text (front)", "de": "Eigener Text (vorn)"},
+    "part_suffix": {"en": "Custom text (back)", "de": "Eigener Text (hinten)"},
+    "part_year": {"en": "Year", "de": "Jahr"},
+    "part_month": {"en": "Month", "de": "Monat"},
+    "part_week": {"en": "Calendar week", "de": "Kalenderwoche"},
+    "part_date": {"en": "Date", "de": "Datum"},
+    "part_time": {"en": "Time of day", "de": "Uhrzeit"},
+    "part_type": {"en": "Recording type", "de": "Aufnahmetyp"},
+    "part_counter": {"en": "Counter", "de": "Zähler"},
+
+    # --- Optionen: Einzelheiten der Bausteine ---
+    "opt_text_placeholder": {"en": "e.g. Voice-Training",
+                             "de": "z. B. Voice-Training"},
+    "opt_text_hint": {
+        "en": "Spaces and characters that a file name cannot hold are "
+              "replaced by a hyphen.",
+        "de": "Leerzeichen und Zeichen, die in einem Dateinamen nicht "
+              "vorkommen dürfen, werden zu einem Bindestrich."},
+    "opt_seconds": {"en": "Time with seconds", "de": "Uhrzeit mit Sekunden"},
+    "opt_seconds_hint": {
+        "en": "On: 14-30-15. Off: 14-30 — then two recordings in the same "
+              "minute only stay apart because of the counter.",
+        "de": "An: 14-30-15. Aus: 14-30 — dann halten nur noch der Zähler "
+              "zwei Aufnahmen derselben Minute auseinander."},
+    "opt_type_hint": {
         "en": "Adds reading, hum, vowel-a, vowel-i, vowel-u or free. The "
               "short form stays English so a language switch does not rename "
               "anything.",
         "de": "Hängt reading, hum, vowel-a, vowel-i, vowel-u oder free an. "
               "Das Kürzel bleibt englisch, damit ein Sprachwechsel nichts "
               "umbenennt."},
-    "storage_example": {"en": "Example: {name}", "de": "Beispiel: {name}"},
+    "opt_digits_prefix": {"en": "Digits: ", "de": "Stellen: "},
+    "opt_reset_never": {"en": "Never", "de": "Nie"},
+    "opt_reset_day": {"en": "Every day", "de": "Pro Tag"},
+    "opt_reset_week": {"en": "Every calendar week", "de": "Pro Kalenderwoche"},
+    "opt_reset_month": {"en": "Every month", "de": "Pro Monat"},
+    "opt_reset_year": {"en": "Every year", "de": "Pro Jahr"},
+    "opt_counter_hint": {
+        "en": "Counts up with every recording and starts at 1 again at the "
+              "beginning of the chosen period.",
+        "de": "Zählt mit jeder Aufnahme hoch und beginnt zu Anfang des "
+              "gewählten Zeitraums wieder bei 1."},
+    "opt_reset_now": {"en": "Set counter to 1 now",
+                      "de": "Zähler jetzt auf 1 setzen"},
+    "opt_counter_at": {"en": "The next recording gets number {value}.",
+                       "de": "Die nächste Aufnahme bekommt die {value}."},
+    "opt_counter_fresh": {"en": "The counter starts at 1.",
+                          "de": "Der Zähler beginnt bei 1."},
     "storage_existing": {"en": "Existing recordings",
                          "de": "Vorhandene Aufnahmen"},
     "storage_move": {"en": "Move old files into the new folder",
@@ -175,6 +247,9 @@ STRINGS: dict[str, dict[str, str]] = {
         "de": "{count} Aufnahmen liegen noch woanders."},
     "storage_all_here": {"en": "Everything is where it belongs.",
                          "de": "Alles liegt, wo es hingehört."},
+    "storage_folder_set": {
+        "en": "New recordings go to {folder}",
+        "de": "Neue Aufnahmen landen in {folder}"},
     "play": {"en": "Play", "de": "Abspielen"},
     "formant_hint": {
         "en": "Formants are only meaningful on voiced material. For stable F1/F2 "
@@ -256,6 +331,31 @@ STRINGS: dict[str, dict[str, str]] = {
     "col_verdict": {"en": "Verdict", "de": "Bewertung"},
     "reanalyse": {"en": "Re-analyse", "de": "Neu auswerten"},
     "close": {"en": "Close", "de": "Schließen"},
+    "changelog": {"en": "Changelog", "de": "Changelog"},
+    "changelog_title": {"en": "Changelog — version history",
+                        "de": "Changelog — Versionshistorie"},
+    "changelog_reload": {"en": "Reload from the web",
+                         "de": "Erneut online laden"},
+    "changelog_open_web": {"en": "Open on GitHub", "de": "Auf GitHub öffnen"},
+    "changelog_loading": {"en": "Loading…", "de": "Wird geladen…"},
+    "changelog_from_web": {
+        "en": "Loaded from GitHub — this is the current state of the project.",
+        "de": "Von GitHub geladen — das ist der aktuelle Stand des Projekts."},
+    "changelog_from_disk": {
+        "en": "From the copy shipped with this installation. It goes up to "
+              "your own version; the web has anything newer.",
+        "de": "Aus der mitgelieferten Fassung. Sie reicht bis zu deiner "
+              "eigenen Version, alles Neuere steht im Netz."},
+    "changelog_from_nowhere": {
+        "en": "Neither the web nor a local copy could be reached.",
+        "de": "Weder das Netz noch eine lokale Fassung war erreichbar."},
+    "changelog_missing": {
+        "en": "# No changelog found\n\nThe file is not part of this "
+              "installation and the project page could not be reached. The "
+              "button next to this text opens it in your browser.",
+        "de": "# Kein Changelog gefunden\n\nDie Datei gehört nicht zu dieser "
+              "Installation, und die Projektseite war nicht erreichbar. Der "
+              "Knopf neben diesem Text öffnet sie im Browser."},
     "no_signal_note": {
         "en": "This recording had too little voiced material, so the metrics were "
               "deliberately not calculated.",
@@ -475,6 +575,7 @@ STRINGS: dict[str, dict[str, str]] = {
     "change_type": {"en": "Change type", "de": "Typ ändern"},
 
     "tab_analysis": {"en": "Analysis", "de": "Analyse"},
+    "tab_options": {"en": "Options", "de": "Optionen"},
     "tab_info": {"en": "Info", "de": "Info"},
     "tab_design": {"en": "Design", "de": "Design"},
     "design_hint": {
@@ -759,6 +860,9 @@ STRINGS: dict[str, dict[str, str]] = {
               "<p><b>Details</b> at the end of a row opens that recording: "
               "all eighteen metrics, each checked against your target "
               "profile, and optionally compared against another take.</p>"
+              "<p><b>Choose folder</b> at the bottom puts the recordings "
+              "somewhere else — an external drive, a synced folder. What the "
+              "files are called is set in <b>Settings → Options</b>.</p>"
               "<p>Recordings without a usable voice say so instead of showing "
               "invented numbers.</p>",
         "de": "<p>Jede Aufnahme landet im Reiter <b>Sessions</b> — der zweite "
@@ -768,6 +872,10 @@ STRINGS: dict[str, dict[str, str]] = {
               "<p><b>Details</b> am Ende einer Zeile öffnet die Aufnahme: "
               "alle achtzehn Kennwerte, jeder gegen dein Zielprofil geprüft "
               "und auf Wunsch mit einer anderen Aufnahme verglichen.</p>"
+              "<p><b>Ordner auswählen</b> unten legt die Aufnahmen woanders "
+              "ab — externe Platte, synchronisierter Ordner. Wie die Dateien "
+              "heißen, stellst du unter <b>Einstellungen → Optionen</b> "
+              "ein.</p>"
               "<p>Aufnahmen ohne verwertbare Stimme sagen das auch, statt "
               "erfundene Zahlen zu zeigen.</p>"},
 
@@ -864,8 +972,15 @@ STRINGS: dict[str, dict[str, str]] = {
                              "de": "Was in den Einstellungen steckt"},
     "intro_settings_body": {
         "en": "<p>The <b>⚙ Settings</b> button, marked in the main window, "
-              "opens four tabs:</p>"
+              "opens five tabs:</p>"
               "<ul>"
+              "<li><b>Options</b> — the folder recordings go to and what "
+              "their file names are made of: subfolders per day, week, month "
+              "or year, and a name assembled from date, time, recording type, "
+              "a counter and your own text, in whatever order you drag them "
+              "into. A preview at the top shows the next file name. A button "
+              "at the bottom moves recordings you already have into the new "
+              "scheme.</li>"
               "<li><b>Analysis</b> — the limits the measurement runs with: "
               "pitch floor and ceiling, formant ceiling, silence threshold and "
               "how much of a take has to be voiced. Templates hold whole sets "
@@ -884,8 +999,15 @@ STRINGS: dict[str, dict[str, str]] = {
               "<p>Changing a limit never touches saved recordings: each entry "
               "records the limits it was measured with.</p>",
         "de": "<p>Der Knopf <b>⚙ Einstellungen</b>, im Hauptfenster markiert, "
-              "öffnet vier Reiter:</p>"
+              "öffnet fünf Reiter:</p>"
               "<ul>"
+              "<li><b>Optionen</b> — der Ordner, in den die Aufnahmen "
+              "wandern, und woraus ihre Dateinamen bestehen: Unterordner pro "
+              "Tag, Woche, Monat oder Jahr und ein Name aus Datum, Uhrzeit, "
+              "Aufnahmetyp, einem Zähler und eigenem Text, in der "
+              "Reihenfolge, in die du sie ziehst. Eine Vorschau oben zeigt "
+              "den nächsten Dateinamen. Ein Knopf unten bringt vorhandene "
+              "Aufnahmen ins neue Schema.</li>"
               "<li><b>Analyse</b> — die Grenzen, mit denen gemessen wird: "
               "untere und obere Tonhöhengrenze, Formant-Obergrenze, "
               "Stilleschwelle und wie viel einer Aufnahme stimmhaft sein "

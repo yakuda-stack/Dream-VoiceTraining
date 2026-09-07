@@ -316,6 +316,9 @@ QPushButton#primary {{ background: {c['accent']}; color: {accent_text}; }}
 QPushButton#record {{ background: {c['red']}; color: {c['fg']}; }}
 QPushButton#help {{ font-size: 16px; padding: 6px 0; color: {c['accent']}; }}
 QPushButton#rowaction, QPushButton#danger {{ padding: 5px 12px; font-weight: 500; }}
+/* Knoepfe, die nur ein Zeichen tragen: die 16px Seitenpolsterung von
+   oben liesse davon nichts uebrig und Qt kuerzte das Zeichen weg. */
+QPushButton#stepper {{ padding: 4px 0; font-size: 15px; }}
 QPushButton#danger {{ background: {inner}; color: {c['red']}; }}
 QPushButton#danger:hover {{ background: {c['red']}; color: {c['fg']}; }}
 QPushButton#langleft, QPushButton#langright {{ padding: 8px 0; font-size: 11px;

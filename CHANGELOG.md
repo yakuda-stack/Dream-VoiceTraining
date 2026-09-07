@@ -4,6 +4,92 @@ Notable changes per release. Format follows
 [Keep a Changelog](https://keepachangelog.com/), versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [1.1.2] — 2026-09-07
+
+### Added
+
+- **A tab for how recordings are named.** *Settings → Options* holds the
+  recording folder and the whole naming scheme in one place, with a live
+  preview of the next file name and its full path at the very top. It updates
+  on every change and never consumes a counter number while you try things out.
+- **Subfolders per day, calendar week, month or year** — or none at all.
+  Recordings are filed by their own date, not by the day they were moved.
+- **A file name assembled from parts.** Custom text front and back, year,
+  month, calendar week, date, time of day, recording type and a running
+  counter. Each part can be switched on and off and dragged into any order by
+  its grip on the left, with arrow buttons for those who would rather not
+  drag. Every row shows what it currently contributes, even while switched
+  off. Parts that come out empty are simply left out.
+- **The preview shows the name in coloured badges**, one per part, so it is
+  obvious which switch produced which piece of the name. It sits in a card of
+  its own above everything else: the folder small and dim on top, the file
+  name large below it.
+- **Each part carries its own settings.** *Time with seconds* sits under the
+  time row, the number of digits and the reset interval under the counter row,
+  and the two custom text fields are the rows themselves. The settings appear
+  with their part and disappear with it — choosing seconds while the time is
+  not in the name at all was a question without an effect.
+- **Fixed:** the two buttons that move a part up and down showed a stub of a
+  dash instead of their arrows. They carried `▲` and `▼` all along, but the
+  side padding every button inherits left two pixels for the glyph and Qt cut
+  it away. They now use their own narrow style.
+- Longer explanations live behind a small ⓘ as tooltips instead of standing as
+  grey paragraphs under every field, and the page is laid out in two columns:
+  what makes up the name on the left, what happens to files that already exist
+  on the right. Both together take the scrolling out of the tab.
+- **Time of day with or without seconds** (`14-30-15` or `14-30`).
+- **A running counter** with a chosen number of digits and a reset interval:
+  never, daily, weekly, monthly or yearly. A button sets it back to 1 by hand.
+- The calendar week uses the ISO year, so the 1st of January still lands in the
+  last week of the year before instead of opening a second folder for the same
+  week. `KW` stays fixed regardless of interface language, for the same reason
+  the type short forms do: a language switch must not rename existing files.
+
+### Changed
+
+- **A Changelog button under *Settings → Info*.** It opens the version history
+  in a window of its own, rendered as formatted text rather than raw Markdown.
+  The text is fetched from the project page on GitHub, because the copy that
+  ships with an installation ends at the version you already have — and what
+  changed *since* your version is the thing you came to read. Without a
+  connection, or when the fetch fails, the shipped copy is shown instead and
+  the window says which of the two you are looking at.
+- **The only network connection this program makes.** It happens when you
+  press that button and never in the background; there is still no update
+  check and nothing is sent but the request itself. The fetch runs in a thread
+  of its own, so the window opens immediately instead of standing still until
+  a timeout runs out. The README statement about network use was corrected
+  accordingly.
+- **The introduction knows about the new tab.** Its settings page lists
+  *Options* first and says what it holds, and the sessions page points at
+  *Settings → Options* for the file names now that *Choose folder* only picks a
+  folder.
+- **Settings tabs reordered** to *Options*, *Analysis*, *Target profiles*,
+  *Design*, *Info* — roughly how often one changes something there. The dialog
+  still opens on *Info*, which is what you want in front of you when you open
+  the settings without a particular parameter in mind.
+- **Choose folder no longer opens a dialog first.** It opens the folder dialog
+  of the system and nothing else. Asking about the naming scheme when someone
+  is looking for a folder was one question too many; the scheme moved to the
+  Options tab.
+- Existing recordings are moved to the assembled scheme, not just to month
+  folders and the type. Whether a name was given by the program or by hand is
+  now decided by taking the name apart into its parts, so hand-given names stay
+  untouched under any scheme. During a move the counter is handed out per
+  period in recording order, not from the stored value — a move brings along
+  months that are long over.
+- Empty subfolders left behind by a scheme change are cleaned up, not only
+  month folders.
+- Settings now roll back the recording folder and the naming scheme on
+  *Cancel*, along with everything else. A move is excluded: moved files are not
+  coming back, so the move button applies its selection right away.
+
+### Migration
+
+- A configuration from 1.1.1 keeps its behaviour: `month_folders` becomes one
+  folder per month, `type_in_name` switches on the type part. Nothing is
+  rewritten until the Options tab is used.
+
 ## [1.1.1] — 2026-09-05
 
 ### Added

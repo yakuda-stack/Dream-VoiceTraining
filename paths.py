@@ -47,12 +47,19 @@ BUNDLE_DIR = Path(getattr(sys, "_MEIPASS", "")) if FROZEN else None
 
 APP_ID = "dream-voicetraining"
 APP_NAME = "Dream-VoiceTraining"
-APP_VERSION = "1.1.1"
+APP_VERSION = "1.1.2"
 
 APP_URL = "https://github.com/yakuda-stack/Dream-VoiceTraining"
 ISSUES_URL = APP_URL + "/issues"
 DISCORD_URL = "https://discord.gg/UkhJSz3Ctf"
 KOFI_URL = "https://ko-fi.com/yakuda_"
+
+# Der Changelog aus dem Netz. Zwei Zweignamen, weil ein umbenannter
+# Hauptzweig sonst still den Knopf leerlaufen liesse; wer nichts erreicht,
+# bekommt die mitgelieferte Datei.
+RAW_URL = "https://raw.githubusercontent.com/yakuda-stack/Dream-VoiceTraining"
+CHANGELOG_URLS = (f"{RAW_URL}/main/CHANGELOG.md",
+                  f"{RAW_URL}/master/CHANGELOG.md")
 
 
 def set_process_name(name: str = APP_ID) -> None:
@@ -113,6 +120,29 @@ def intro_shot(name: str) -> Path | None:
     candidates += [
         here / "assets" / "intro" / name,
         Path(f"/usr/share/{APP_ID}/assets/intro") / name,
+    ]
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def changelog_file() -> Path | None:
+    """Die mitgelieferte CHANGELOG.md suchen.
+
+    Der Rueckfall, wenn die Fassung im Netz nicht erreichbar ist. Liegt im
+    Quellordner, wird von den Paketen unter share/doc abgelegt und von
+    PyInstaller neben die EXE entpackt. Fehlt sie, sagt das Fenster das —
+    ein Programm, das ohne seinen Changelog laeuft, ist kein Fehlerfall.
+    """
+    candidates = []
+    if BUNDLE_DIR is not None:
+        candidates.append(BUNDLE_DIR / "CHANGELOG.md")
+    here = Path(__file__).resolve().parent
+    candidates += [
+        here / "CHANGELOG.md",
+        Path(f"/usr/share/doc/{APP_ID}/CHANGELOG.md"),
+        Path(f"/usr/share/{APP_ID}/CHANGELOG.md"),
     ]
     for candidate in candidates:
         if candidate.is_file():

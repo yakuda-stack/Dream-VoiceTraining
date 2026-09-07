@@ -28,6 +28,7 @@ from dataclasses import asdict, dataclass, fields
 from typing import NamedTuple
 
 import i18n
+import naming
 from paths import CONFIG_PATH
 
 LEGACY_PROFILE_NAME = "My target"
@@ -126,7 +127,8 @@ _state = {"active_template": DEFAULT_TEMPLATE, "user_templates": {}, "device": N
           "view": {}, "user_profiles": {}, "theme": {}, "intro_done": False, "install_asked": False,
           "builtin_overrides": {},
           "warn_low_level": True, "recording_type": "reading",
-          "session_dir": None, "month_folders": False, "type_in_name": False}
+          "session_dir": None, "month_folders": False, "type_in_name": False,
+          "naming": None, "name_counter": {"period": "", "value": 0}}
 
 
 def apply(new: Settings) -> None:
@@ -284,6 +286,45 @@ def set_type_in_name(enabled: bool) -> None:
         save()
 
 
+# --------------------------------------------------------- Namensschema
+
+def get_naming() -> dict:
+    """Das eingestellte Namensschema, immer vollstaendig und gueltig.
+
+    Steht noch keines in der Konfiguration, wird es aus den beiden alten
+    Schaltern gebaut. Das passiert hier und nicht in load(), damit auch
+    eine Konfiguration ohne Schema — etwa aus einer aelteren Fassung, die
+    zwischendurch lief — dasselbe Ergebnis liefert.
+    """
+    stored = _state["naming"]
+    if not isinstance(stored, dict):
+        return naming.from_legacy(_state["month_folders"],
+                                  _state["type_in_name"])
+    return naming.normalize(stored)
+
+
+def set_naming(scheme: dict) -> None:
+    clean = naming.normalize(scheme)
+    if _state["naming"] != clean:
+        _state["naming"] = clean
+        save()
+
+
+def get_name_counter() -> dict:
+    raw = _state["name_counter"]
+    raw = raw if isinstance(raw, dict) else {}
+    try:
+        value = int(raw.get("value", 0))
+    except (TypeError, ValueError):
+        value = 0
+    return {"period": str(raw.get("period", "")), "value": max(value, 0)}
+
+
+def set_name_counter(period: str, value: int) -> None:
+    _state["name_counter"] = {"period": str(period), "value": int(value)}
+    save()
+
+
 def get_intro_done() -> bool:
     return bool(_state["intro_done"])
 
@@ -416,6 +457,16 @@ def load() -> None:
     _state["session_dir"] = str(folder) if folder else None
     _state["month_folders"] = bool(raw.get("month_folders", False))
     _state["type_in_name"] = bool(raw.get("type_in_name", False))
+    # Fehlt das Schema, bleibt hier None: get_naming() baut es dann aus den
+    # beiden Schaltern darueber. Geschrieben wird es erst, wenn jemand die
+    # Optionen bearbeitet — eine Konfiguration ungefragt umzuschreiben, nur
+    # weil das Programm einmal startete, waere unfreundlich gegenueber dem,
+    # der noch die alte Fassung danebenliegen hat.
+    scheme = raw.get("naming")
+    _state["naming"] = naming.normalize(scheme) if isinstance(scheme, dict) else None
+    counter = raw.get("name_counter")
+    _state["name_counter"] = (counter if isinstance(counter, dict)
+                              else {"period": "", "value": 0})
     i18n.set_language(_state["language"])
 
 
@@ -437,6 +488,8 @@ def save() -> None:
         "session_dir": _state["session_dir"],
         "month_folders": _state["month_folders"],
         "type_in_name": _state["type_in_name"],
+        "naming": _state["naming"],
+        "name_counter": _state["name_counter"],
         "values": asdict(CFG),
         "user_templates": {n: asdict(s) for n, s in _state["user_templates"].items()},
     }

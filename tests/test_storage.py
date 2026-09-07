@@ -23,6 +23,11 @@ def store(tmp_path, monkeypatch):
     settings._state["session_dir"] = None
     settings._state["month_folders"] = False
     settings._state["type_in_name"] = False
+    # Ohne das haengt der Ausgang an der Testreihenfolge: ein Test, der
+    # vorher settings.load() gerufen hat, laesst hier sonst sein Schema
+    # stehen.
+    settings._state["naming"] = None
+    settings._state["name_counter"] = {"period": "", "value": 0}
     monkeypatch.setattr(settings, "save", lambda: None)
     return storage
 

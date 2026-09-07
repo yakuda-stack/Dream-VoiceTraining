@@ -32,6 +32,7 @@ datas += [
     (str(PACKAGING / "dream-voicetraining.svg"), "."),
     (str(ROOT / "LICENSE"), "."),
     (str(ROOT / "THIRD_PARTY_NOTICES.md"), "."),
+    (str(ROOT / "CHANGELOG.md"), "."),
 ]
 
 # Bildschirmfotos der Einfuehrung. PyInstaller entpackt sie nach

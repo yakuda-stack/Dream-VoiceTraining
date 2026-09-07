@@ -393,16 +393,31 @@ für Tests und portable Varianten. Daten aus früheren Versionen werden beim
 ersten Start automatisch übernommen, vorhandene Dateien nie überschrieben.
 
 **Ordner auswählen** neben *Ordner öffnen* im Reiter *Sessions* legt die
-Aufnahmen woanders ab — externe Platte, synchronisierter Ordner — und schaltet
-auf Wunsch einen Ordner pro Monat und den Aufnahmetyp im Dateinamen dazu
-(`2026-09/2026-09-05_18-30-00_vowel-a.wav`). Ein Knopf unten im Dialog
-verschiebt, was schon da ist, in den neuen Ordner und das neue Schema; selbst
-vergebene Namen bleiben dabei stehen. Die Sessionliste selbst bleibt in den
-Programmdaten, damit sie auch dann da ist, wenn die Platte nicht steckt.
+Aufnahmen woanders ab — externe Platte, synchronisierter Ordner. Der Klick
+öffnet den Ordnerdialog des Systems und sonst nichts.
 
-Alles ist reines WAV und JSON. Nichts wird irgendwohin hochgeladen, es gibt
-keine Telemetrie, und das Programm baut überhaupt keine Netzwerkverbindungen
-auf.
+Wie die Dateien heißen, steht unter *Einstellungen → Optionen*, mit einer
+Vorschau des nächsten Dateinamens ganz oben. Unterordner pro Tag,
+Kalenderwoche, Monat oder Jahr; ein Dateiname aus Bausteinen, die sich anhaken
+und in die gewünschte Reihenfolge ziehen lassen: eigener Text vorn und hinten,
+Jahr, Monat, Kalenderwoche, Datum, Uhrzeit (mit oder ohne Sekunden),
+Aufnahmetyp und ein fortlaufender Zähler, der nie, täglich, wöchentlich,
+monatlich oder jährlich zurückgesetzt wird. Die Vorschau zeigt das Ergebnis mit
+einer Marke je Baustein, und jeder Baustein trägt seine Einstellungen in seiner
+eigenen Zeile.
+`Voice-Training_2026-KW37_14-30_vowel-a_001.wav` ist genauso möglich wie die
+Vorgabe `2026-09-07_14-30-15.wav`. Ein Knopf unten im Reiter verschiebt, was
+schon da ist, in den neuen Ordner und das neue Schema; selbst vergebene Namen
+bleiben dabei stehen. Die Sessionliste selbst bleibt in den Programmdaten,
+damit sie auch dann da ist, wenn die Platte nicht steckt.
+
+Alles ist reines WAV und JSON. Nichts wird irgendwohin hochgeladen, und es gibt
+keine Telemetrie. Genau eine Netzwerkverbindung baut das Programm auf, und nur
+wenn du sie verlangst: **Changelog** unter *Einstellungen → Info* holt die
+Versionshistorie von der Projektseite bei GitHub. Gesendet wird dabei nichts
+außer der Anfrage, eine Aktualisierungsprüfung gibt es nicht, und im
+Hintergrund passiert nichts. Ohne Verbindung zeigt das Fenster die
+mitgelieferte Fassung.
 
 ---
 
