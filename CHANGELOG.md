@@ -4,6 +4,45 @@ Notable changes per release. Format follows
 [Keep a Changelog](https://keepachangelog.com/), versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [1.1.5] — 2026-09-09
+
+### Added
+
+- **Folder names can be built from parts, like file names.** *Subfolder →
+  From parts …* offers calendar week, week span (`07.09-13.09`), date, year,
+  month, day and free text, tickable and reorderable, joined with spaces —
+  folders may hold those, file names here may not. `KW37 07.09-13.09 Voice
+  Training` is what the default selection plus a word of your own produces,
+  which is how such folders usually get made by hand. The fixed periods stay
+  where they were; picking one changes nothing about how it behaves.
+- **A *Day* name part.** With *Month* now contributing only the month, year,
+  month and day can be ticked separately and add up to what *Date* gives in
+  one piece.
+
+### Fixed
+
+- **The detail spectrogram stays sharp when you zoom in.** It was computed
+  once at the width of the chart, so zooming stretched a handful of columns
+  into blocks. Both charts are now redrawn for whatever stretch of time is on
+  screen. The spectrogram gets the same number of columns over less time, and
+  its analysis window shrinks with the view — 1024 samples is 64 ms at 16 kHz,
+  so at a 25 ms zoom every column used to see almost the same piece of audio
+  and the picture turned into horizontal streaks. Below roughly a tenth of a
+  second you now see the individual glottal pulses. The trade is frequency
+  resolution, which is exactly the trade you want when zooming in. Brightness
+  is still derived from the whole recording, so a quiet passage does not
+  brighten up just because you looked at it closely. The image also sits where
+  it belongs now: the first column starts half a window in, and that offset
+  used to be ignored.
+- **The waveform above it is redrawn from the samples themselves.** Its
+  envelope had 2400 points for the whole recording — one every 2.5 ms in a
+  six-second take, which at high zoom left a staircase with no relation to the
+  signal. A narrow view now plots one point per sample.
+- **The spectrogram comes back at the height it left.** Both charts in the
+  advanced area now have fixed stretch factors; without them Qt redistributed
+  the space by size hints and the chart returned smaller or larger than
+  before.
+
 ## [1.1.4] — 2026-09-09
 
 ### Fixed

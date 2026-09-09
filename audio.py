@@ -539,27 +539,32 @@ def read_wav(path) -> tuple[np.ndarray, int]:
 
 def spectrogram(data: np.ndarray, rate: int, nfft: int = 1024,
                 max_freq: float = 5000.0, max_columns: int = 900):
-    """Zeit-Frequenz-Bild einer ganzen Aufnahme, in dB.
+    """Zeit-Frequenz-Bild eines Abschnitts, in dB.
 
-    Zurueck kommt (bild, sekunden, obere_frequenz). Das Bild ist nach
-    [Spalte, Frequenzband] angeordnet — so erwartet es pyqtgraph, ohne dass
-    noch jemand transponieren muss.
+    Zurueck kommt (bild, von, bis, obere_frequenz). "von" und "bis" sind
+    Sekunden relativ zum Anfang von data und beschreiben, was das Bild
+    wirklich abdeckt: die erste Spalte liegt eine halbe Fensterlaenge
+    hinter dem Anfang, die letzte entsprechend vor dem Ende. Ohne diese
+    beiden Zahlen saesse das Bild um bis zu eine Fensterlaenge neben der
+    Wellenform darueber — beim Hineinzoomen deutlich sichtbar.
+
+    Das Bild ist nach [Spalte, Frequenzband] angeordnet, so wie pyqtgraph
+    es erwartet.
 
     Der Vorschub richtet sich nach der Laenge: mehr Spalten, als das
     Diagramm Bildpunkte hat, kosten Rechenzeit und Speicher und sind
-    danach nicht zu sehen. Eine Stunde Ton ergaebe bei festem Vorschub
-    ueber eine Million Spalten.
-
-    Anders als das mitlaufende Spektrogramm im Livebereich rechnet das
-    hier alles auf einmal — eine fertige Datei waechst nicht mehr.
+    danach nicht zu sehen. Wer hineinzoomt, ruft die Funktion mit dem
+    sichtbaren Ausschnitt erneut auf und bekommt dieselbe Spaltenzahl
+    ueber weniger Zeit — also mehr Aufloesung.
     """
     data = np.asarray(data, dtype=np.float32).reshape(-1)
     bins = max(1, int(max_freq / (rate / nfft)) + 1)
     top = min(float(max_freq), rate / 2.0)
     if data.size < nfft:
-        return np.zeros((1, bins), dtype=np.float32), 0.0, top
+        return np.zeros((1, bins), dtype=np.float32), 0.0, \
+            data.size / float(rate), top
 
-    hop = max(nfft // 4, int(np.ceil((data.size - nfft) / max(1, max_columns))))
+    hop = max(1, int(np.ceil((data.size - nfft) / max(1, max_columns))))
     starts = np.arange(0, data.size - nfft + 1, hop)
     # Ein Fensterausschnitt je Zeile, ohne die Daten zu kopieren.
     frames = np.lib.stride_tricks.as_strided(
@@ -570,7 +575,12 @@ def spectrogram(data: np.ndarray, rate: int, nfft: int = 1024,
     spectrum = np.fft.rfft(frames * window, axis=1)[:, :bins]
     magnitude = np.abs(spectrum) / (nfft / 2)
     image = 20.0 * np.log10(np.maximum(magnitude, 1e-6))
-    return image.astype(np.float32), data.size / float(rate), top
+
+    # Eine Spalte steht fuer die Mitte ihres Fensters und ist hop breit.
+    half = nfft / 2.0
+    first = (float(starts[0]) + half - hop / 2.0) / rate
+    last = (float(starts[-1]) + half + hop / 2.0) / rate
+    return image.astype(np.float32), first, last, top
 
 
 def envelope(data: np.ndarray, points: int = 2000):

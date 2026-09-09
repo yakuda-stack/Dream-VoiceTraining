@@ -466,6 +466,9 @@ class SessionDetailDialog(QtWidgets.QDialog):
         self._rate = 0
         self._duration = 0.0
         self._spectrogram_done = False
+        self.wave_curve = None
+        self._spec_levels = None
+        self._spec_span = None
         self._syncing = False
         self._selection_stats = None
         self._selection_span = None
@@ -703,7 +706,11 @@ class SessionDetailDialog(QtWidgets.QDialog):
         self.wave_plot.getAxis("bottom").setStyle(showValues=False)
         self.wave_plot.getAxis("left").setStyle(showValues=False)
         self.wave_plot.setMouseEnabled(x=True, y=False)
-        lay.addWidget(self.wave_plot)
+        # Feste Streckungsfaktoren fuer beide Diagramme. Ohne sie teilt Qt
+        # den Platz nach Groessenhinweisen auf, und der faellt nach einem
+        # Aus- und Wiedereinschalten anders aus als vorher — das
+        # Spektrogramm kam in einer anderen Hoehe zurueck, als es ging.
+        lay.addWidget(self.wave_plot, 2)
 
         accent = QtGui.QColor(NORD["accent"])
         self.region = pg.LinearRegionItem(
@@ -712,7 +719,7 @@ class SessionDetailDialog(QtWidgets.QDialog):
         self.region.setZValue(10)
         self.region.sigRegionChanged.connect(self._region_moved)
 
-        lay.addWidget(self._build_spectrogram())
+        lay.addWidget(self._build_spectrogram(), 3)
 
         info = QtWidgets.QHBoxLayout()
         self.range_label = QtWidgets.QLabel("")
@@ -769,7 +776,18 @@ class SessionDetailDialog(QtWidgets.QDialog):
             self.spec_img.setColorMap(pg.colormap.get("inferno"))
         except Exception:
             pass
-        self.spec_plot.addItem(self.spec_img)
+        # ignoreBounds: das Bild soll den sichtbaren Bereich nicht
+        # mitbestimmen. Sonst zoege ein neu gesetztes Bild die Achse nach,
+        # die Achse loeste das naechste Neuzeichnen aus, und so fort.
+        self.spec_plot.addItem(self.spec_img, ignoreBounds=True)
+
+        # Beim Zoomen neu rechnen, aber nicht bei jedem Rad-Klick einzeln.
+        self._spec_timer = QtCore.QTimer(self)
+        self._spec_timer.setSingleShot(True)
+        self._spec_timer.setInterval(120)
+        self._spec_timer.timeout.connect(self._render_zoom)
+        self.spec_plot.getPlotItem().vb.sigXRangeChanged.connect(
+            lambda *_: self._spec_timer.start())
 
         # Dieselbe Auswahl noch einmal. Sie laesst sich auch hier ziehen —
         # wer eine Stelle an den Formanten erkennt, will sie nicht erst in
@@ -803,28 +821,133 @@ class SessionDetailDialog(QtWidgets.QDialog):
         self.spec_plot.setVisible(on)
         if on:
             self._load_spectrogram()
+            self._render_spectrogram(force=True)
 
     def _load_spectrogram(self) -> None:
-        """Bild einmal rechnen und ablegen; eine Datei waechst nicht mehr."""
+        """Einmalige Vorbereitung: Helligkeit, Achse, Auswahlbereich."""
         if self._samples is None or self._spectrogram_done:
             return
-        image, duration, top = audio_mod.spectrogram(self._samples, self._rate)
+        image, _, _, top = audio_mod.spectrogram(self._samples, self._rate)
         if image.size == 0:
             return
 
         # Feste Grenzen wie im Livebereich taugen hier nicht: eine leise
         # Aufnahme waere durchgehend schwarz. Der obere Wert kommt aus dem
-        # Bild selbst, der untere 70 dB darunter.
+        # Bild selbst, der untere 70 dB darunter. Berechnet wird er einmal
+        # ueber die ganze Aufnahme, damit die Helligkeit beim Zoomen
+        # stehenbleibt — sonst wuerde jeder Ausschnitt neu ausgesteuert und
+        # eine leise Stelle saehe aus wie eine laute.
         ceiling = float(np.percentile(image, 99.5))
-        self.spec_img.setImage(image, autoLevels=False,
-                               levels=(ceiling - 70.0, ceiling))
-        # Muss NACH setImage kommen, sonst kann pyqtgraph nicht skalieren.
-        self.spec_img.setRect(QtCore.QRectF(0, 0, duration, top))
+        self._spec_levels = (ceiling - 70.0, ceiling)
+        self._spec_top = top
+
         self.spec_plot.setYRange(0, top, padding=0)
         self.spec_plot.addItem(self.spec_region)
-        self.spec_region.setBounds((0.0, duration))
+        self.spec_region.setBounds((0.0, self._duration))
         self._mirror(self.region, self.spec_region)
         self._spectrogram_done = True
+        self._render_spectrogram(force=True)
+
+    def _render_zoom(self) -> None:
+        """Beide Diagramme auf den sichtbaren Ausschnitt bringen."""
+        self._render_waveform()
+        self._render_spectrogram()
+
+    def _render_waveform(self) -> None:
+        """Die Wellenform aus den echten Abtastwerten des Ausschnitts.
+
+        Die Huellkurve ueber die ganze Aufnahme hat 2400 Stuetzstellen. Bei
+        sechs Sekunden ist das jede 2,5 Millisekunden — beim Hineinzoomen
+        auf ein paar Hundertstel bleibt davon eine Treppe uebrig, die mit
+        dem Signal nichts mehr zu tun hat. Also wird auch sie fuer den
+        sichtbaren Bereich neu gebildet, und ist der klein genug, stehen
+        dort die Abtastwerte selbst.
+        """
+        if self._samples is None or self.wave_curve is None:
+            return
+        view = self.wave_plot.getPlotItem().vb
+        low, high = view.viewRange()[0]
+        start = max(0, int(max(0.0, low) * self._rate))
+        stop = min(self._samples.size,
+                   int(min(self._duration, high) * self._rate) + 1)
+        if stop - start < 2:
+            return
+
+        piece = self._samples[start:stop]
+        if piece.size <= 4000:
+            xs = np.arange(start, stop, dtype=np.float64)
+            ys = piece
+        else:
+            xs, ys = audio_mod.envelope(piece, 2400)
+            xs = np.asarray(xs, dtype=np.float64) + start
+        self.wave_curve.setData(xs / float(self._rate), ys)
+
+    @staticmethod
+    def _window_for(span: float, rate: int) -> int:
+        """Fensterlaenge, die zum sichtbaren Zeitraum passt.
+
+        Das Fenster bestimmt, wie fein das Spektrogramm in der Zeit
+        aufloest. 1024 Abtastwerte sind bei 16 kHz 64 ms lang — wer auf
+        25 ms hineinzoomt, sieht in jeder Spalte fast dasselbe Stueck Ton
+        und bekommt waagerechte Streifen statt Struktur. Also faellt das
+        Fenster mit dem Ausschnitt, bis hinunter zu 128.
+
+        Der Preis ist Frequenzaufloesung: ein kurzes Fenster unterscheidet
+        benachbarte Obertoene schlechter. Genau der Tausch ist beim
+        Hineinzoomen aber gewollt.
+        """
+        nfft = 1024
+        while nfft > 128 and nfft / rate > span / 8.0:
+            nfft //= 2
+        return nfft
+
+    def _render_spectrogram(self, force: bool = False) -> None:
+        """Das Bild fuer den gerade sichtbaren Zeitraum rechnen.
+
+        Ein einmal fuer die ganze Aufnahme gerechnetes Bild hat so viele
+        Spalten, wie das Diagramm breit ist. Wer hineinzoomt, zieht ein
+        paar davon auseinander und sieht Kloetzchen. Also wird derselbe
+        Aufwand auf den kleineren Ausschnitt verwendet: gleich viele
+        Spalten, weniger Zeit, mehr zu erkennen.
+        """
+        if not self._spectrogram_done or self.spec_plot.isHidden():
+            return
+        view = self.spec_plot.getPlotItem().vb
+        low, high = view.viewRange()[0]
+        low = max(0.0, float(low))
+        high = min(float(self._duration), float(high))
+        if high - low < 1e-3:
+            return
+        if not force and self._spec_span is not None:
+            vorher_low, vorher_high = self._spec_span
+            # Ein Nachrechnen lohnt erst, wenn sich der Ausschnitt spuerbar
+            # geaendert hat; sonst rechnete jedes Verschieben um ein Pixel.
+            breite = vorher_high - vorher_low
+            if (abs(low - vorher_low) < breite * 0.02
+                    and abs(high - vorher_high) < breite * 0.02):
+                return
+
+        rate = self._rate
+        nfft = self._window_for(high - low, rate)
+        # Etwas Vorlauf auf beiden Seiten: das erste Fenster beginnt eine
+        # halbe Fensterlaenge vor der ersten Spalte, sonst bliebe am Rand
+        # ein leerer Streifen stehen.
+        start = max(0, int(low * rate) - nfft)
+        stop = min(self._samples.size, int(high * rate) + nfft)
+        piece = self._samples[start:stop]
+        if piece.size < nfft:
+            return
+
+        image, first, last, top = audio_mod.spectrogram(piece, rate, nfft=nfft)
+        if image.size == 0:
+            return
+        offset = start / float(rate)
+        self.spec_img.setImage(image, autoLevels=False,
+                               levels=self._spec_levels)
+        # Muss NACH setImage kommen, sonst kann pyqtgraph nicht skalieren.
+        self.spec_img.setRect(QtCore.QRectF(offset + first, 0.0,
+                                            max(last - first, 1e-6), top))
+        self._spec_span = (low, high)
 
     def _toggle_advanced(self, on: bool) -> None:
         self.btn_advanced.setText(("▾  " if on else "▸  ") + i18n.t("advanced"))
@@ -851,9 +974,8 @@ class SessionDetailDialog(QtWidgets.QDialog):
             return
 
         self._samples, self._rate = data, rate
-        xs, ys = audio_mod.envelope(data, 2400)
-        seconds = xs / float(rate)
-        self.wave_plot.plot(seconds, ys, pen=pg.mkPen(NORD["accent"], width=1))
+        self.wave_curve = self.wave_plot.plot(
+            pen=pg.mkPen(NORD["accent"], width=1))
         duration = data.size / float(rate)
         self._duration = duration
         self.btn_full.setEnabled(True)
@@ -863,6 +985,7 @@ class SessionDetailDialog(QtWidgets.QDialog):
         # dass sich der Bereich ziehen laesst.
         self.region.setRegion((duration / 3.0, duration * 2.0 / 3.0))
         self.region.setBounds((0.0, duration))
+        self._render_waveform()
         if self.chk_spec.isChecked():
             self._load_spectrogram()
         self._region_moved()
@@ -1448,8 +1571,9 @@ class FilterDialog(QtWidgets.QDialog):
 # Farbe je Baustein. Aus den Rollen des Farbschemas, damit die Marken in
 # der Vorschau ein Themenwechsel mitnimmt statt sie fest einzubrennen.
 PART_ROLES = {
-    "prefix": "purple", "suffix": "purple",
-    "year": "accent", "month": "accent", "week": "accent", "date": "accent",
+    "prefix": "purple", "suffix": "purple", "text": "purple",
+    "year": "accent", "month": "accent", "day": "accent",
+    "week": "accent", "weekrange": "accent", "date": "accent",
     "time": "green",
     "type": "yellow",
     "counter": "red",
@@ -1837,11 +1961,37 @@ class OptionsPage(QtWidgets.QWidget):
         self.subfolders = QtWidgets.QComboBox()
         for key in naming.SUBFOLDERS:
             self.subfolders.addItem(i18n.t(f"opt_sub_{key}"), key)
-        self.subfolders.currentIndexChanged.connect(self._refresh)
+        # Letzter Eintrag: derselbe Baukasten wie beim Dateinamen, nur fuer
+        # den Ordner. Wer seine Ordner schon von Hand in einer bestimmten
+        # Form fuehrt, kann sie damit fortfuehren.
+        self.subfolders.addItem(i18n.t("opt_sub_blocks"), "blocks")
+        self.subfolders.currentIndexChanged.connect(self._folder_mode_changed)
         sub.addWidget(self.subfolders, 1)
         sub.addWidget(info_icon(i18n.t("opt_sub_hint")))
         lay.addLayout(sub)
+
+        self.folder_parts = PartList()
+        self.folder_parts.changed.connect(self._refresh)
+        for key in naming.FOLDER_BLOCKS:
+            self.folder_parts.add_row(self._build_folder_row(key))
+        self.folder_parts.setMaximumHeight(190)
+        self.folder_parts.hide()
+        lay.addWidget(self.folder_parts)
         return box
+
+    def _build_folder_row(self, key: str) -> PartRow:
+        row = PartRow(key)
+        if key == "text":
+            self.folder_text = QtWidgets.QLineEdit()
+            self.folder_text.setPlaceholderText(i18n.t("opt_folder_text_hint"))
+            self.folder_text.setMaxLength(naming.MAX_TEXT)
+            self.folder_text.textChanged.connect(self._refresh)
+            row.set_inline(self.folder_text)
+        return row
+
+    def _folder_mode_changed(self) -> None:
+        self.folder_parts.setVisible(self.subfolders.currentData() == "blocks")
+        self._refresh()
 
     def _build_parts(self) -> QtWidgets.QWidget:
         box = QtWidgets.QGroupBox(i18n.t("opt_parts"))
@@ -2056,8 +2206,16 @@ class OptionsPage(QtWidgets.QWidget):
         scheme = naming.normalize(scheme)
         self._loading = True
 
-        index = self.subfolders.findData(scheme["subfolders"])
+        folder = scheme["folder"]
+        gewaehlt = ("blocks" if folder["mode"] == "blocks"
+                    else scheme["subfolders"])
+        index = self.subfolders.findData(gewaehlt)
         self.subfolders.setCurrentIndex(max(index, 0))
+        self.folder_text.setText(folder["text"])
+        self.folder_parts.set_order(folder["order"])
+        for row in self.folder_parts.rows():
+            row.set_checked(folder["enabled"].get(row.key, False))
+        self.folder_parts.setVisible(folder["mode"] == "blocks")
         index = self.reset_box.findData(scheme["counter_reset"])
         self.reset_box.setCurrentIndex(max(index, 0))
 
@@ -2073,8 +2231,16 @@ class OptionsPage(QtWidgets.QWidget):
 
     def _collect(self) -> dict:
         """Schema aus dem, was gerade in den Widgets steht."""
+        gewaehlt = self.subfolders.currentData()
         return naming.normalize({
-            "subfolders": self.subfolders.currentData(),
+            "subfolders": gewaehlt if gewaehlt in naming.SUBFOLDERS else "none",
+            "folder": {
+                "mode": "blocks" if gewaehlt == "blocks" else "period",
+                "order": self.folder_parts.order(),
+                "enabled": {row.key: row.is_checked()
+                            for row in self.folder_parts.rows()},
+                "text": self.folder_text.text(),
+            },
             "order": self.parts.order(),
             "enabled": {row.key: row.is_checked() for row in self.parts.rows()},
             "prefix": self.prefix.text(),
@@ -2104,6 +2270,8 @@ class OptionsPage(QtWidgets.QWidget):
         for row in self.parts.rows():
             row.set_value(naming.block_value(row.key, scheme, stamp,
                                              type_key, counter))
+        for row in self.folder_parts.rows():
+            row.set_value(naming.folder_block_value(row.key, scheme, stamp))
         self._loading = False
 
         self.preview_folder.setText(str(Path(self.folder)) + os.sep)

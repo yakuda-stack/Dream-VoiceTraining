@@ -42,20 +42,30 @@ zu lassen.
 from __future__ import annotations
 
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import rectypes
 
 SEPARATOR = "_"
 
 # Reihenfolge hier ist die Vorgabe, nicht die einzig moegliche.
-BLOCKS = ("prefix", "year", "month", "week", "date", "time", "type",
+BLOCKS = ("prefix", "year", "month", "day", "week", "date", "time", "type",
           "counter", "suffix")
 
 # Freitext-Bausteine. Sie liefern nur etwas, wenn auch etwas eingetippt ist.
 TEXT_BLOCKS = ("prefix", "suffix")
 
 SUBFOLDERS = ("none", "day", "week", "month", "year")
+
+# Bausteine fuer den Ordnernamen. Eine eigene Liste, weil ein Ordner
+# andere Sachen braucht als eine Datei: keinen Zaehler, keinen Aufnahmetyp,
+# dafuer die Spanne einer Kalenderwoche ("07.09-13.09").
+FOLDER_BLOCKS = ("year", "month", "day", "date", "week", "weekrange", "text")
+FOLDER_MODES = ("period", "blocks")
+
+# Ordner duerfen Leerzeichen tragen, Dateinamen in diesem Programm nicht.
+# Deshalb hier ein anderer Trenner als SEPARATOR.
+FOLDER_SEPARATOR = " "
 RESETS = ("never", "day", "week", "month", "year")
 
 MIN_DIGITS, MAX_DIGITS = 1, 6
@@ -66,6 +76,13 @@ MAX_TEXT = 40
 # vom ganzen Umbau nichts.
 DEFAULT: dict = {
     "subfolders": "none",
+    "folder": {"mode": "period",
+               "order": list(FOLDER_BLOCKS),
+               # Nur wirksam, wenn mode "blocks" ist. Die Vorbelegung
+               # ergibt "KW37 07.09-13.09" — die Form, in der Wochenordner
+               # ueblicherweise von Hand angelegt werden.
+               "enabled": {"week": True, "weekrange": True},
+               "text": ""},
     "order": list(BLOCKS),
     "enabled": {"date": True, "time": True},
     "prefix": "",
@@ -129,6 +146,32 @@ def _time_part(stamp: datetime, seconds: bool) -> str:
     return stamp.strftime("%H-%M-%S" if seconds else "%H-%M")
 
 
+def week_range(stamp: datetime) -> str:
+    """Montag bis Sonntag der Woche, als "07.09-13.09"."""
+    monday = stamp - timedelta(days=stamp.weekday())
+    sunday = monday + timedelta(days=6)
+    return f"{monday:%d.%m}-{sunday:%d.%m}"
+
+
+def folder_block_value(key: str, scheme: dict, stamp: datetime) -> str:
+    """Was ein einzelner Ordnerbaustein beitraegt."""
+    if key == "text":
+        return clean_stem(scheme.get("folder", {}).get("text", ""))[:MAX_TEXT]
+    if key == "year":
+        return stamp.strftime("%Y")
+    if key == "month":
+        return stamp.strftime("%m")
+    if key == "day":
+        return stamp.strftime("%d")
+    if key == "date":
+        return stamp.strftime("%Y-%m-%d")
+    if key == "week":
+        return f"KW{_week(stamp)[1]:02d}"
+    if key == "weekrange":
+        return week_range(stamp)
+    return ""
+
+
 def period_key(kind: str, stamp: datetime) -> str:
     """Bezeichner des Zeitraums — fuer Unterordner und Zaehler dasselbe."""
     if kind == "day":
@@ -157,6 +200,26 @@ def normalize(raw: dict | None) -> dict:
 
     folders = raw.get("subfolders")
     scheme["subfolders"] = folders if folders in SUBFOLDERS else "none"
+
+    raw_folder = raw.get("folder")
+    raw_folder = raw_folder if isinstance(raw_folder, dict) else {}
+    mode = raw_folder.get("mode")
+    folder_order = [key for key in raw_folder.get("order", [])
+                    if key in FOLDER_BLOCKS]
+    gesehen: list[str] = []
+    for key in folder_order:
+        if key not in gesehen:
+            gesehen.append(key)
+    folder_enabled = raw_folder.get("enabled")
+    folder_enabled = folder_enabled if isinstance(folder_enabled, dict) else {}
+    scheme["folder"] = {
+        "mode": mode if mode in FOLDER_MODES else "period",
+        "order": gesehen + [key for key in FOLDER_BLOCKS if key not in gesehen],
+        "enabled": {key: bool(folder_enabled.get(
+            key, DEFAULT["folder"]["enabled"].get(key, False)))
+            for key in FOLDER_BLOCKS},
+        "text": clean_stem(raw_folder.get("text", ""))[:MAX_TEXT],
+    }
 
     reset = raw.get("counter_reset")
     scheme["counter_reset"] = reset if reset in RESETS else "never"
@@ -230,6 +293,10 @@ def block_value(key: str, scheme: dict, stamp: datetime,
         # hier hineinzupacken hiesse, dass "Jahr" und "Monat" zusammen
         # 2026_2026-03 ergaeben.
         return stamp.strftime("%m")
+    if key == "day":
+        # Aus demselben Grund nur der Tag: Jahr, Monat und Tag zusammen
+        # ergeben, was sonst "Datum" liefert, aber einzeln abwaehlbar.
+        return stamp.strftime("%d")
     if key == "week":
         return f"KW{_week(stamp)[1]:02d}"
     if key == "date":
@@ -260,8 +327,19 @@ def build_stem(scheme: dict, stamp: datetime, type_key: str | None = None,
 
 
 def build_folder(scheme: dict, stamp: datetime) -> str:
-    """Der Unterordner, oder leer."""
-    return period_key(normalize(scheme)["subfolders"], stamp)
+    """Der Unterordner, oder leer.
+
+    Zwei Betriebsarten: entweder ein fertiger Zeitraum wie bisher, oder ein
+    Name aus Bausteinen — dieselbe Idee wie beim Dateinamen, nur mit
+    Leerzeichen als Trenner, weil Ordner welche tragen duerfen.
+    """
+    scheme = normalize(scheme)
+    folder = scheme["folder"]
+    if folder["mode"] != "blocks":
+        return period_key(scheme["subfolders"], stamp)
+    parts = [folder_block_value(key, scheme, stamp)
+             for key in folder["order"] if folder["enabled"].get(key)]
+    return FOLDER_SEPARATOR.join(part for part in parts if part).strip()
 
 
 def relative(scheme: dict, stamp: datetime, type_key: str | None = None,
@@ -291,8 +369,9 @@ _TOKEN_TIME = (
     r"\d{4}-\d{2}-\d{2}",     # Datum
     r"\d{4}-\d{2}",           # Monat der Fassungen bis 1.1.2
     r"\d{4}",                 # Jahr
-    r"(?:0[1-9]|1[0-2])",     # Monat — nur 01 bis 12, damit eine selbst
-                              # "42" genannte Datei nicht als erzeugt gilt
+    r"(?:0[1-9]|[12]\d|3[01])",  # Monat oder Tag — nur 01 bis 31, damit
+                                 # eine selbst "42" genannte Datei nicht
+                                 # als erzeugt gilt
     r"KW\d{2}",               # Kalenderwoche
     r"\d{2}-\d{2}(?:-\d{2})?",  # Uhrzeit
 )

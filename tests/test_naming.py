@@ -551,3 +551,54 @@ def test_jede_auswahl_hat_eine_beschriftung():
         for key in naming.RESETS:
             assert i18n.t(f"opt_reset_{key}") != f"opt_reset_{key}", key
     i18n.set_language("en")
+
+
+# ------------------------------------------------- Ordner aus Bausteinen
+
+def test_ordner_aus_bausteinen():
+    """Die Form, in der Wochenordner ueblicherweise von Hand entstehen."""
+    scheme = naming.normalize({"folder": {
+        "mode": "blocks",
+        "order": ["week", "weekrange", "text"],
+        "enabled": {"week": True, "weekrange": True, "text": True,
+                    "year": False, "month": False, "day": False,
+                    "date": False},
+        "text": "Voice Training"}})
+    assert naming.build_folder(scheme, STAMP) == "KW37 07.09-13.09 Voice Training"
+
+
+def test_wochenspanne_ist_montag_bis_sonntag():
+    assert naming.week_range(datetime(2026, 9, 9, 13, 45)) == "07.09-13.09"
+    # Auch von einem Sonntag aus gesehen dieselbe Woche.
+    assert naming.week_range(datetime(2026, 9, 13, 23, 0)) == "07.09-13.09"
+
+
+def test_ordnerbausteine_ohne_umschaltung_wirkungslos():
+    """Wer bei einem Zeitraum bleibt, merkt vom Baukasten nichts."""
+    scheme = naming.normalize({"subfolders": "month", "folder": {
+        "enabled": {"week": True, "text": True}, "text": "Egal"}})
+    assert naming.build_folder(scheme, STAMP) == "2026-09"
+
+
+def test_leerer_ordner_bleibt_leer():
+    scheme = naming.normalize({"folder": {
+        "mode": "blocks",
+        "enabled": {key: False for key in naming.FOLDER_BLOCKS}}})
+    assert naming.build_folder(scheme, STAMP) == ""
+
+
+def test_ordnertext_darf_leerzeichen_haben():
+    """Anders als im Dateinamen — Ordner tragen sie ohne Probleme."""
+    scheme = naming.normalize({"folder": {"text": "Voice Training"}})
+    assert scheme["folder"]["text"] == "Voice Training"
+    # Ein Schraegstrich wuerde einen Unterordner aufmachen und fliegt raus.
+    scheme = naming.normalize({"folder": {"text": "a/b"}})
+    assert "/" not in scheme["folder"]["text"]
+
+
+def test_tag_traegt_nur_den_tag_bei():
+    nur = scheme(enabled={key: key == "day" for key in naming.BLOCKS})
+    assert naming.build_stem(nur, STAMP) == "07"
+    zusammen = scheme(enabled={key: key in ("year", "month", "day")
+                               for key in naming.BLOCKS})
+    assert naming.build_stem(zusammen, STAMP) == "2026_09_07"

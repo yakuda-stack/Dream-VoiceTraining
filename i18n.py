@@ -163,6 +163,9 @@ STRINGS: dict[str, dict[str, str]] = {
     "opt_sub_day": {"en": "One per day", "de": "Pro Tag"},
     "opt_sub_week": {"en": "One per calendar week", "de": "Pro Kalenderwoche"},
     "opt_sub_month": {"en": "One per month", "de": "Pro Monat"},
+    "opt_sub_blocks": {"en": "From parts …", "de": "Aus Bausteinen …"},
+    "opt_folder_text_hint": {"en": "e.g. Voice Training",
+                             "de": "z. B. Voice Training"},
     "opt_sub_year": {"en": "One per year", "de": "Pro Jahr"},
     "opt_sub_hint": {
         "en": "Recordings are filed by their own date, not by the day they "
@@ -198,6 +201,9 @@ STRINGS: dict[str, dict[str, str]] = {
     "part_suffix": {"en": "Custom text (back)", "de": "Eigener Text (hinten)"},
     "part_year": {"en": "Year", "de": "Jahr"},
     "part_month": {"en": "Month", "de": "Monat"},
+    "part_day": {"en": "Day", "de": "Tag"},
+    "part_weekrange": {"en": "Week span", "de": "Wochenspanne"},
+    "part_text": {"en": "Custom text", "de": "Eigener Text"},
     "part_week": {"en": "Calendar week", "de": "Kalenderwoche"},
     "part_date": {"en": "Date", "de": "Datum"},
     "part_time": {"en": "Time of day", "de": "Uhrzeit"},
