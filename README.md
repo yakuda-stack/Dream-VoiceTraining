@@ -27,9 +27,9 @@ Native support for **Linux** and **Windows**. No setup required for portable ver
 | :--- | :--- | :--- |
 | **Linux (One-liner)** | `curl -fsSL https://raw.githubusercontent.com/yakuda-stack/Dream-VoiceTraining/main/install.sh \| bash` | Auto-installs on Arch, Ubuntu, Debian, Fedora, openSUSE |
 | **Arch / CachyOS (AUR)** | `paru -S dream-voicetraining` | Official AUR package |
-| **Linux (AppImage)** | [Download AppImage](https://github.com/yakuda-stack/Dream-VoiceTraining/releases/download/v1.1.4/Dream-VoiceTraining-1.1.4-x86_64.AppImage) | Single file execution (`chmod +x` & run) |
-| **Windows (Installer)** | [Download Setup `.exe`](https://github.com/yakuda-stack/Dream-VoiceTraining/releases/download/v1.1.4/Dream-VoiceTraining-1.1.4.exe) | Sets itself up on first run: Start Menu and Desktop shortcuts, no admin rights, uninstall via Apps & Features |
-| **Windows (Portable)** | [Download Portable `.exe`](https://github.com/yakuda-stack/Dream-VoiceTraining/releases/download/v1.1.4/Dream-VoiceTraining-1.1.4-Portable.exe) | Self-contained, stores data in local folder |
+| **Linux (AppImage)** | [Download AppImage](https://github.com/yakuda-stack/Dream-VoiceTraining/releases/download/v1.1.5/Dream-VoiceTraining-1.1.5-x86_64.AppImage) | Single file execution (`chmod +x` & run) |
+| **Windows (Installer)** | [Download Setup `.exe`](https://github.com/yakuda-stack/Dream-VoiceTraining/releases/download/v1.1.5/Dream-VoiceTraining-1.1.5.exe) | Sets itself up on first run: Start Menu and Desktop shortcuts, no admin rights, uninstall via Apps & Features |
+| **Windows (Portable)** | [Download Portable `.exe`](https://github.com/yakuda-stack/Dream-VoiceTraining/releases/download/v1.1.5/Dream-VoiceTraining-1.1.5-Portable.exe) | Self-contained, stores data in local folder |
 | **All Releases** | [GitHub Releases Overview](https://github.com/yakuda-stack/Dream-VoiceTraining/releases) | View all release history & full changelogs |
 
 ---
