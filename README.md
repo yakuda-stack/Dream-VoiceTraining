@@ -25,10 +25,10 @@ Native support for **Linux** and **Windows**. No setup required for portable ver
 
 | Platform | Quick Download / Command | Notes |
 | :--- | :--- | :--- |
-| **Linux (One-liner)** | `curl -fsSL [https://raw.githubusercontent.com/yakuda-stack/Dream-VoiceTraining/main/install.sh](https://raw.githubusercontent.com/yakuda-stack/Dream-VoiceTraining/main/install.sh) \| bash` | Auto-installs on Arch, Ubuntu, Debian, Fedora, openSUSE |
+| **Linux (One-liner)** | `curl -fsSL https://raw.githubusercontent.com/yakuda-stack/Dream-VoiceTraining/main/install.sh \| bash` | Auto-installs on Arch, Ubuntu, Debian, Fedora, openSUSE |
 | **Arch / CachyOS (AUR)** | `paru -S dream-voicetraining` | Official AUR package |
 | **Linux (AppImage)** | [Download AppImage](https://github.com/yakuda-stack/Dream-VoiceTraining/releases/download/v1.1.4/Dream-VoiceTraining-1.1.4-x86_64.AppImage) | Single file execution (`chmod +x` & run) |
-| **Windows (Installer)** | [Download Setup `.exe`](https://github.com/yakuda-stack/Dream-VoiceTraining/releases/download/v1.1.4/Dream-VoiceTraining-1.1.4.exe) | Standard installer with Start Menu & Desktop shortcuts |
+| **Windows (Installer)** | [Download Setup `.exe`](https://github.com/yakuda-stack/Dream-VoiceTraining/releases/download/v1.1.4/Dream-VoiceTraining-1.1.4-setup.exe) | Standard installer with Start Menu & Desktop shortcuts |
 | **Windows (Portable)** | [Download Portable `.exe`](https://github.com/yakuda-stack/Dream-VoiceTraining/releases/download/v1.1.4/Dream-VoiceTraining-1.1.4-Portable.exe) | Self-contained, stores data in local folder |
 | **All Releases** | [GitHub Releases Overview](https://github.com/yakuda-stack/Dream-VoiceTraining/releases) | View all release history & full changelogs |
 
@@ -39,21 +39,21 @@ Native support for **Linux** and **Windows**. No setup required for portable ver
 | Live Analysis | Session Management | Detailed Metrics |
 | :---: | :---: | :---: |
 | <img src="assets/dashboard.png" width="280" alt="Live View"/> | <img src="assets/sessions.png" width="280" alt="Session List"/> | <img src="assets/details.png" width="280" alt="Detail View"/> |
-| Real-time Pitch, Formants (F1/F2), & Weight | Track recordings over time with 24 exportable metrics | 18 acoustic metrics & detailed spectrogram view |
+| Real-time Pitch, Formants (F1/F2), & Weight | Track recordings over time across 24 sortable, exportable columns | 18 acoustic metrics & detailed spectrogram view |
 
 ---
 
 ## 🚀 Key Features
 
 - **Real-Time Visual Analysis:** Pitch history, live spectrogram with F1/F2 formant tracking, pitch zone indicators, and voice weight (H1–H2).
-- **Import & Existing Audio:** Import external WAV/audio files to analyze existing recordings alongside your live sessions.
-- **Session History & Analytics:** Save recordings as WAV + JSON metrics. Filter, sort, and manage 24 different vocal parameters.
+- **Import Existing Recordings:** Bring in WAV files from anywhere on disk — 8, 16, 24 or 32-bit, mono or stereo — and analyse them alongside your live sessions. Files are copied, never moved.
+- **Session History & Analytics:** Save recordings as WAV + JSON metrics. Filter, sort and export a table of 24 columns — 18 acoustic metrics plus date, name, type and file.
 - **Advanced Region Analysis & Spectrogram:** Select steady-state vowels (e.g., `/a/`, `/i/`, `/u/`) with a dedicated spectrogram view in the details panel for precise formant & jitter tracking.
-- **Custom Prompts & Recording Types:** Select from custom practice texts and define custom recording types for standardized testing.
+- **Your Own Practice Texts & Recording Types:** Write and save practice texts of your own, and define recording types beyond the built-in ones — so the same material is measured the same way every session.
 - **Custom Target Profiles:** Compare your measurements against Masculine, Androgynous, Feminine, or custom reference ranges.
 - **100% Offline & Private:** Operates completely offline following XDG specs. No tracking, no telemetry, no cloud dependency.
 
-*(Want to understand how these metrics work? Check out our [Acoustic Metrics & Methodology Guide](docs/metrics.md))*
+*(Want to know what the numbers mean and how they are measured? See the [Acoustic Metrics & Methodology guide](docs/metrics.md).)*
 
 ---
 
