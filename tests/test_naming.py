@@ -73,6 +73,26 @@ def test_abgeschaltete_bausteine_behalten_ihren_platz():
     assert naming.build_stem(an, STAMP) == "2026-09-07_KW37_14-30-15"
 
 
+def test_monat_traegt_nur_den_monat_bei():
+    """Sonst ergaeben Jahr und Monat zusammen 2026_2026-09."""
+    nur = scheme(enabled={key: key == "month" for key in naming.BLOCKS})
+    assert naming.build_stem(nur, STAMP) == "09"
+
+    beides = scheme(enabled={key: key in ("year", "month")
+                             for key in naming.BLOCKS})
+    assert naming.build_stem(beides, STAMP) == "2026_09"
+
+
+def test_monatsnamen_gelten_weiter_als_selbst_vergeben():
+    """Sonst liesse ein Umzug die Dateien der alten Fassungen liegen."""
+    assert naming.looks_generated("09") is True
+    assert naming.looks_generated("2026_09_14-30-15") is True
+    # Das alte Format aus den Fassungen bis 1.1.2 ebenfalls.
+    assert naming.looks_generated("2026-09") is True
+    # Eine zweistellige Zahl, die kein Monat sein kann, aber nicht.
+    assert naming.looks_generated("42") is False
+
+
 def test_uhrzeit_ohne_sekunden():
     kurz = scheme(seconds=False)
     assert naming.build_stem(kurz, STAMP) == "2026-09-07_14-30"
@@ -116,6 +136,16 @@ def test_leerer_freitext_faellt_weg():
 ])
 def test_unterordner_je_zeitraum(kind, expected):
     assert naming.build_folder(scheme(subfolders=kind), STAMP) == expected
+
+
+def test_monatsordner_behaelt_das_jahr():
+    """Anders als der Namensbaustein.
+
+    Der Ordnerschluessel steuert auch den Zaehler-Neustart. Ohne das Jahr
+    landete der Januar 2027 im Ordner des Januars 2026.
+    """
+    assert naming.period_key("month", STAMP) == "2026-09"
+    assert naming.period_key("month", datetime(2027, 9, 1)) == "2027-09"
 
 
 def test_kalenderwoche_benutzt_das_iso_jahr():

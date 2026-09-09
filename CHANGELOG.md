@@ -4,6 +4,92 @@ Notable changes per release. Format follows
 [Keep a Changelog](https://keepachangelog.com/), versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [1.1.3] — 2026-09-09
+
+### Added
+
+- **A spectrogram in the detail window.** *Advanced* now shows one under the
+  waveform, on the same time axis, so every moment sits at the same place in
+  both. The selection can be dragged in either of them — a spot you recognise
+  by its formants no longer has to be found in the waveform first. A checkbox
+  next to the range switches it off. The contrast comes from the recording
+  itself rather than from fixed limits, so a quiet take is not simply black.
+- **Import existing recordings.** *Import …* on the *Sessions* tab takes WAV
+  files from anywhere on disk, analyses them and files them like any other
+  session. Files are copied, never moved — the originals stay where they are.
+  Each one keeps its own file name, so it shows up in the list under the name
+  it had on disk; two files of the same name get a number, and a name that
+  cannot be used at all falls back to the normal scheme. A later move puts
+  them in the right subfolder without renaming them. You pick one type for the
+  whole selection and can change it per recording afterwards. Each file keeps
+  its own sample rate rather than being assumed to match the microphone, which
+  would put pitch and formants off by exactly that ratio, and its modification
+  date becomes the recording time, so it lands in the right month folder and
+  the right place in the list. A file that cannot be read is reported by name
+  at the end instead of ending the run.
+- **8, 24 and 32-bit WAV files can be read**, not just 16-bit. Files with
+  floating-point samples still cannot — those have to be converted first, and
+  the import now says so instead of failing obscurely.
+- **Recording types of your own.** *Settings → Options* now lists every type
+  and lets you add your own — a warm-up, a passage, whatever you keep coming
+  back to. They show up in the type picker on the *Live* tab, in the
+  right-click menu of the session list and in the detail window, and they can
+  go into the file name like the built-in ones do. Each gets its short form
+  once, when it is created, and keeps it: recordings made weeks ago carry that
+  short form in their file name, so renaming would lose them. Deleting a type
+  says how many recordings use it and what they will read as afterwards —
+  their files and values are untouched, but the name behind the type is gone.
+- **Practice texts you can choose between.** The field on the *Live* tab now
+  sits under a dropdown. The built-in text stays where it was, and anything
+  you type can be saved under a name of its own — a warm-up, a paragraph from
+  a newspaper, a passage you keep coming back to. *Save as …* offers the name
+  of the entry you are on, so revising one is two clicks; on the built-in text
+  the field starts empty, and it keeps its own wording. The choice is
+  remembered, so the same text is up again next time. Switching away from
+  unsaved changes asks first.
+- **The pitch history reads out under the mouse.** Moving the pointer across
+  *Last 30 seconds* draws a dashed line at that height with the frequency
+  next to it, so you can measure off the curve instead of estimating between
+  the grid lines. The readout follows the line, so it stays put while the
+  time window scrolls underneath.
+- **Both live charts can be cleared by hand.** Right-clicking the pitch
+  history offers *Clear history*, the spectrogram *Clear spectrogram*. Since
+  neither is wiped on start any more, this is the way to start fresh — after
+  the third exercise the beginning of the first was still in the picture.
+  The charts' built-in pyqtgraph menu is gone with it: zoom and axis ranges
+  are switched off here, so every entry in it was without effect.
+
+### Fixed
+
+- **A saved design survives a restart again.** Colours, background image and
+  card opacity were written to the configuration correctly, but never read
+  back: the call that applies them ran before the configuration was loaded and
+  therefore always saw the empty default, which reset everything to the
+  preset. The startup sequence now loads first and applies afterwards, and
+  restoring an empty design is a no-op rather than a reset.
+- **"Whole recording" in the detail window now does something visible.** It
+  only reset the numbers back to the stored ones, so with no analysed
+  selection in play the button appeared dead. It now opens the selection up
+  to the entire recording as well, which is what the numbers in the table
+  refer to. While the waveform has not loaded — or the file is gone — the
+  button stays disabled instead of pretending.
+
+### Changed
+
+- **The *Month* name part is now just the month.** It used to contribute the
+  year as well, so switching on *Year* and *Month* together produced
+  `2026_2026-03`. It now contributes `03`, and the year comes from the part
+  that is named after it. Recordings named under the old scheme are still
+  recognised as self-generated, so a later move sorts them into folders
+  instead of leaving them behind. The month **subfolder** keeps the year —
+  it also drives the counter reset, and without the year January 2027 would
+  land in January 2026's folder.
+- **Starting the stream no longer wipes the spectrogram and the pitch
+  history.** Both carry on where the previous run left off, so stopping to
+  clear your throat no longer costs you the last thirty seconds. The clock
+  behind the history only advances while the stream is running, so the pause
+  leaves no gap in the curve.
+
 ## [1.1.2] — 2026-09-07
 
 ### Added

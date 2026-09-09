@@ -77,6 +77,9 @@ def fresh_settings(tmp_path, monkeypatch):
     settings._state["builtin_overrides"] = {}
     settings._state["profile"] = "feminin"
     settings._state["live_profile"] = "none"
+    settings._state["practice_texts"] = {}
+    settings._state["practice_choice"] = "builtin"
+    settings._state["user_types"] = {}
     yield
 
 
@@ -144,3 +147,24 @@ def intro_window(qt_app):
     yield window
     window.show_spotlight("")
     window.close()
+
+
+@pytest.fixture
+def detail(qt_app, tmp_path, monkeypatch):
+    """Detailfenster mit einer echten, zwei Sekunden langen Aufnahme."""
+    import audio
+    import storage
+    import dialogs
+
+    folder = tmp_path / "sessions"
+    folder.mkdir()
+    rate = 16000
+    tone = 0.2 * np.sin(2 * np.pi * 150.0 * np.arange(2 * rate) / rate)
+    audio.write_wav(folder / "probe.wav", tone, rate)
+    monkeypatch.setattr(storage, "root", lambda: folder)
+
+    entry = {"timestamp": "2026-09-01T10:00:00", "file": "probe.wav",
+             "quality": "ok", "duration": 2.0, "f0_median": 150.0}
+    dlg = dialogs.SessionDetailDialog(entry, [entry], folder)
+    yield dlg
+    dlg.close()

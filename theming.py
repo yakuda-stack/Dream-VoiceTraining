@@ -218,7 +218,13 @@ def snapshot() -> dict:
 
 
 def restore(data: dict) -> None:
-    if not isinstance(data, dict):
+    """Gespeicherten Zustand uebernehmen.
+
+    Ein leeres dict bedeutet "nichts gespeichert" und nicht "alles
+    zuruecksetzen": sonst raeumt ein Aufruf zum falschen Zeitpunkt — bevor
+    die Konfiguration gelesen ist — das eingestellte Design ab.
+    """
+    if not isinstance(data, dict) or not data:
         return
     apply(preset=data.get("preset", DEFAULT_PRESET))
     colors = data.get("colors")

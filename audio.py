@@ -499,15 +499,78 @@ def write_wav(path, samples: np.ndarray, samplerate: int) -> None:
 
 
 def read_wav(path) -> tuple[np.ndarray, int]:
-    """Mono-Samples als float32 in [-1, 1] plus Abtastrate."""
+    """Mono-Samples als float32 in [-1, 1] plus Abtastrate.
+
+    Verarbeitet werden 8, 16, 24 und 32 Bit Ganzzahl-PCM. Andere Formate —
+    etwa WAV mit Gleitkomma-Abtastwerten, MP3 oder FLAC — lassen sich mit
+    der Standardbibliothek nicht lesen; dafuer kommt eine wave.Error, die
+    der Aufrufer abfangen muss.
+    """
     with wave.open(str(path), "rb") as wf:
         rate = wf.getframerate()
         channels = wf.getnchannels()
+        width = wf.getsampwidth()
         raw = wf.readframes(wf.getnframes())
-    data = np.frombuffer(raw, dtype="<i2").astype(np.float32) / 32768.0
+
+    if width == 1:
+        # 8 Bit ist als einziges vorzeichenlos, Mitte liegt bei 128.
+        data = (np.frombuffer(raw, dtype=np.uint8).astype(np.float32) - 128.0) / 128.0
+    elif width == 2:
+        data = np.frombuffer(raw, dtype="<i2").astype(np.float32) / 32768.0
+    elif width == 3:
+        # 24 Bit hat keinen numpy-Typ. Je drei Bytes auf vier auffuellen und
+        # als 32 Bit lesen; das hoechstwertige Byte traegt das Vorzeichen.
+        packed = np.frombuffer(raw, dtype=np.uint8)
+        packed = packed[:packed.size - packed.size % 3].reshape(-1, 3)
+        filled = np.zeros((packed.shape[0], 4), dtype=np.uint8)
+        filled[:, 1:] = packed
+        data = (filled.view("<i4").reshape(-1).astype(np.float32)
+                / float(1 << 31))
+    elif width == 4:
+        data = np.frombuffer(raw, dtype="<i4").astype(np.float32) / float(1 << 31)
+    else:
+        raise wave.Error(f"unsupported sample width: {width} bytes")
+
     if channels > 1:
-        data = data.reshape(-1, channels).mean(axis=1)
-    return data, rate
+        usable = data.size - data.size % channels
+        data = data[:usable].reshape(-1, channels).mean(axis=1)
+    return np.ascontiguousarray(data), rate
+
+
+def spectrogram(data: np.ndarray, rate: int, nfft: int = 1024,
+                max_freq: float = 5000.0, max_columns: int = 900):
+    """Zeit-Frequenz-Bild einer ganzen Aufnahme, in dB.
+
+    Zurueck kommt (bild, sekunden, obere_frequenz). Das Bild ist nach
+    [Spalte, Frequenzband] angeordnet — so erwartet es pyqtgraph, ohne dass
+    noch jemand transponieren muss.
+
+    Der Vorschub richtet sich nach der Laenge: mehr Spalten, als das
+    Diagramm Bildpunkte hat, kosten Rechenzeit und Speicher und sind
+    danach nicht zu sehen. Eine Stunde Ton ergaebe bei festem Vorschub
+    ueber eine Million Spalten.
+
+    Anders als das mitlaufende Spektrogramm im Livebereich rechnet das
+    hier alles auf einmal — eine fertige Datei waechst nicht mehr.
+    """
+    data = np.asarray(data, dtype=np.float32).reshape(-1)
+    bins = max(1, int(max_freq / (rate / nfft)) + 1)
+    top = min(float(max_freq), rate / 2.0)
+    if data.size < nfft:
+        return np.zeros((1, bins), dtype=np.float32), 0.0, top
+
+    hop = max(nfft // 4, int(np.ceil((data.size - nfft) / max(1, max_columns))))
+    starts = np.arange(0, data.size - nfft + 1, hop)
+    # Ein Fensterausschnitt je Zeile, ohne die Daten zu kopieren.
+    frames = np.lib.stride_tricks.as_strided(
+        data, shape=(starts.size, nfft),
+        strides=(data.strides[0] * hop, data.strides[0]))
+
+    window = np.hanning(nfft).astype(np.float32)
+    spectrum = np.fft.rfft(frames * window, axis=1)[:, :bins]
+    magnitude = np.abs(spectrum) / (nfft / 2)
+    image = 20.0 * np.log10(np.maximum(magnitude, 1e-6))
+    return image.astype(np.float32), data.size / float(rate), top
 
 
 def envelope(data: np.ndarray, points: int = 2000):

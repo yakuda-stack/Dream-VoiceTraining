@@ -93,6 +93,25 @@ def clean_text(raw: str) -> str:
     return text[:MAX_TEXT]
 
 
+# Fuer Namen, die von aussen kommen — beim Import. Anders als oben bleiben
+# Leerzeichen und Unterstriche stehen: ein uebernommener Name soll
+# aussehen wie vorher und nicht wie ein erzeugter. Entfernt wird nur, was
+# als Dateiname verboten ist oder einen Unterordner aufmachen wuerde.
+_FORBIDDEN_STEM = re.compile(r'[<>:"/\\|?*\x00-\x1f]+')
+MAX_STEM = 80
+
+
+def clean_stem(raw: str) -> str:
+    """Einen uebernommenen Dateinamen auf das Unbedenkliche eindampfen.
+
+    Kommt nichts Brauchbares heraus — ein Name nur aus Punkten etwa —,
+    ist das Ergebnis leer, und der Aufrufer vergibt einen eigenen Namen.
+    """
+    text = _FORBIDDEN_STEM.sub("-", str(raw or ""))
+    text = _SPACES.sub(" ", text).strip(". ")
+    return text[:MAX_STEM].strip(". ")
+
+
 # ----------------------------------------------------------- Zeitbausteine
 
 def _week(stamp: datetime) -> tuple[int, int]:
@@ -207,7 +226,10 @@ def block_value(key: str, scheme: dict, stamp: datetime,
     if key == "year":
         return stamp.strftime("%Y")
     if key == "month":
-        return stamp.strftime("%Y-%m")
+        # Nur die Monatszahl. Das Jahr hat einen eigenen Baustein — beides
+        # hier hineinzupacken hiesse, dass "Jahr" und "Monat" zusammen
+        # 2026_2026-03 ergaeben.
+        return stamp.strftime("%m")
     if key == "week":
         return f"KW{_week(stamp)[1]:02d}"
     if key == "date":
@@ -267,8 +289,10 @@ def uses_counter(scheme: dict) -> bool:
 # erzeugt und darf umbenannt werden.
 _TOKEN_TIME = (
     r"\d{4}-\d{2}-\d{2}",     # Datum
-    r"\d{4}-\d{2}",           # Monat
+    r"\d{4}-\d{2}",           # Monat der Fassungen bis 1.1.2
     r"\d{4}",                 # Jahr
+    r"(?:0[1-9]|1[0-2])",     # Monat — nur 01 bis 12, damit eine selbst
+                              # "42" genannte Datei nicht als erzeugt gilt
     r"KW\d{2}",               # Kalenderwoche
     r"\d{2}-\d{2}(?:-\d{2})?",  # Uhrzeit
 )
@@ -277,7 +301,7 @@ _COUNTER = re.compile(r"\d{1,6}\Z")
 
 
 def _known_token(token: str, texts: set[str]) -> bool:
-    if token in texts or token in set(rectypes.SLUGS.values()):
+    if token in texts or token in rectypes.all_slugs():
         return True
     return bool(_TIMEISH.match(token) or _COUNTER.match(token))
 

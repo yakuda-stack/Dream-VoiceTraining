@@ -51,7 +51,9 @@ import analysis
 import columns
 import debuglog
 import i18n
+import naming
 import paths
+import practice
 import rectypes
 import settings
 import storage
@@ -233,9 +235,16 @@ class MainWindow(QtWidgets.QMainWindow):
         self.window_fn = np.hanning(NFFT).astype(np.float32)
 
         self.history: deque[tuple[float, float]] = deque(maxlen=1200)
+        # elapsed misst den laufenden Durchgang, run_seconds summiert die
+        # vorherigen. Zusammen ergeben sie eine Uhr, die nur laeuft, solange
+        # der Stream laeuft — siehe _clock().
         self.elapsed = QtCore.QElapsedTimer()
         self.elapsed.start()
+        self.run_seconds = 0.0
         self.f0_smooth: deque[float] = deque(maxlen=3)
+        # Steht schon vor dem UI-Aufbau, weil die Auswahlliste beim
+        # Fuellen dagegen vergleicht.
+        self._practice_key = practice.BUILTIN
 
         paths.ensure_dirs()
         self.sessions = self._load_sessions()
@@ -351,14 +360,9 @@ class MainWindow(QtWidgets.QMainWindow):
         # sonst auf eine Breite, die "Lesetext" nicht braucht. Der volle Text
         # steht im Tooltip, der Platz gehoert dem Mikrofonnamen.
         self.type_box.setMaximumWidth(150)
-        for kind in rectypes.TYPES:
-            self.type_box.addItem(kind.label, kind.key)
-            self.type_box.setItemData(self.type_box.count() - 1, kind.hint,
-                                      QtCore.Qt.ItemDataRole.ToolTipRole)
-        index = self.type_box.findData(settings.get_recording_type())
-        self.type_box.setCurrentIndex(max(0, index))
         self.type_box.currentIndexChanged.connect(
             lambda: settings.set_recording_type(self.type_box.currentData()))
+        self._fill_types()
 
         self.profile_box = QtWidgets.QComboBox()
         self.profile_box.setMaximumWidth(140)
@@ -444,6 +448,7 @@ class MainWindow(QtWidgets.QMainWindow):
         sg = QtWidgets.QVBoxLayout(spec_group)
         sg.addWidget(self.spec_plot)
         root.addWidget(spec_group, 3)
+        self._plot_menu(self.spec_plot, self._spec_menu)
 
         # Pitchverlauf
         self.pitch_plot = pg.PlotWidget()
@@ -464,6 +469,28 @@ class MainWindow(QtWidgets.QMainWindow):
         self.pitch_curve = self.pitch_plot.plot(
             pen=pg.mkPen(NORD["accent"], width=2), connect="finite")
 
+        # Fadenkreuz: zeigt beim Ueberfahren, welche Tonhoehe unter dem
+        # Zeiger liegt. Die Beschriftung haengt an der Linie selbst statt
+        # an einer festen Stelle — so wandert sie mit, wenn sich der
+        # Zeitausschnitt unter ihr weiterschiebt.
+        self.pitch_cursor = pg.InfiniteLine(
+            angle=0, movable=False,
+            pen=pg.mkPen(NORD["fg"], width=1,
+                         style=QtCore.Qt.PenStyle.DashLine),
+            label="{value:0.0f} Hz",
+            labelOpts={"position": 0.02, "color": NORD["fg"],
+                       "fill": pg.mkBrush(QtGui.QColor(NORD["bg3"])),
+                       "border": pg.mkPen(NORD["border"])})
+        self.pitch_cursor.setZValue(20)
+        self.pitch_cursor.setVisible(False)
+        self.pitch_plot.addItem(self.pitch_cursor, ignoreBounds=True)
+        self.pitch_plot.scene().sigMouseMoved.connect(self._pitch_hover)
+        # Fuer den Fall, dass der Zeiger das Fenster verlaesst, ohne noch
+        # ein Bewegungssignal ueber dem Diagramm auszuloesen.
+        self.pitch_plot.installEventFilter(self)
+
+        self._plot_menu(self.pitch_plot, self._pitch_menu)
+
         pitch_group = QtWidgets.QGroupBox(i18n.t("history"))
         pgl = QtWidgets.QVBoxLayout(pitch_group)
         pgl.addWidget(self.pitch_plot)
@@ -472,10 +499,29 @@ class MainWindow(QtWidgets.QMainWindow):
         # Uebungstext
         text_group = QtWidgets.QGroupBox(i18n.t("practice_text"))
         tg = QtWidgets.QVBoxLayout(text_group)
-        txt = QtWidgets.QTextEdit(i18n.t("practice_body"))
-        txt.setMaximumHeight(78)
-        tg.addWidget(txt)
+
+        picker = QtWidgets.QHBoxLayout()
+        self.practice_box = QtWidgets.QComboBox()
+        # Namen sind kurz; ueber die ganze Breite gezogen sieht das Feld
+        # leer aus. Der Rest der Zeile gehoert dem Abstand.
+        self.practice_box.setMaximumWidth(360)
+        self.practice_box.currentIndexChanged.connect(self._practice_picked)
+        self.btn_practice_save = QtWidgets.QPushButton(i18n.t("save_as"))
+        self.btn_practice_save.clicked.connect(self._save_practice)
+        self.btn_practice_delete = QtWidgets.QPushButton(i18n.t("delete"))
+        self.btn_practice_delete.clicked.connect(self._delete_practice)
+        picker.addWidget(self.practice_box, 1)
+        picker.addStretch(1)
+        picker.addWidget(self.btn_practice_save)
+        picker.addWidget(self.btn_practice_delete)
+        tg.addLayout(picker)
+
+        self.practice_edit = QtWidgets.QTextEdit()
+        self.practice_edit.setMaximumHeight(78)
+        tg.addWidget(self.practice_edit)
         root.addWidget(text_group)
+
+        self._fill_practice()
 
         return page
 
@@ -490,10 +536,13 @@ class MainWindow(QtWidgets.QMainWindow):
         btn_filter = QtWidgets.QPushButton(i18n.t("filter"))
         btn_filter.clicked.connect(self._open_filter)
         self.btn_filter = btn_filter
+        btn_import = QtWidgets.QPushButton(i18n.t("import_list"))
+        btn_import.clicked.connect(self._import_files)
         btn_export = QtWidgets.QPushButton(i18n.t("export_list"))
         btn_export.clicked.connect(self._export_list)
         bar.addWidget(self.count_label, 1)
         bar.addWidget(btn_filter)
+        bar.addWidget(btn_import)
         bar.addWidget(btn_export)
         lay.addLayout(bar)
 
@@ -762,10 +811,14 @@ class MainWindow(QtWidgets.QMainWindow):
         menu.addSeparator()
         submenu = menu.addMenu(i18n.t("change_type"))
         current = entry.get("type")
-        for kind in rectypes.TYPES:
+        # Bei einem geloeschten eigenen Typ soll kein Haken irgendwo
+        # sitzen; get() faende sonst den Standardtyp und behauptete, die
+        # Aufnahme sei ein Lesetext.
+        marked = current if rectypes.exists(current) else rectypes.get(current).key
+        for kind in rectypes.all_types():
             action = submenu.addAction(kind.label)
             action.setCheckable(True)
-            action.setChecked(kind.key == rectypes.get(current).key)
+            action.setChecked(kind.key == marked)
             action.triggered.connect(
                 lambda _=False, e=entry, k=kind.key: self._set_type(e, k))
 
@@ -1248,7 +1301,14 @@ class MainWindow(QtWidgets.QMainWindow):
         # Ein Umzug hat entry["file"] veraendert, ein Ordnerwechsel den Ort:
         # beides muss in die Liste, bevor jemand auf Abspielen drueckt.
         dialog.storage_changed.connect(self._session_changed)
+        # Ein neuer oder geloeschter Typ aendert die Auswahl im Livebereich
+        # und die Beschriftungen in der Sessionliste.
+        dialog.types_changed.connect(self._types_changed)
         self.open_dialog(dialog)
+
+    def _types_changed(self) -> None:
+        self._fill_types()
+        self._fill_session_table()
 
     def _apply_settings(self) -> None:
         self._fill_profiles()
@@ -1335,6 +1395,12 @@ class MainWindow(QtWidgets.QMainWindow):
         if self.engine.running:
             if self.engine.is_recording:
                 self._toggle_record()
+            # Die bisherige Laufzeit festhalten, bevor der Zeitgeber beim
+            # naechsten Start wieder bei null anfaengt. Ohne das entstuende
+            # in der Zeitachse eine Luecke so gross wie die Pause, und der
+            # Verlauf davor faende sich schlagartig ausserhalb der letzten
+            # 30 Sekunden wieder — sichtbar waere dasselbe wie geloescht.
+            self.run_seconds += self.elapsed.elapsed() / 1000.0
             self.engine.stop()
             self.timer.stop()
             self.btn_start.setText(i18n.t("start"))
@@ -1355,9 +1421,10 @@ class MainWindow(QtWidgets.QMainWindow):
                 i18n.t("mic_open_failed") + f"\n\n{self.engine.last_error}")
             return
 
-        self.spec_cursor = self.engine.total_samples
-        self.spec[:] = -100.0
-        self.history.clear()
+        # Weder Spektrogramm noch Verlauf werden geleert: beides soll da
+        # weitergehen, wo der letzte Lauf aufgehoert hat. Der Zaehler
+        # engine.total_samples laeuft ueber das Stoppen hinweg weiter und
+        # steht waehrend der Pause still, also passt spec_cursor noch.
         self.elapsed.restart()
         self.timer.start()
         self.btn_start.setText(i18n.t("stop"))
@@ -1365,7 +1432,172 @@ class MainWindow(QtWidgets.QMainWindow):
         settings.set_device(self._current_device_key())
         self.status.showMessage(i18n.t("running", rate=self.sr))
 
+    # -- Uebungstexte ------------------------------------------------------
+
+    def _fill_practice(self, select: str | None = None) -> None:
+        """Auswahlliste neu aufbauen und den zugehoerigen Text einsetzen."""
+        key = practice.resolve(select or settings.get_practice_choice())
+        blocked = self.practice_box.blockSignals(True)
+        self.practice_box.clear()
+        for entry in practice.keys():
+            self.practice_box.addItem(practice.label(entry), entry)
+        self.practice_box.setCurrentIndex(
+            max(0, self.practice_box.findData(key)))
+        self.practice_box.blockSignals(blocked)
+        settings.set_practice_choice(key)
+        self._show_practice(key)
+
+    def _show_practice(self, key: str) -> None:
+        self._practice_key = key
+        self.practice_edit.setPlainText(practice.body(key))
+        # Der eingebaute Text laesst sich nicht loeschen. Er bleibt als
+        # Rueckfallebene stehen, auch wenn alle eigenen weg sind.
+        self.btn_practice_delete.setEnabled(practice.is_user(key))
+
+    def _practice_picked(self) -> None:
+        key = self.practice_box.currentData()
+        if key is None or key == self._practice_key:
+            return
+        if not self._practice_may_leave():
+            # Zurueck auf den alten Eintrag, ohne dieses Signal erneut
+            # auszuloesen.
+            blocked = self.practice_box.blockSignals(True)
+            self.practice_box.setCurrentIndex(
+                self.practice_box.findData(self._practice_key))
+            self.practice_box.blockSignals(blocked)
+            return
+        settings.set_practice_choice(key)
+        self._show_practice(key)
+
+    def _practice_may_leave(self) -> bool:
+        """Nachfragen, wenn im Feld etwas Ungespeichertes steht.
+
+        Ein Wechsel in der Liste ueberschreibt das Feld. Wer gerade einen
+        Text getippt und noch nicht gespeichert hat, waere ihn sonst mit
+        einem Klick los.
+        """
+        typed = self.practice_edit.toPlainText().strip()
+        if typed == practice.body(self._practice_key).strip():
+            return True
+        answer = QtWidgets.QMessageBox.question(
+            self, i18n.t("practice_discard_title"),
+            i18n.t("practice_discard_body"))
+        return answer == QtWidgets.QMessageBox.StandardButton.Yes
+
+    def _save_practice(self) -> None:
+        """Den Text im Feld unter einem Namen ablegen.
+
+        Vorgeschlagen wird der Name des gerade gewaehlten eigenen Textes:
+        wer einen bestehenden ueberarbeitet, bestaetigt einmal und ist
+        fertig. Beim eingebauten bleibt das Feld leer — der bekommt auf
+        diesem Weg eine Kopie unter eigenem Namen und bleibt selbst, wie
+        er ist.
+        """
+        text = self.practice_edit.toPlainText().strip()
+        if not text:
+            QtWidgets.QMessageBox.information(
+                self, i18n.t("practice_save_title"), i18n.t("practice_empty"))
+            return
+
+        current = self.practice_box.currentData()
+        suggestion = (practice.name_of(current)
+                      if practice.is_user(current) else "")
+        name, ok = QtWidgets.QInputDialog.getText(
+            self, i18n.t("practice_save_title"), i18n.t("name"),
+            text=suggestion)
+        name = practice.clean_name(name)
+        if not ok or not name:
+            return
+
+        settings.save_practice_text(name, text)
+        self._fill_practice(select=practice.USER_PREFIX + name)
+        self.status.showMessage(i18n.t("practice_saved", name=name))
+
+    def _delete_practice(self) -> None:
+        key = self.practice_box.currentData()
+        if not practice.is_user(key):
+            return
+        name = practice.name_of(key)
+        answer = QtWidgets.QMessageBox.question(
+            self, i18n.t("practice_delete_title"),
+            i18n.t("practice_delete_body", name=name))
+        if answer == QtWidgets.QMessageBox.StandardButton.Yes:
+            settings.delete_practice_text(name)
+            self._fill_practice(select=practice.BUILTIN)
+
+    # -- Diagramme: Zeiger und Kontextmenue --------------------------------
+
+    @staticmethod
+    def _plot_menu(plot, handler) -> None:
+        """Eigenes Kontextmenue statt des eingebauten von pyqtgraph.
+
+        Dessen Menue bietet Zoom und Achsenbereiche an — beides ist hier
+        abgeschaltet, es waere also ein Menue voller Eintraege ohne Wirkung.
+        """
+        plot.setMenuEnabled(False)
+        plot.setContextMenuPolicy(
+            QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
+        plot.customContextMenuRequested.connect(handler)
+
+    def _pitch_menu(self, pos) -> None:
+        menu = QtWidgets.QMenu(self)
+        menu.addAction(i18n.t("clear_history"), self._clear_history)
+        menu.exec(self.pitch_plot.mapToGlobal(pos))
+
+    def _spec_menu(self, pos) -> None:
+        menu = QtWidgets.QMenu(self)
+        menu.addAction(i18n.t("clear_spectrogram"), self._clear_spectrogram)
+        menu.exec(self.spec_plot.mapToGlobal(pos))
+
+    def _clear_history(self) -> None:
+        """Verlauf verwerfen.
+
+        Seit Start und Stopp ihn stehenlassen, braucht es einen Weg, ihn
+        von Hand loszuwerden — sonst haengt nach der dritten Uebung noch
+        der Anfang der ersten mit im Bild.
+        """
+        self.history.clear()
+        self.f0_smooth.clear()
+        self.pitch_curve.setData([], [])
+
+    def _clear_spectrogram(self) -> None:
+        # Derselbe Wert wie beim Aufbau in __init__: knapp unter dem
+        # Anzeigeboden, damit ein leeres Bild ueberall gleich aussieht.
+        self.spec[:] = -100.0
+        self.spec_img.setImage(self.spec, autoLevels=False,
+                               levels=(SPEC_FLOOR_DB, SPEC_CEIL_DB))
+        self.spec_img.setRect(QtCore.QRectF(0, 0, SPEC_COLS, MAX_FREQ))
+
+    def _pitch_hover(self, pos) -> None:
+        """Fadenkreuz auf die Tonhoehe unter dem Mauszeiger setzen."""
+        view = self.pitch_plot.getPlotItem().vb
+        # Das Signal kommt fuer die ganze Szene, also auch fuer die Achsen
+        # und den Rand daneben. Dort gibt es keinen sinnvollen Messwert.
+        if not view.sceneBoundingRect().contains(pos):
+            self.pitch_cursor.setVisible(False)
+            return
+        # Reihenfolge zaehlt: die Beschriftung einer InfiniteLine bringt
+        # sich nur auf Stand, solange sie sichtbar ist. Erst setzen und
+        # dann einblenden hiesse, sie zeigte dauerhaft 0 Hz.
+        self.pitch_cursor.setVisible(True)
+        self.pitch_cursor.setPos(view.mapSceneToView(pos).y())
+
+    def eventFilter(self, obj, event) -> bool:
+        if (getattr(self, "pitch_plot", None) is obj
+                and event.type() == QtCore.QEvent.Type.Leave):
+            self.pitch_cursor.setVisible(False)
+        return super().eventFilter(obj, event)
+
     # -- Haupttakt --------------------------------------------------------
+
+    def _clock(self) -> float:
+        """Laufzeit in Sekunden, ohne die Pausen zwischen den Durchgaengen.
+
+        Die Zeitachse des Verlaufs haengt daran. Wuerde hier die Wanduhr
+        stehen, risse jede Pause ein Loch hinein, das breiter ist als das
+        gezeigte Fenster.
+        """
+        return self.run_seconds + self.elapsed.elapsed() / 1000.0
 
     def _tick(self) -> None:
         if not self.engine.running:
@@ -1432,7 +1664,7 @@ class MainWindow(QtWidgets.QMainWindow):
         too_quiet = 1e-5 < level < CFG.silence_rms
         self.card_level.set_color(NORD["red"] if too_quiet else None)
 
-        t = self.elapsed.elapsed() / 1000.0
+        t = self._clock()
         f0 = result["f0"]
 
         if f0 is not None:
@@ -1477,6 +1709,22 @@ class MainWindow(QtWidgets.QMainWindow):
             self.pitch_plot.setXRange(cutoff, t, padding=0)
 
     # -- Aufnahme ---------------------------------------------------------
+
+    def _fill_types(self) -> None:
+        """Typ-Auswahl neu aufbauen; eigene Typen koennen dazugekommen sein."""
+        blocked = self.type_box.blockSignals(True)
+        self.type_box.clear()
+        for kind in rectypes.all_types():
+            self.type_box.addItem(kind.label, kind.key)
+            self.type_box.setItemData(self.type_box.count() - 1, kind.hint,
+                                      QtCore.Qt.ItemDataRole.ToolTipRole)
+        index = self.type_box.findData(settings.get_recording_type())
+        self.type_box.setCurrentIndex(max(0, index))
+        self.type_box.blockSignals(blocked)
+        # Zeigte die Einstellung auf einen geloeschten Typ, steht jetzt ein
+        # anderer im Feld — dann soll auch das gespeichert sein, sonst
+        # bekaeme die naechste Aufnahme ein Kuerzel, das niemand mehr sieht.
+        settings.set_recording_type(self.type_box.currentData())
 
     def _fill_profiles(self, select: str | None = None) -> None:
         """Zielauswahl neu aufbauen; eigene Profile koennen dazugekommen sein."""
@@ -1549,13 +1797,39 @@ class MainWindow(QtWidgets.QMainWindow):
             self.status.showMessage(i18n.t("level_live_warning", level=decibel))
 
     def store_recording(self, samples: np.ndarray, type_key: str,
-                        span: tuple[float, float] | None = None) -> dict:
-        """WAV schreiben, auswerten und in die Historie aufnehmen."""
-        stamp = datetime.now()
-        name = storage.next_name(stamp, type_key)
+                        span: tuple[float, float] | None = None,
+                        rate: int | None = None,
+                        stamp: datetime | None = None,
+                        stem: str | None = None,
+                        refresh: bool = True) -> dict:
+        """WAV schreiben, auswerten und in die Historie aufnehmen.
+
+        rate gehoert zu den Abtastwerten und ist ohne Angabe die des
+        Aufnahmegeraets. Eine importierte Datei bringt ihre eigene mit —
+        mit der falschen laegen Tonhoehe und Formanten um genau deren
+        Verhaeltnis daneben.
+
+        stamp ist der Zeitpunkt der Aufnahme, nicht der des Speicherns.
+        Beim Import steht dort das Aenderungsdatum der Datei, damit sie im
+        Ordner ihres Monats landet und in der Liste an der richtigen
+        Stelle steht.
+
+        stem ist ein mitgebrachter Name ohne Endung. Beim Import steht
+        dort der Name der Quelldatei, damit die Aufnahme in der Liste unter
+        dem Namen auftaucht, unter dem sie vorher auf der Platte lag. Der
+        Zaehler wird dabei nicht weitergedreht — er steht ja gar nicht im
+        Namen.
+
+        refresh=False laesst Speichern und Tabellenaufbau aus — beim
+        Import ueber mehrere Dateien lohnt sich das erst am Ende.
+        """
+        rate = int(rate or self.sr)
+        stamp = stamp or datetime.now()
+        name = (storage.relative_name(stamp, type_key, stem=stem) if stem
+                else storage.next_name(stamp, type_key))
         path = storage.free_path(storage.root() / name)
         path.parent.mkdir(parents=True, exist_ok=True)
-        write_wav(path, samples, self.sr)
+        write_wav(path, samples, rate)
         name = path.relative_to(storage.root()).as_posix()
 
         # Die vollstaendige Auswertung braucht rund 0,13 s je Sekunde Audio
@@ -1563,7 +1837,7 @@ class MainWindow(QtWidgets.QMainWindow):
         # wird, statt das Fenster stumm einfrieren zu lassen.
         QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.CursorShape.WaitCursor)
         try:
-            stats = analysis.analyse_recording(samples, self.sr)
+            stats = analysis.analyse_recording(samples, rate)
         finally:
             QtWidgets.QApplication.restoreOverrideCursor()
 
@@ -1573,9 +1847,96 @@ class MainWindow(QtWidgets.QMainWindow):
             entry["selection"] = [round(span[0], 3), round(span[1], 3)]
 
         self.sessions.append(entry)
-        self._save_sessions()
-        self._fill_session_table()
+        if refresh:
+            self._save_sessions()
+            self._fill_session_table()
         return entry
+
+    # -- Import ------------------------------------------------------------
+
+    def _import_files(self) -> None:
+        """Vorhandene WAV-Dateien in die Sessionliste aufnehmen.
+
+        Die Dateien werden kopiert, nicht verschoben: das Original liegt
+        oft in einem Ordner, den jemand anderes verwaltet, und ein Umzug
+        aus der Sessionliste heraus wuerde es dort wegnehmen.
+        """
+        paths_chosen, _ = QtWidgets.QFileDialog.getOpenFileNames(
+            self, i18n.t("import_title"), str(Path.home()),
+            i18n.t("import_filter"))
+        if not paths_chosen:
+            return
+
+        type_key = self._ask_import_type(len(paths_chosen))
+        if type_key is None:
+            return
+
+        added, failed = self._import_all(paths_chosen, type_key)
+
+        if added:
+            self._save_sessions()
+            self._fill_session_table()
+            self.status.showMessage(i18n.t("import_done", count=added))
+        if failed:
+            QtWidgets.QMessageBox.warning(
+                self, i18n.t("import_failed_title"),
+                i18n.t("import_failed_body", count=len(failed))
+                + "\n\n" + "\n".join(failed[:12]))
+        elif not added:
+            self.status.showMessage(i18n.t("import_nothing"))
+
+    def _ask_import_type(self, count: int) -> str | None:
+        """Ein Typ fuer alle gewaehlten Dateien.
+
+        Je Datei zu fragen waere bei einem Ordner voller Aufnahmen eine
+        Klickstrecke; wer sie doch einzeln braucht, aendert den Typ danach
+        im Kontextmenue der Liste.
+        """
+        kinds = rectypes.all_types()
+        labels = [kind.label for kind in kinds]
+        current = max(0, [k.key for k in kinds].index(
+            rectypes.get(settings.get_recording_type()).key))
+        choice, ok = QtWidgets.QInputDialog.getItem(
+            self, i18n.t("import_title"), i18n.t("import_type", count=count),
+            labels, current, False)
+        if not ok:
+            return None
+        for kind in kinds:
+            if kind.label == choice:
+                return kind.key
+        return rectypes.DEFAULT
+
+    def _import_all(self, paths_chosen, type_key: str) -> tuple[int, list[str]]:
+        """Reihum einlesen und ablegen. Zurueck kommt (Anzahl, Fehlerzeilen).
+
+        Eine Datei, die sich nicht lesen laesst, beendet den Durchgang
+        nicht — bei zwanzig ausgewaehlten Dateien waere sonst eine kaputte
+        genug, um die anderen neunzehn zu verlieren.
+        """
+        added, failed = 0, []
+        for number, raw in enumerate(paths_chosen, start=1):
+            source = Path(raw)
+            self.status.showMessage(
+                i18n.t("import_running", number=number,
+                       total=len(paths_chosen), name=source.name))
+            QtWidgets.QApplication.processEvents()
+            try:
+                samples, rate = audio_mod.read_wav(source)
+                if samples.size < int(0.2 * rate):
+                    raise ValueError(i18n.t("import_too_short"))
+                # Das Aenderungsdatum ist das Naechste, was eine Datei an
+                # Aufnahmezeitpunkt hergibt. Es entscheidet ueber den
+                # Monatsordner und den Platz in der Liste.
+                stamp = datetime.fromtimestamp(source.stat().st_mtime)
+                self.store_recording(samples, type_key, rate=rate,
+                                     stamp=stamp,
+                                     stem=naming.clean_stem(source.stem),
+                                     refresh=False)
+                added += 1
+            except Exception as exc:
+                debuglog.record_exception("main.import_files", exc)
+                failed.append(f"{source.name}: {exc}")
+        return added, failed
 
     # -- Erster Start unter Windows ---------------------------------------
 
@@ -1642,6 +2003,25 @@ class MainWindow(QtWidgets.QMainWindow):
         super().closeEvent(event)
 
 
+def load_state() -> list[str]:
+    """Konfiguration lesen und den gespeicherten Zustand anwenden.
+
+    Die Reihenfolge ist der ganze Sinn dieser Funktion, deshalb steht sie
+    beisammen: erst kann der Umzug die config.json ueberhaupt an ihren
+    Platz legen, dann wird sie gelesen, und erst danach duerfen Design und
+    Sprache daraus gesetzt werden. Wer restore() davorzieht, bekommt den
+    leeren Vorgabewert und damit nach jedem Start wieder die Vorlagenfarben.
+
+    Zurueck kommt, was der Umzug bewegt hat.
+    """
+    paths.ensure_dirs()
+    moved = paths.migrate_from(APP_DIR)
+    settings.load()
+    theming.restore(settings.get_theme())
+    i18n.set_language(settings.get_language())
+    return moved
+
+
 def main() -> int:
     paths.set_process_name()
 
@@ -1656,13 +2036,9 @@ def main() -> int:
     icon_path = paths.icon_file()
     if icon_path is not None:
         app.setWindowIcon(QtGui.QIcon(str(icon_path)))
-    theming.restore(settings.get_theme())
-    app.setStyleSheet(theming.stylesheet())
     debuglog.install()
-    paths.ensure_dirs()
-    moved = paths.migrate_from(APP_DIR)
-    settings.load()
-    i18n.set_language(settings.get_language())
+    moved = load_state()
+    app.setStyleSheet(theming.stylesheet())
     if not paths.CONFIG_PATH.exists():
         settings.save()      # beim ersten Start eine Datei anlegen
     win = MainWindow()

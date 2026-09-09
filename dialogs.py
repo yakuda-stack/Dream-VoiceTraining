@@ -117,6 +117,7 @@ class SettingsDialog(QtWidgets.QDialog):
     theme_changed = QtCore.Signal()
     intro_requested = QtCore.Signal()
     storage_changed = QtCore.Signal()
+    types_changed = QtCore.Signal()
 
     def __init__(self, parent=None, entries: list[dict] | None = None):
         super().__init__(parent)
@@ -153,6 +154,7 @@ class SettingsDialog(QtWidgets.QDialog):
         # unteren Rand des Dialogs.
         self.options = OptionsPage(entries)
         self.options.changed.connect(self.storage_changed)
+        self.options.types_changed.connect(self.types_changed)
         options_page = QtWidgets.QScrollArea()
         options_page.setWidgetResizable(True)
         options_page.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
@@ -462,6 +464,9 @@ class SessionDetailDialog(QtWidgets.QDialog):
         self._columns_sized = False
         self._samples = None
         self._rate = 0
+        self._duration = 0.0
+        self._spectrogram_done = False
+        self._syncing = False
         self._selection_stats = None
         self._selection_span = None
 
@@ -570,9 +575,15 @@ class SessionDetailDialog(QtWidgets.QDialog):
         lay.setContentsMargins(0, 0, 0, 0)
 
         self.type_box = QtWidgets.QComboBox()
-        for kind in rectypes.TYPES:
+        for kind in rectypes.all_types():
             self.type_box.addItem(kind.label, kind.key)
-        index = self.type_box.findData(rectypes.get(self.entry.get("type")).key)
+        stored = self.entry.get("type")
+        if stored and not rectypes.exists(stored):
+            # Der Typ wurde geloescht. Ihn trotzdem anzubieten ist besser,
+            # als die Aufnahme beim naechsten Speichern stumm zum Lesetext
+            # zu machen.
+            self.type_box.addItem(rectypes.label(stored), stored)
+        index = self.type_box.findData(stored or rectypes.DEFAULT)
         self.type_box.setCurrentIndex(max(0, index))
         self.type_box.currentIndexChanged.connect(self._type_changed)
 
@@ -685,10 +696,11 @@ class SessionDetailDialog(QtWidgets.QDialog):
 
         self.wave_plot = pg.PlotWidget()
         self.wave_plot.setBackground(NORD["bg2"])
-        self.wave_plot.setMinimumHeight(170)
+        self.wave_plot.setMinimumHeight(140)
         self.wave_plot.setMenuEnabled(False)
         self.wave_plot.hideButtons()
-        self.wave_plot.setLabel("bottom", i18n.t("seconds"))
+        # Die Sekundenachse steht unter dem Spektrogramm, nicht zweimal.
+        self.wave_plot.getAxis("bottom").setStyle(showValues=False)
         self.wave_plot.getAxis("left").setStyle(showValues=False)
         self.wave_plot.setMouseEnabled(x=True, y=False)
         lay.addWidget(self.wave_plot)
@@ -700,9 +712,18 @@ class SessionDetailDialog(QtWidgets.QDialog):
         self.region.setZValue(10)
         self.region.sigRegionChanged.connect(self._region_moved)
 
+        lay.addWidget(self._build_spectrogram())
+
+        info = QtWidgets.QHBoxLayout()
         self.range_label = QtWidgets.QLabel("")
         self.range_label.setStyleSheet(f"color: {NORD['fg']};")
-        lay.addWidget(self.range_label)
+        self.chk_spec = QtWidgets.QCheckBox(i18n.t("adv_spectrogram"))
+        self.chk_spec.setChecked(True)
+        self.chk_spec.setToolTip(i18n.t("adv_spectrogram_hint"))
+        self.chk_spec.toggled.connect(self._toggle_spectrogram)
+        info.addWidget(self.range_label, 1)
+        info.addWidget(self.chk_spec)
+        lay.addLayout(info)
 
         row = QtWidgets.QHBoxLayout()
         self.btn_sel_analyse = QtWidgets.QPushButton(i18n.t("analyse_selection"))
@@ -710,17 +731,100 @@ class SessionDetailDialog(QtWidgets.QDialog):
         self.btn_sel_analyse.clicked.connect(self._analyse_selection)
         btn_sel_play = QtWidgets.QPushButton(i18n.t("play_selection"))
         btn_sel_play.clicked.connect(self._play_selection)
-        btn_full = QtWidgets.QPushButton(i18n.t("full_recording"))
-        btn_full.clicked.connect(self._show_full)
+        # Bis die Wellenform geladen ist, gibt es keine Aufnahme, auf die
+        # sich "ganz" beziehen koennte. Fehlt die Datei, bleibt der Knopf
+        # gesperrt — das ist ehrlicher als ein Druck, der nichts bewirkt.
+        self.btn_full = QtWidgets.QPushButton(i18n.t("full_recording"))
+        self.btn_full.setEnabled(False)
+        self.btn_full.clicked.connect(self._show_full)
         self.btn_sel_save = QtWidgets.QPushButton(i18n.t("save_selection"))
         self.btn_sel_save.setEnabled(False)
         self.btn_sel_save.clicked.connect(self._save_selection)
-        for widget in (self.btn_sel_analyse, btn_sel_play, btn_full):
+        for widget in (self.btn_sel_analyse, btn_sel_play, self.btn_full):
             row.addWidget(widget)
         row.addStretch(1)
         row.addWidget(self.btn_sel_save)
         lay.addLayout(row)
         return box
+
+    def _build_spectrogram(self) -> QtWidgets.QWidget:
+        """Das Spektrogramm unter der Wellenform, auf derselben Zeitachse.
+
+        Nicht daneben: beide zeigen denselben Zeitraum, und untereinander
+        liegt jeder Augenblick in beiden an derselben Stelle. Die
+        Sekundenachse steht deshalb nur einmal, hier unten.
+        """
+        self.spec_plot = pg.PlotWidget()
+        self.spec_plot.setBackground(NORD["bg2"])
+        self.spec_plot.setMinimumHeight(150)
+        self.spec_plot.setMenuEnabled(False)
+        self.spec_plot.hideButtons()
+        self.spec_plot.setLabel("bottom", i18n.t("seconds"))
+        self.spec_plot.setLabel("left", i18n.t("frequency"), units="Hz")
+        self.spec_plot.setMouseEnabled(x=True, y=False)
+        self.spec_plot.setXLink(self.wave_plot)
+
+        self.spec_img = pg.ImageItem()
+        try:
+            self.spec_img.setColorMap(pg.colormap.get("inferno"))
+        except Exception:
+            pass
+        self.spec_plot.addItem(self.spec_img)
+
+        # Dieselbe Auswahl noch einmal. Sie laesst sich auch hier ziehen —
+        # wer eine Stelle an den Formanten erkennt, will sie nicht erst in
+        # der Wellenform darueber suchen muessen.
+        accent = QtGui.QColor(NORD["accent"])
+        self.spec_region = pg.LinearRegionItem(
+            brush=pg.mkBrush(accent.red(), accent.green(), accent.blue(), 55),
+            hoverBrush=pg.mkBrush(accent.red(), accent.green(), accent.blue(), 85))
+        self.spec_region.setZValue(10)
+        self.spec_region.sigRegionChanged.connect(self._spec_region_moved)
+        return self.spec_plot
+
+    def _mirror(self, source, target) -> None:
+        """Auswahl von einem Diagramm ins andere uebernehmen.
+
+        Die Sperre verhindert, dass die beiden sich gegenseitig immer
+        weiter anstossen: setRegion meldet sofort zurueck.
+        """
+        if self._syncing:
+            return
+        self._syncing = True
+        try:
+            target.setRegion(source.getRegion())
+        finally:
+            self._syncing = False
+
+    def _spec_region_moved(self) -> None:
+        self._mirror(self.spec_region, self.region)
+
+    def _toggle_spectrogram(self, on: bool) -> None:
+        self.spec_plot.setVisible(on)
+        if on:
+            self._load_spectrogram()
+
+    def _load_spectrogram(self) -> None:
+        """Bild einmal rechnen und ablegen; eine Datei waechst nicht mehr."""
+        if self._samples is None or self._spectrogram_done:
+            return
+        image, duration, top = audio_mod.spectrogram(self._samples, self._rate)
+        if image.size == 0:
+            return
+
+        # Feste Grenzen wie im Livebereich taugen hier nicht: eine leise
+        # Aufnahme waere durchgehend schwarz. Der obere Wert kommt aus dem
+        # Bild selbst, der untere 70 dB darunter.
+        ceiling = float(np.percentile(image, 99.5))
+        self.spec_img.setImage(image, autoLevels=False,
+                               levels=(ceiling - 70.0, ceiling))
+        # Muss NACH setImage kommen, sonst kann pyqtgraph nicht skalieren.
+        self.spec_img.setRect(QtCore.QRectF(0, 0, duration, top))
+        self.spec_plot.setYRange(0, top, padding=0)
+        self.spec_plot.addItem(self.spec_region)
+        self.spec_region.setBounds((0.0, duration))
+        self._mirror(self.region, self.spec_region)
+        self._spectrogram_done = True
 
     def _toggle_advanced(self, on: bool) -> None:
         self.btn_advanced.setText(("▾  " if on else "▸  ") + i18n.t("advanced"))
@@ -728,7 +832,12 @@ class SessionDetailDialog(QtWidgets.QDialog):
         if on and self._samples is None:
             self._load_waveform()
         if on:
-            self.resize(self.width(), max(self.height(), 900))
+            # Zwei Diagramme brauchen mehr Platz als eines — aber nicht
+            # mehr, als der Bildschirm hergibt, sonst steht die Knopfreihe
+            # unter dem unteren Rand.
+            screen = self.screen()
+            room = screen.availableGeometry().height() - 80 if screen else 1020
+            self.resize(self.width(), max(self.height(), min(1020, room)))
 
     def _load_waveform(self) -> None:
         path = self._path()
@@ -746,12 +855,16 @@ class SessionDetailDialog(QtWidgets.QDialog):
         seconds = xs / float(rate)
         self.wave_plot.plot(seconds, ys, pen=pg.mkPen(NORD["accent"], width=1))
         duration = data.size / float(rate)
+        self._duration = duration
+        self.btn_full.setEnabled(True)
         self.wave_plot.setXRange(0, duration, padding=0)
         self.wave_plot.addItem(self.region)
         # Voreinstellung: mittleres Drittel, damit sofort sichtbar ist,
         # dass sich der Bereich ziehen laesst.
         self.region.setRegion((duration / 3.0, duration * 2.0 / 3.0))
         self.region.setBounds((0.0, duration))
+        if self.chk_spec.isChecked():
+            self._load_spectrogram()
         self._region_moved()
 
     def _span(self) -> tuple[float, float]:
@@ -762,6 +875,7 @@ class SessionDetailDialog(QtWidgets.QDialog):
         start, end = self._span()
         self.range_label.setText(
             i18n.t("selection_label", start=start, end=end, length=end - start))
+        self._mirror(self.region, self.spec_region)
 
     def _selected_samples(self) -> np.ndarray | None:
         if self._samples is None:
@@ -798,9 +912,21 @@ class SessionDetailDialog(QtWidgets.QDialog):
         self._fill()
 
     def _show_full(self) -> None:
+        """Zurueck auf die gespeicherten Werte — und die Markierung mit.
+
+        Nur die Werte zurueckzusetzen reicht nicht: liegt gerade keine
+        ausgewertete Auswahl vor, aendert sich dabei nichts Sichtbares und
+        der Knopf wirkt kaputt. Die Region geht deshalb immer auf die
+        ganze Aufnahme auf, damit zu sehen ist, worauf sich die Tabelle
+        gerade bezieht.
+        """
         self._selection_stats = None
         self._selection_span = None
         self.btn_sel_save.setEnabled(False)
+        if self._samples is not None and self._duration > 0.0:
+            # Loest _region_moved aus und schreibt damit das Bereichslabel
+            # neu — genau das soll passieren.
+            self.region.setRegion((0.0, self._duration))
         self._fill()
 
     def _save_selection(self) -> None:
@@ -1609,6 +1735,7 @@ class OptionsPage(QtWidgets.QWidget):
     """
 
     changed = QtCore.Signal()
+    types_changed = QtCore.Signal()
 
     def __init__(self, entries: list[dict] | None = None, parent=None):
         super().__init__(parent)
@@ -1635,6 +1762,7 @@ class OptionsPage(QtWidgets.QWidget):
         right.setSpacing(12)
         right.addWidget(self._build_move_box())
         right.addWidget(self._build_counter_box())
+        right.addWidget(self._build_types_box())
         right.addStretch(1)
 
         columns_row.addLayout(left, 3)
@@ -1818,6 +1946,108 @@ class OptionsPage(QtWidgets.QWidget):
         self.btn_counter.clicked.connect(self._reset_counter)
         lay.addWidget(self.btn_counter)
         return box
+
+    # -- Aufnahmetypen -----------------------------------------------------
+
+    def _build_types_box(self) -> QtWidgets.QWidget:
+        box = QtWidgets.QGroupBox(i18n.t("opt_types"))
+        lay = QtWidgets.QVBoxLayout(box)
+        lay.setSpacing(6)
+
+        head = QtWidgets.QHBoxLayout()
+        hint = QtWidgets.QLabel(i18n.t("opt_types_note"))
+        hint.setWordWrap(True)
+        hint.setStyleSheet(f"color: {NORD['dim']}; font-size: 11px;")
+        head.addWidget(hint, 1)
+        head.addWidget(info_icon(i18n.t("opt_types_hint")))
+        lay.addLayout(head)
+
+        self.type_list = QtWidgets.QListWidget()
+        self.type_list.setMaximumHeight(130)
+        self.type_list.currentItemChanged.connect(self._type_selected)
+        lay.addWidget(self.type_list)
+
+        row = QtWidgets.QHBoxLayout()
+        add = QtWidgets.QPushButton(i18n.t("opt_type_add"))
+        add.clicked.connect(self._add_type)
+        self.btn_type_delete = QtWidgets.QPushButton(i18n.t("delete"))
+        self.btn_type_delete.setEnabled(False)
+        self.btn_type_delete.clicked.connect(self._delete_type)
+        row.addWidget(add)
+        row.addStretch(1)
+        row.addWidget(self.btn_type_delete)
+        lay.addLayout(row)
+
+        self._fill_types()
+        return box
+
+    def _fill_types(self, select: str | None = None) -> None:
+        """Liste neu aufbauen. Eingebaute stehen mit drin, aber blass.
+
+        Sie lassen sich nicht loeschen; sichtbar sein sollen sie trotzdem,
+        schon damit zu sehen ist, welches Kuerzel im Dateinamen landet.
+        """
+        self.type_list.clear()
+        for kind in rectypes.all_types():
+            item = QtWidgets.QListWidgetItem(
+                f"{kind.label}  ·  {rectypes.slug(kind.key)}")
+            item.setData(QtCore.Qt.ItemDataRole.UserRole, kind.key)
+            if not rectypes.is_user(kind.key):
+                item.setForeground(QtGui.QColor(NORD["dim"]))
+            self.type_list.addItem(item)
+            if kind.key == select:
+                self.type_list.setCurrentItem(item)
+        self._type_selected()
+
+    def _selected_type(self) -> str | None:
+        item = self.type_list.currentItem()
+        return None if item is None else item.data(
+            QtCore.Qt.ItemDataRole.UserRole)
+
+    def _type_selected(self, *args) -> None:
+        self.btn_type_delete.setEnabled(rectypes.is_user(self._selected_type()))
+
+    def _add_type(self) -> None:
+        name, ok = QtWidgets.QInputDialog.getText(
+            self, i18n.t("type_add_title"), i18n.t("name"))
+        name = rectypes.clean_name(name)
+        if not ok or not name:
+            return
+        taken = {kind.label.lower() for kind in rectypes.all_types()}
+        if name.lower() in taken:
+            QtWidgets.QMessageBox.warning(
+                self, i18n.t("name_taken"), i18n.t("type_name_taken"))
+            return
+
+        code = rectypes.make_slug(name)
+        settings.save_user_type(code, name)
+        self._fill_types(select=rectypes.USER_PREFIX + code)
+        self._refresh()
+        self.types_changed.emit()
+
+    def _delete_type(self) -> None:
+        key = self._selected_type()
+        if not rectypes.is_user(key):
+            return
+        name = rectypes.label(key)
+
+        # Aufnahmen behalten ihren Typ-Schluessel; nur der Name dazu ist
+        # danach weg. Wer das nicht weiss, wundert sich spaeter ueber eine
+        # Liste voller Kuerzel.
+        used = sum(1 for entry in self.entries if entry.get("type") == key)
+        body = i18n.t("type_delete_body", name=name)
+        if used:
+            body += "\n\n" + i18n.t("type_delete_used", count=used,
+                                     slug=rectypes.slug_of(key))
+        answer = QtWidgets.QMessageBox.question(
+            self, i18n.t("type_delete_title"), body)
+        if answer != QtWidgets.QMessageBox.StandardButton.Yes:
+            return
+
+        settings.delete_user_type(rectypes.slug_of(key))
+        self._fill_types()
+        self._refresh()
+        self.types_changed.emit()
 
     # -- Bausteine ---------------------------------------------------------
 

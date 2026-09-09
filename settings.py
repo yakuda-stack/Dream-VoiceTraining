@@ -128,7 +128,9 @@ _state = {"active_template": DEFAULT_TEMPLATE, "user_templates": {}, "device": N
           "builtin_overrides": {},
           "warn_low_level": True, "recording_type": "reading",
           "session_dir": None, "month_folders": False, "type_in_name": False,
-          "naming": None, "name_counter": {"period": "", "value": 0}}
+          "naming": None, "name_counter": {"period": "", "value": 0},
+          "practice_texts": {}, "practice_choice": "builtin",
+          "user_types": {}}
 
 
 def apply(new: Settings) -> None:
@@ -325,6 +327,55 @@ def set_name_counter(period: str, value: int) -> None:
     save()
 
 
+# ------------------------------------------------------ Aufnahmetypen
+
+def get_user_types() -> dict[str, str]:
+    """Eigene Aufnahmetypen: Kuerzel -> Name."""
+    return {code: str(name) for code, name in _state["user_types"].items()}
+
+
+def save_user_type(code: str, name: str) -> None:
+    _state["user_types"][str(code)] = str(name)
+    save()
+
+
+def delete_user_type(code: str) -> bool:
+    if code in _state["user_types"]:
+        del _state["user_types"][code]
+        save()
+        return True
+    return False
+
+
+# --------------------------------------------------------- Uebungstexte
+
+def get_practice_texts() -> dict[str, str]:
+    return {name: str(text) for name, text in _state["practice_texts"].items()}
+
+
+def save_practice_text(name: str, text: str) -> None:
+    _state["practice_texts"][str(name)] = str(text)
+    save()
+
+
+def delete_practice_text(name: str) -> bool:
+    if name in _state["practice_texts"]:
+        del _state["practice_texts"][name]
+        save()
+        return True
+    return False
+
+
+def get_practice_choice() -> str:
+    return str(_state["practice_choice"])
+
+
+def set_practice_choice(key: str) -> None:
+    if _state["practice_choice"] != key:
+        _state["practice_choice"] = str(key)
+        save()
+
+
 def get_intro_done() -> bool:
     return bool(_state["intro_done"])
 
@@ -467,6 +518,13 @@ def load() -> None:
     counter = raw.get("name_counter")
     _state["name_counter"] = (counter if isinstance(counter, dict)
                               else {"period": "", "value": 0})
+    texts = raw.get("practice_texts")
+    _state["practice_texts"] = ({str(k): str(v) for k, v in texts.items()}
+                                if isinstance(texts, dict) else {})
+    _state["practice_choice"] = str(raw.get("practice_choice", "builtin"))
+    kinds = raw.get("user_types")
+    _state["user_types"] = ({str(k): str(v) for k, v in kinds.items()}
+                            if isinstance(kinds, dict) else {})
     i18n.set_language(_state["language"])
 
 
@@ -490,6 +548,9 @@ def save() -> None:
         "type_in_name": _state["type_in_name"],
         "naming": _state["naming"],
         "name_counter": _state["name_counter"],
+        "practice_texts": _state["practice_texts"],
+        "practice_choice": _state["practice_choice"],
+        "user_types": _state["user_types"],
         "values": asdict(CFG),
         "user_templates": {n: asdict(s) for n, s in _state["user_templates"].items()},
     }

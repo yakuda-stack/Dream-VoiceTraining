@@ -49,8 +49,28 @@ STRINGS: dict[str, dict[str, str]] = {
                     "de": "Spektrogramm  ·  gestrichelt: F1 / F2"},
     "frequency": {"en": "Frequency", "de": "Frequenz"},
     "history": {"en": "Last 30 seconds", "de": "Verlauf letzte 30 Sekunden"},
+    "clear_history": {"en": "Clear history", "de": "Verlauf leeren"},
+    "clear_spectrogram": {"en": "Clear spectrogram",
+                          "de": "Spektrogramm leeren"},
     "practice_text": {"en": "Practice text  ·  read the same one every session",
                       "de": "Übungstext  ·  jede Session denselben lesen"},
+    "practice_builtin": {"en": "Built-in text", "de": "Eingebauter Text"},
+    "practice_save_title": {"en": "Save practice text",
+                            "de": "Übungstext speichern"},
+    "practice_empty": {"en": "There is nothing in the field to save.",
+                       "de": "Im Feld steht nichts, was sich speichern ließe."},
+    "practice_saved": {"en": "Practice text “{name}” saved.",
+                       "de": "Übungstext „{name}“ gespeichert."},
+    "practice_delete_title": {"en": "Delete practice text",
+                              "de": "Übungstext löschen"},
+    "practice_delete_body": {"en": "Really delete “{name}”?",
+                             "de": "„{name}“ wirklich löschen?"},
+    "practice_discard_title": {"en": "Unsaved text", "de": "Ungespeicherter Text"},
+    "practice_discard_body": {
+        "en": "The field holds changes that are not saved. Switching "
+              "replaces them. Continue?",
+        "de": "Im Feld stehen Änderungen, die nicht gespeichert sind. "
+              "Ein Wechsel überschreibt sie. Weiter?"},
     "practice_body": {
         "en": "The morning sky was clear and the air still cool. I walked slowly "
               "across the meadow, listened to the birds and stopped at the old oak. "
@@ -524,6 +544,12 @@ STRINGS: dict[str, dict[str, str]] = {
     "waveform": {"en": "Waveform", "de": "Wellenform"},
     "seconds": {"en": "s", "de": "s"},
     "analyse_selection": {"en": "Analyse selection", "de": "Auswahl auswerten"},
+    "adv_spectrogram": {"en": "Spectrogram", "de": "Spektrogramm"},
+    "adv_spectrogram_hint": {
+        "en": "Shows the same stretch of time as the waveform above. The "
+              "selection can be dragged in either of them.",
+        "de": "Zeigt denselben Zeitraum wie die Wellenform darüber. Die "
+              "Auswahl lässt sich in beiden ziehen."},
     "full_recording": {"en": "Whole recording", "de": "Ganze Aufnahme"},
     "play_selection": {"en": "Play selection", "de": "Auswahl abspielen"},
     "save_selection": {"en": "Save selection as session values",
@@ -566,6 +592,41 @@ STRINGS: dict[str, dict[str, str]] = {
     "type_free_hint": {"en": "Anything else — conversation, a phrase, an experiment.",
                        "de": "Alles andere — Gespräch, ein Satz, ein Versuch."},
     "recording_type": {"en": "Type", "de": "Typ"},
+    "type_user_hint": {"en": "Your own recording type.",
+                       "de": "Ein selbst angelegter Aufnahmetyp."},
+    "opt_types": {"en": "Recording types", "de": "Aufnahmetypen"},
+    "opt_types_note": {
+        "en": "Built-in types are greyed out. Behind each name is the short "
+              "form that goes into the file name.",
+        "de": "Eingebaute Typen stehen blass da. Hinter jedem Namen steht "
+              "die Kurzform, die in den Dateinamen wandert."},
+    "opt_types_hint": {
+        "en": "A type of your own gets its short form once, when it is "
+              "created, and keeps it from then on. Renaming is therefore not "
+              "offered: recordings made weeks ago carry that short form in "
+              "their file name, and they would no longer be found under a "
+              "different one.",
+        "de": "Ein eigener Typ bekommt seine Kurzform einmal beim Anlegen "
+              "und behält sie danach. Umbenennen gibt es deshalb nicht: "
+              "vor Wochen gemachte Aufnahmen tragen diese Kurzform im "
+              "Dateinamen und wären unter einer anderen nicht mehr "
+              "wiederzufinden."},
+    "opt_type_add": {"en": "Add type …", "de": "Typ anlegen …"},
+    "type_add_title": {"en": "New recording type", "de": "Neuer Aufnahmetyp"},
+    "type_name_taken": {
+        "en": "There is already a recording type with that name.",
+        "de": "Einen Aufnahmetyp mit diesem Namen gibt es schon."},
+    "type_delete_title": {"en": "Delete recording type",
+                          "de": "Aufnahmetyp löschen"},
+    "type_delete_body": {"en": "Really delete “{name}”?",
+                         "de": "„{name}“ wirklich löschen?"},
+    "type_delete_used": {
+        "en": "{count} recording(s) use this type. They keep their files and "
+              "their values; in the list they will show “{slug}” from now on, "
+              "and picking a different type for them cannot be undone.",
+        "de": "{count} Aufnahme(n) benutzen diesen Typ. Ihre Dateien und "
+              "Werte bleiben; in der Liste stehen sie danach unter „{slug}“, "
+              "und wer ihnen einen anderen Typ gibt, kommt nicht zurück."},
 
     "level_live_warning": {
         "en": "Level low ({level:.0f} dBFS) — the analysis may find no usable "
@@ -713,6 +774,32 @@ STRINGS: dict[str, dict[str, str]] = {
     "shown_count": {"en": "{shown} of {total} recordings shown",
                     "de": "{shown} von {total} Aufnahmen angezeigt"},
     "export_list": {"en": "Export list …", "de": "Liste exportieren …"},
+    "import_list": {"en": "Import …", "de": "Importieren …"},
+    "import_title": {"en": "Import recordings", "de": "Aufnahmen importieren"},
+    "import_filter": {"en": "WAV file (*.wav *.WAV)",
+                      "de": "WAV-Datei (*.wav *.WAV)"},
+    "import_type": {
+        "en": "Which type are these {count} recording(s)? The type can be "
+              "changed per recording afterwards.",
+        "de": "Welcher Typ sind diese {count} Aufnahme(n)? Der Typ lässt "
+              "sich danach je Aufnahme ändern."},
+    "import_running": {"en": "Importing {number}/{total} — {name} …",
+                       "de": "Importiere {number}/{total} — {name} …"},
+    "import_done": {
+        "en": "{count} recording(s) imported. The originals were copied, not "
+              "moved.",
+        "de": "{count} Aufnahme(n) importiert. Die Originale wurden kopiert, "
+              "nicht verschoben."},
+    "import_nothing": {"en": "Nothing imported.", "de": "Nichts importiert."},
+    "import_too_short": {"en": "shorter than 0.2 seconds",
+                         "de": "kürzer als 0,2 Sekunden"},
+    "import_failed_title": {"en": "Not imported", "de": "Nicht importiert"},
+    "import_failed_body": {
+        "en": "{count} file(s) could not be read. Only WAV with integer "
+              "samples works; other formats have to be converted first.",
+        "de": "{count} Datei(en) ließen sich nicht lesen. Es geht nur WAV mit "
+              "Ganzzahl-Abtastwerten; andere Formate müssen vorher umgewandelt "
+              "werden."},
     "export_list_title": {"en": "Export session list",
                           "de": "Sessionliste exportieren"},
     "report_list_title": {"en": "Dream-VoiceTraining — session list",
