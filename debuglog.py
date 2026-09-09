@@ -83,6 +83,13 @@ def environment() -> list[str]:
         lines.append(f"Version     {paths.APP_VERSION}")
         lines.append(f"Config      {paths.CONFIG_DIR}")
         lines.append(f"Data        {paths.SESSION_DIR}")
+        # Damit "die Einfuehrung zeigt keine Bilder" nicht zur Ratepartie
+        # wird: hier steht, wo gesucht wurde und was gefunden ist.
+        shot = paths.intro_shot("sessions.png")
+        lines.append(f"Intro shots {shot.parent if shot else 'not found'}")
+        if shot is None:
+            for folder in paths.intro_folders():
+                lines.append(f"  searched   {folder}")
     except Exception:
         pass
     for name in ("PySide6", "pyqtgraph", "numpy", "sounddevice", "parselmouth"):

@@ -4,6 +4,20 @@ Notable changes per release. Format follows
 [Keep a Changelog](https://keepachangelog.com/), versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [1.1.4] — 2026-09-09
+
+### Fixed
+
+- **The tutorial looks for its screenshots in more places, and says so when it
+  finds none.** It searched next to `paths.py` and under `/usr/share` only.
+  That misses two real cases: the launcher being a symlink, since `.resolve()`
+  follows it out of the folder the files actually live in, and the Arch
+  package, which installs them under `/usr/lib/dream-voicetraining`. Both are
+  covered now, along with the directory of the launched script and the working
+  directory. A miss is written to the debug log with every path it tried, and
+  the diagnostics show where the screenshots were found — a page without
+  pictures is no longer a guessing game.
+
 ## [1.1.3] — 2026-09-09
 
 ### Added

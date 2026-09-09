@@ -47,7 +47,7 @@ BUNDLE_DIR = Path(getattr(sys, "_MEIPASS", "")) if FROZEN else None
 
 APP_ID = "dream-voicetraining"
 APP_NAME = "Dream-VoiceTraining"
-APP_VERSION = "1.1.3"
+APP_VERSION = "1.1.4"
 
 APP_URL = "https://github.com/yakuda-stack/Dream-VoiceTraining"
 ISSUES_URL = APP_URL + "/issues"
@@ -112,19 +112,57 @@ def intro_shot(name: str) -> Path | None:
     Liegt im Quellordner unter assets/intro und wird von den Paketen daneben
     installiert. Wer nur die .py-Dateien kopiert, bekommt None zurueck und
     die Einfuehrung zeigt die Seite ohne Bild — das ist kein Fehlerfall.
+
+    Gesucht wird an mehreren Stellen, weil __file__ nicht immer dorthin
+    zeigt, wo die Dateien liegen: ein Startskript kann ein Symlink sein,
+    und .resolve() folgt ihm bis ins Ziel.
     """
-    candidates = []
-    if BUNDLE_DIR is not None:
-        candidates.append(BUNDLE_DIR / "assets" / "intro" / name)
-    here = Path(__file__).resolve().parent
-    candidates += [
-        here / "assets" / "intro" / name,
-        Path(f"/usr/share/{APP_ID}/assets/intro") / name,
-    ]
-    for candidate in candidates:
+    for folder in intro_folders():
+        candidate = folder / name
         if candidate.is_file():
             return candidate
+    debuglog_note(f"intro_shot: {name} nicht gefunden in "
+                  + ", ".join(str(f) for f in intro_folders()))
     return None
+
+
+def intro_folders() -> list[Path]:
+    """Alle Orte, an denen die Bilder der Einfuehrung liegen koennen."""
+    folders = []
+    if BUNDLE_DIR is not None:
+        folders.append(BUNDLE_DIR / "assets" / "intro")
+    folders.append(Path(__file__).resolve().parent / "assets" / "intro")
+    # Der Ordner des aufgerufenen Skripts und das Arbeitsverzeichnis: beides
+    # trifft zu, wenn jemand das Programm aus seinem Ordner heraus startet,
+    # ohne dass __file__ dorthin zeigt.
+    try:
+        started = Path(sys.argv[0]).resolve().parent
+        folders.append(started / "assets" / "intro")
+    except (OSError, IndexError):
+        pass
+    folders.append(Path.cwd() / "assets" / "intro")
+    folders.append(Path(f"/usr/share/{APP_ID}/assets/intro"))
+    folders.append(Path(f"/usr/lib/{APP_ID}/assets/intro"))
+
+    seen, unique = set(), []
+    for folder in folders:
+        if folder not in seen:
+            seen.add(folder)
+            unique.append(folder)
+    return unique
+
+
+def debuglog_note(message: str) -> None:
+    """Notiz ins Fehlerprotokoll, ohne dass paths davon abhaengt.
+
+    Der Import steht hier drin und nicht oben: debuglog holt sich paths,
+    ein Import auf Modulebene machte daraus einen Ring.
+    """
+    try:
+        import debuglog
+        debuglog.record_note("paths", message)
+    except Exception:
+        pass
 
 
 def changelog_file() -> Path | None:

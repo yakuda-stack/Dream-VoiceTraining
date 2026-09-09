@@ -99,3 +99,31 @@ def test_prozessname_bricht_unter_windows_nicht(monkeypatch):
     import paths
     monkeypatch.setattr(paths, "WINDOWS", True)
     paths.set_process_name()          # darf einfach nichts tun
+
+
+# --------------------------------------------------- Bilder der Einfuehrung
+
+def test_intro_bilder_werden_im_quellordner_gefunden():
+    import paths
+    shot = paths.intro_shot("sessions.png")
+    assert shot is not None and shot.is_file()
+
+
+def test_intro_suche_nennt_mehrere_orte():
+    """Ein Startskript kann ein Symlink sein — dann zeigt __file__ woandershin."""
+    import paths
+    folders = [str(f) for f in paths.intro_folders()]
+    assert len(folders) == len(set(folders)), "Ein Ordner steht doppelt drin"
+    assert any(f.endswith("assets/intro") for f in folders)
+    assert any("/usr/share/" in f for f in folders)
+
+
+def test_fehlendes_bild_landet_im_protokoll(monkeypatch, tmp_path):
+    """Sonst bleibt "die Einfuehrung zeigt nichts" eine Ratepartie."""
+    import debuglog
+    import paths
+
+    monkeypatch.setattr(paths, "intro_folders", lambda: [tmp_path / "nirgends"])
+    debuglog.clear()
+    assert paths.intro_shot("sessions.png") is None
+    assert "intro_shot" in debuglog.as_text()
