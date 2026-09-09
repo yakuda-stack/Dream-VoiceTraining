@@ -38,18 +38,21 @@ Native support for **Linux** and **Windows**. No setup required for portable ver
 | Live Analysis | Session Management | Detailed Metrics |
 | :---: | :---: | :---: |
 | <img src="assets/dashboard.png" width="280" alt="Live View"/> | <img src="assets/sessions.png" width="280" alt="Session List"/> | <img src="assets/details.png" width="280" alt="Detail View"/> |
-| Real-time Pitch, Formants (F1/F2), & Weight | Track recordings over time with 23 exportable metrics | 18 clinical/acoustic metrics with built-in explanations |
+| Real-time Pitch, Formants (F1/F2), & Weight | Track recordings over time across 24 sortable, exportable columns | 18 acoustic metrics & detailed spectrogram view |
 
 ---
 
 ## 🚀 Key Features
 
 - **Real-Time Visual Analysis:** Pitch history, live spectrogram with F1/F2 formant tracking, pitch zone indicators, and voice weight (H1–H2).
-- **Session History & Analytics:** Save recordings as WAV + JSON metrics. Filter, sort, and manage 23 different vocal parameters.
-- **Advanced Region Analysis:** Select and evaluate specific steady-state vowels (e.g., sustained `/a/`, `/i/`, `/u/`) for accurate formant & jitter tracking.
-- **Custom Target Profiles:** Compare your measurements against Masculine, Androgynous, Feminine, or fully custom reference ranges.
-- **Interactive First-Run Onboarding:** Interactive guided tour highlighting interface controls with animated indicators.
+- **Import Existing Recordings:** Bring in WAV files from anywhere on disk — 8, 16, 24 or 32-bit, mono or stereo — and analyse them alongside your live sessions. Files are copied, never moved.
+- **Session History & Analytics:** Save recordings as WAV + JSON metrics. Filter, sort and export a table of 24 columns — 18 acoustic metrics plus date, name, type and file.
+- **Advanced Region Analysis & Spectrogram:** Select steady-state vowels (e.g., `/a/`, `/i/`, `/u/`) with a dedicated spectrogram view in the details panel for precise formant & jitter tracking.
+- **Your Own Practice Texts & Recording Types:** Write and save practice texts of your own, and define recording types beyond the built-in ones — so the same material is measured the same way every session.
+- **Custom Target Profiles:** Compare your measurements against Masculine, Androgynous, Feminine, or custom reference ranges.
 - **100% Offline & Private:** Operates completely offline following XDG specs. No tracking, no telemetry, no cloud dependency.
+
+*(Want to know what the numbers mean and how they are measured? See the [Acoustic Metrics & Methodology guide](docs/metrics.md).)*
 
 ---
 
@@ -94,7 +97,7 @@ Files follow standard OS paths:
 * **Linux:** `~/.config/dream-voicetraining/` (settings) and `~/.local/share/dream-voicetraining/sessions/` (recordings).
 * **Windows:** `%APPDATA%\Dream-VoiceTraining\` (settings) and `%LOCALAPPDATA%\Dream-VoiceTraining\` (recordings).
 
-File naming patterns and destination folders can be fully customized in **Settings → Options**.
+Custom file naming schemes and target folders can be configured in **Settings → Options**.
 </details>
 
 ---
@@ -105,10 +108,8 @@ File naming patterns and destination folders can be fully customized in **Settin
 * **Code Implementation:** Developed, generated, and refactored using Claude Code (Anthropic).
 * **Documentation & Copy:** Drafted and formatted with support from Google Gemini.
 
-### AI as a High-Efficiency Tool
-Artificial Intelligence serves as a high-efficiency tool to accelerate software engineering. Just as craftsmen shifted from hand-cranked drills to power drills, AI automates laborious execution — while direction, structural integrity, and rigorous testing remain strictly in the hands of the human developer.
-
-Every line of code and documentation is manually audited, executed, and tested. Code quality, architecture, and maintenance responsibility remain 100% mine.
+### Development Approach
+AI tools were used extensively to accelerate development and code generation. System architecture, feature decisions, code reviews, and quality control were managed directly by the developer. All code is tested and verified prior to release.
 
 ---
 

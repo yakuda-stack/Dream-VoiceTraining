@@ -38,24 +38,27 @@ Volle Unterstützung für **Linux** und **Windows**. Portable Versionen benötig
 | Live-Analyse | Session-Verwaltung | Detail-Auswertung |
 | :---: | :---: | :---: |
 | <img src="assets/dashboard.png" width="280" alt="Live-Ansicht"/> | <img src="assets/sessions.png" width="280" alt="Sessionliste"/> | <img src="assets/details.png" width="280" alt="Detailansicht"/> |
-| Echtzeit-Tonhöhe, Formanten (F1/F2) & Stimmgewicht | Verfolge Aufnahmen über Zeit mit 23 exportierbaren Spalten | 18 akkurate Messwerte mit Erklärungen per Klick |
+| Echtzeit-Tonhöhe, Formanten (F1/F2) & Stimmgewicht | Verfolge Aufnahmen über Zeit in 24 sortier- und exportierbaren Spalten | 18 akustische Kennwerte & Spektrogramm-Detailansicht |
 
 ---
 
 ## 🚀 Hauptfunktionen
 
 - **Echtzeit-Stimmanalyse:** Live-Spektrogramm mit Formanten-Tracking (F1/F2), Tonhöhenverlauf, Zonenanzeige und Stimmgewicht (H1–H2).
-- **Session-Verwaltung:** Speichert Takes als WAV + JSON. Sortiere, filtere und vergleiche 23 verschiedene Parameter.
-- **Erweiterter Ausschnitts-Modus:** Schneide präzise Abschnitte aus gehaltenen Vokalen (z. B. `/a/`, `/i/`, `/u/`) für exakte Formant-, Jitter- und Shimmer-Werte heraus.
+- **Vorhandene Aufnahmen importieren:** Hol WAV-Dateien von überall auf der Platte herein — 8, 16, 24 oder 32 Bit, mono oder stereo — und werte sie neben deinen Live-Sessions aus. Die Dateien werden kopiert, nicht verschoben.
+- **Session-Verwaltung:** Speichert Takes als WAV + JSON. Sortiere, filtere und exportiere eine Tabelle mit 24 Spalten — 18 akustische Kennwerte plus Datum, Name, Typ und Datei.
+- **Ausschnitts-Modus & Spektrogramm:** Wähle Vokale (z. B. `/a/`, `/i/`, `/u/`) aus und analysiere sie im Detailfenster inklusive Spektrogramm-Ansicht.
+- **Eigene Übungstexte & Aufnahmetypen:** Leg eigene Übungstexte an und speichere sie, und definiere Aufnahmetypen über die eingebauten hinaus — damit jede Session dasselbe Material auf dieselbe Weise misst.
 - **Anpassbare Zielprofile:** Vergleiche deine Werte mit Zielbereichen für maskuline, androgyne oder feminine Stimmlagen.
-- **Interaktive Einführung:** Geführter Rundgang beim ersten Start mit hervorgehobenen Bedienelementen.
-- **100% Lokal & Datenschutzfreundlich:** Funktioniert vollständig offline. Keine Telemetrie, kein Cloud-Zwang, volle Datenkontrolle.
+- **100% Lokal & Datenschutzfreundlich:** Funktioniert vollständig offline nach XDG-Standards. Keine Telemetrie, kein Cloud-Zwang.
+
+*(Du willst wissen, was die Zahlen bedeuten und wie sie zustande kommen? Siehe [Akustik & Methodik](docs/metrics.de.md).)*
 
 ---
 
 ## ⚠️ Wichtiger Hinweis
 
-> **Dream-VoiceTraining ist ein Messgerät, kein Therapieprogramm.**
+> **Dream-VoiceTraining ist ein Messgerät, kein Therapieprogramm oder Medizinprodukt.**
 
 1. **Niemals gegen Schmerz trainieren:** Bei Kratzen, Druckgefühl oder Heiserkeit sofort abbrechen.
 2. **Messwerte sind keine Schulnoten:** Stimmwahrnehmung hängt von vielen Faktoren ab, die über reine Akustikwerte hinausgehen.
@@ -94,7 +97,7 @@ Standardpfade des Betriebssystems:
 * **Linux:** `~/.config/dream-voicetraining/` (Einstellungen) und `~/.local/share/dream-voicetraining/sessions/` (Aufnahmen).
 * **Windows:** `%APPDATA%\Dream-VoiceTraining\` (Einstellungen) und `%LOCALAPPDATA%\Dream-VoiceTraining\` (Aufnahmen).
 
-Dateinamen-Schemata und Zielordner lassen sich unter **Einstellungen → Optionen** flexibel anpassen.
+Eigene Dateinamen-Schemata und Zielordner lassen sich unter **Einstellungen → Optionen** konfigurieren.
 </details>
 
 ---
@@ -105,10 +108,8 @@ Dateinamen-Schemata und Zielordner lassen sich unter **Einstellungen → Optione
 * **Code-Implementierung:** Geschrieben, generiert und refactort unter Einsatz von Claude Code (Anthropic).
 * **Dokumentation & Texte:** Ausformuliert und formatiert mit Unterstützung von Google Gemini.
 
-### KI als modernes Werkzeug
-Künstliche Intelligenz ist für mich ein hocheffizientes Werkzeug zur Umsetzung komplexer Softwareprojekte. So wie man früher ein Loch mit der Handbohrmaschine gedreht hat und heute auf den Knopf einer Akkubohrmaschine drückt, nimmt KI das zeitintensive Handwerk ab — die Richtung, die Präzision und die Kontrolle über das Ergebnis liegen jedoch weiterhin vollständig beim Entwickler.
-
-Jede Codezeile und jeder Text wurden vor der Veröffentlichung persönlich geprüft, ausgeführt und getestet. Die Verantwortung für Codequalität, Architektur, Tests und Wartung liegt uneingeschränkt bei mir.
+### Entwicklungsansatz
+KI-Werkzeuge wurden intensiv genutzt, um die Entwicklung und Code-Generierung zu beschleunigen. Systemarchitektur, Feature-Entscheidungen, Code-Reviews und Qualitätskontrolle lagen direkt beim Entwickler. Der gesamte Code wird vor Veröffentlichung ausgeführt und getestet.
 
 ---
 

@@ -36,10 +36,4 @@ machen, sonst brechen die Spalten um.
   <tr>
     <td><b>Settings · Target profiles</b><br><img src="settings-profiles.png" alt="Target profiles" width="800"/></td>
   </tr>  
-  <tr>
-    <td><b>Settings · option</b><br><img src="option.png" alt="option" width="800"/></td>
-  </tr>   
-  <tr>
-    <td><b>Click · Tutorial</b><br><img src="tut.png" alt="Click Tutorial" width="800"/></td>
-  </tr>     
 </table>
