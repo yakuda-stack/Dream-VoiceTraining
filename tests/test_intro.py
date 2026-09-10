@@ -203,12 +203,12 @@ def test_letzte_seite_bringt_die_projektverweise(qt_app):
     from dialogs import IntroDialog, PROJECT_LINKS
     from PySide6 import QtWidgets
 
-    urls = [url for _, url in PROJECT_LINKS]
+    urls = [link.url for link in PROJECT_LINKS]
     assert paths.APP_URL in urls
     assert paths.DISCORD_URL in urls
     assert paths.KOFI_URL in urls
-    for key, _ in PROJECT_LINKS:
-        assert key in i18n.STRINGS, key
+    for link in PROJECT_LINKS:
+        assert link.key in i18n.STRINGS, link.key
 
     assert IntroDialog.LINK_PAGE == IntroDialog.PAGES[-1][1]
 
@@ -217,9 +217,56 @@ def test_letzte_seite_bringt_die_projektverweise(qt_app):
     box = last.findChild(QtWidgets.QGroupBox, "projectlinks")
     assert box is not None, "Verweise fehlen auf der letzten Seite"
 
-    texts = " ".join(label.text() for label in box.findChildren(QtWidgets.QLabel))
+    knoepfe = box.findChildren(QtWidgets.QPushButton)
+    assert len(knoepfe) == len(PROJECT_LINKS)
+    # Die Adresse steht nicht mehr im Text, aber weiterhin da, wo man sie
+    # sieht, bevor man drueckt.
+    tooltips = [b.toolTip() for b in knoepfe]
     for url in urls:
-        assert f'href="{url}"' in texts, url
-    # Das verirrte style=f"..." hat die Angabe frueher unbrauchbar gemacht.
-    assert 'style=f"' not in texts
+        assert url in tooltips, url
+        assert url in [b.statusTip() for b in knoepfe], url
     dialog.close()
+
+
+def test_verweisknoepfe_tragen_ihre_kennungen(qt_app):
+    """An den objectNames haengen die Hausfarben in theming.py."""
+    from PySide6 import QtCore, QtWidgets
+    import dialogs
+
+    box = dialogs.project_links_box()
+    try:
+        namen = [b.objectName() for b in box.findChildren(QtWidgets.QPushButton)]
+        assert namen == ["btn_link_github", "btn_link_discord",
+                         "btn_link_kofi"]
+        for button in box.findChildren(QtWidgets.QPushButton):
+            assert button.cursor().shape() == \
+                QtCore.Qt.CursorShape.PointingHandCursor
+            assert button.toolTip().startswith("https://")
+    finally:
+        box.deleteLater()
+
+
+def test_hausfarben_stehen_im_stylesheet():
+    import theming
+
+    qss = theming.stylesheet()
+    assert "#btn_link_discord:hover" in qss
+    assert "#5865F2" in qss
+    assert "#btn_link_kofi:hover" in qss
+    assert "#FF5E5B" in qss
+    assert "#btn_link_github:hover" in qss
+
+
+def test_ohne_emoji_schrift_bleibt_die_beschriftung_lesbar(qt_app, monkeypatch):
+    """Sonst stuende auf dem Knopf ein leeres Kaestchen."""
+    from PySide6 import QtWidgets
+    import dialogs
+
+    monkeypatch.setattr(dialogs, "_EMOJI_OK", False)
+    box = dialogs.project_links_box()
+    try:
+        texte = [b.text() for b in box.findChildren(QtWidgets.QPushButton)]
+        assert "Discord" in texte
+        assert all("\U0001F4AC" not in t for t in texte)
+    finally:
+        box.deleteLater()

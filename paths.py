@@ -47,7 +47,7 @@ BUNDLE_DIR = Path(getattr(sys, "_MEIPASS", "")) if FROZEN else None
 
 APP_ID = "dream-voicetraining"
 APP_NAME = "Dream-VoiceTraining"
-APP_VERSION = "1.1.5"
+APP_VERSION = "1.1.6"
 
 APP_URL = "https://github.com/yakuda-stack/Dream-VoiceTraining"
 ISSUES_URL = APP_URL + "/issues"

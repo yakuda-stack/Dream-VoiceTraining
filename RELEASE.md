@@ -21,7 +21,7 @@ python -m venv .venv
 source .venv/bin/activate.fish
 pip install -r requirements-dev.txt
 python main.py                       # startet es?
-python -m pytest tests/ -q           # 86 passed
+python -m pytest tests/ -q           # 337 passed
 ```
 
 ## A2. Git und erster Push

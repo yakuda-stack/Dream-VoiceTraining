@@ -217,3 +217,207 @@ def test_wellenform_zeigt_im_zoom_die_abtastwerte(detail):
     assert len(xs) == pytest.approx(0.03 * detail._rate, rel=0.2)
     assert len(xs) < weit
     assert float(xs[0]) >= 0.89
+
+# ----------------------------------------------------- die Farbskala
+
+def _detail_mit_pegel(tmp_path, monkeypatch, amplitude, name):
+    """Ein Detailfenster ueber eine Aufnahme mit gewaehltem Pegel."""
+    import dialogs
+    import storage
+
+    folder = tmp_path / name
+    folder.mkdir()
+    rate = 16000
+    ton = (amplitude
+           * np.sin(2 * np.pi * 150.0 * np.arange(2 * rate) / rate))
+    audio.write_wav(folder / "probe.wav", ton, rate)
+    monkeypatch.setattr(storage, "root", lambda: folder)
+
+    entry = {"timestamp": "2026-09-01T10:00:00", "file": "probe.wav",
+             "quality": "ok", "duration": 2.0, "f0_median": 150.0}
+    dlg = dialogs.SessionDetailDialog(entry, [entry], folder)
+    dlg._toggle_advanced(True)
+    return dlg
+
+
+def test_grenzen_stehen_in_audio_und_gelten_in_beiden_ansichten():
+    """Sonst muesste dialogs auf main zugreifen — und main auf dialogs."""
+    import main
+
+    assert audio.SPEC_FLOOR_DB < audio.SPEC_CEIL_DB
+    assert main.SPEC_FLOOR_DB == audio.SPEC_FLOOR_DB
+    assert main.SPEC_CEIL_DB == audio.SPEC_CEIL_DB
+
+
+def test_ohne_haken_steuert_sich_jede_aufnahme_selbst_aus(qt_app, tmp_path,
+                                                          monkeypatch):
+    """Die Voreinstellung: gut fuer eine Aufnahme, untauglich zum Vergleich."""
+    leise = _detail_mit_pegel(tmp_path, monkeypatch, 0.02, "leise")
+    laut = _detail_mit_pegel(tmp_path, monkeypatch, 0.4, "laut")
+    try:
+        assert leise._spec_levels != laut._spec_levels
+    finally:
+        leise.close()
+        laut.close()
+
+
+def test_mit_haken_bekommen_beide_dieselbe_skala(qt_app, tmp_path,
+                                                 monkeypatch):
+    import settings
+
+    settings.set_fixed_spec_scale(True)
+    leise = _detail_mit_pegel(tmp_path, monkeypatch, 0.02, "leise")
+    laut = _detail_mit_pegel(tmp_path, monkeypatch, 0.4, "laut")
+    try:
+        fest = (audio.SPEC_FLOOR_DB, audio.SPEC_CEIL_DB)
+        assert leise._spec_levels == fest
+        assert laut._spec_levels == fest
+        assert leise.chk_fixed_scale.isChecked()
+    finally:
+        leise.close()
+        laut.close()
+
+
+def test_haken_gilt_auch_im_naechsten_fenster(detail):
+    """Zwei Aufnahmen vergleicht man in zwei Fenstern — der Schalter merkt sich."""
+    import settings
+
+    detail._toggle_advanced(True)
+    detail.chk_fixed_scale.setChecked(True)
+    assert settings.get_fixed_spec_scale()
+
+
+def test_umschalten_faerbt_um_ohne_neu_zu_rechnen(detail):
+    detail._toggle_advanced(True)
+    vorher = detail.spec_img.image
+    auto = detail._spec_levels
+
+    detail.chk_fixed_scale.setChecked(True)
+    assert detail._spec_levels == (audio.SPEC_FLOOR_DB, audio.SPEC_CEIL_DB)
+    # Dasselbe Bild, nur anders eingefaerbt.
+    assert detail.spec_img.image is vorher
+
+    detail.chk_fixed_scale.setChecked(False)
+    assert detail._spec_levels == auto
+
+
+def test_feste_skala_bleibt_beim_zoomen_stehen(detail):
+    """Was fest heisst, darf sich auch durch einen Ausschnitt nicht bewegen."""
+    detail._toggle_advanced(True)
+    detail.chk_fixed_scale.setChecked(True)
+
+    detail.spec_plot.getPlotItem().vb.setXRange(0.4, 0.6, padding=0)
+    detail._render_spectrogram(force=True)
+
+    assert detail._spec_levels == (audio.SPEC_FLOOR_DB, audio.SPEC_CEIL_DB)
+
+
+# ------------------------------------------------- die Orientierungslinien
+
+def test_drei_linien_auf_den_richtigen_frequenzen(detail):
+    import targets
+
+    detail._toggle_advanced(True)
+    assert [round(line.value()) for line in detail._guides] == [600, 1500, 2800]
+    assert len(detail._guides) == len(targets.FORMANT_GUIDES)
+
+
+def test_linien_verzerren_den_frequenzbereich_nicht(detail):
+    """Ohne ignoreBounds zoege die oberste Linie die Achse an sich."""
+    detail._toggle_advanced(True)
+    unten, oben = detail.spec_plot.getPlotItem().vb.viewRange()[1]
+    assert unten == pytest.approx(0.0, abs=1e-6)
+    assert oben == pytest.approx(detail._spec_top, abs=1e-6)
+
+
+def test_linien_liegen_unter_auswahl_und_messlinien(detail):
+    import dialogs
+
+    detail._toggle_advanced(True)
+    for line in detail._guides:
+        assert line.zValue() < detail.spec_region.zValue()
+        assert line.zValue() < dialogs.MEASURED_Z
+        # Aber ueber dem Bild — sonst waeren sie nicht zu sehen.
+        assert line.zValue() > detail.spec_img.zValue()
+
+
+def test_linie_ueber_der_oberen_frequenz_faellt_weg(qt_app, tmp_path,
+                                                    monkeypatch):
+    """Bei 5512 Hz Abtastrate endet das Bild unter der F3."""
+    import audio as audio_mod
+    import dialogs
+    import storage
+
+    folder = tmp_path / "schmal"
+    folder.mkdir()
+    rate = 5512
+    ton = 0.2 * np.sin(2 * np.pi * 150.0 * np.arange(2 * rate) / rate)
+    audio_mod.write_wav(folder / "probe.wav", ton, rate)
+    monkeypatch.setattr(storage, "root", lambda: folder)
+
+    entry = {"timestamp": "2026-09-01T10:00:00", "file": "probe.wav",
+             "quality": "ok", "duration": 2.0}
+    dlg = dialogs.SessionDetailDialog(entry, [entry], folder)
+    try:
+        dlg._toggle_advanced(True)
+        werte = [round(line.value()) for line in dlg._guides]
+        assert werte == [600, 1500]
+    finally:
+        dlg.close()
+
+
+def test_abgeschaltet_werden_keine_linien_gezeigt(qt_app, tmp_path,
+                                                  monkeypatch):
+    import dialogs
+    import settings
+    import storage
+
+    settings.set_formant_guides(False)
+    folder = tmp_path / "ohne"
+    folder.mkdir()
+    rate = 16000
+    ton = 0.2 * np.sin(2 * np.pi * 150.0 * np.arange(2 * rate) / rate)
+    audio.write_wav(folder / "probe.wav", ton, rate)
+    monkeypatch.setattr(storage, "root", lambda: folder)
+
+    entry = {"timestamp": "2026-09-01T10:00:00", "file": "probe.wav",
+             "quality": "ok", "duration": 2.0}
+    dlg = dialogs.SessionDetailDialog(entry, [entry], folder)
+    try:
+        dlg._toggle_advanced(True)
+        assert all(not line.isVisible() for line in dlg._guides)
+    finally:
+        dlg.close()
+
+
+def test_gepunktet_und_duenn_statt_gestrichelt(detail):
+    """Sonst waeren sie von den Messlinien nicht zu unterscheiden."""
+    from PySide6 import QtCore
+
+    detail._toggle_advanced(True)
+    for line in detail._guides:
+        stift = line.pen
+        assert stift.style() == QtCore.Qt.PenStyle.DotLine
+        assert stift.width() <= 1
+        assert stift.color().alpha() < 255
+
+
+def test_livebereich_hat_dieselben_linien(qt_app):
+    """Beide Ansichten zeigen denselben Anhaltspunkt, sonst hilft er nicht."""
+    import main
+    import settings
+
+    window = main.MainWindow()
+    try:
+        assert [round(line.value()) for line in window.spec_guides] == \
+            [600, 1500, 2800]
+        assert all(line.isVisible() for line in window.spec_guides)
+        # Die gemessenen Formantlinien liegen darueber.
+        for line in window.spec_guides:
+            assert line.zValue() < window.line_f1.zValue()
+
+        settings.set_formant_guides(False)
+        window._show_formant_guides()
+        assert all(not line.isVisible() for line in window.spec_guides)
+    finally:
+        window.close()

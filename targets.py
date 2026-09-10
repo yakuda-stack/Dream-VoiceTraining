@@ -71,6 +71,16 @@ METRICS = [
 
 METRIC_BY_KEY = {m.key: m for m in METRICS}
 
+# Orientierungslinien im Spektrogramm, in Hz.
+#
+# Derselbe Vorbehalt wie oben, nur sichtbarer: das sind Mittelwerte fuer
+# gehaltene Vokale. In fliessender Sprache wandern die Formanten mit jedem
+# Laut, eine Linie wird dabei staendig gerissen, und das ist kein Fehler.
+# Sie steht als Anhaltspunkt im Bild, damit sich Hoehenunterschiede
+# zwischen zwei Aufnahmen ueberhaupt schaetzen lassen — nicht als Ziel,
+# das zu treffen waere. Wer eigene Werte will, legt ein Profil an.
+FORMANT_GUIDES = (("F1", 600.0), ("F2", 1500.0), ("F3", 2800.0))
+
 # Profilabhaengige Bereiche: key -> (untere Grenze, obere Grenze), None = offen
 # Bewusst nur die Groessen rund um die Tonhoehe. Formanten stehen zwar in
 # der Literatur, dort aber fuer gehaltene Vokale — verglichen wuerde hier ein

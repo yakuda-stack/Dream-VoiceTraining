@@ -20,6 +20,7 @@ neue Parameter dort eintragen reicht also aus."""
 from __future__ import annotations
 
 from dataclasses import asdict
+from typing import NamedTuple
 
 import os
 
@@ -135,6 +136,7 @@ class SettingsDialog(QtWidgets.QDialog):
         analysis_lay = QtWidgets.QVBoxLayout(analysis_page)
         analysis_lay.setContentsMargins(0, 8, 0, 0)
         analysis_lay.addWidget(self._build_template_row())
+        analysis_lay.addWidget(self._build_spectrogram_group())
 
         scroll = QtWidgets.QScrollArea()
         scroll.setWidgetResizable(True)
@@ -211,6 +213,7 @@ class SettingsDialog(QtWidgets.QDialog):
 
         self._before = settings.snapshot()
         self._before_template = settings.active_template()
+        self._before_guides = settings.get_formant_guides()
         self._before_storage = self.options.snapshot()
         self._refresh_templates()
         self._load_values(self._before)
@@ -232,6 +235,27 @@ class SettingsDialog(QtWidgets.QDialog):
         lay.addWidget(self.template_box, 1)
         lay.addWidget(self.btn_save)
         lay.addWidget(self.btn_delete)
+        return box
+
+    def _build_spectrogram_group(self) -> QtWidgets.QWidget:
+        """Was im Spektrogramm zusaetzlich zu sehen ist.
+
+        Steht bei der Analyse und nicht bei den Optionen: die Optionen
+        handeln von Ordnern und Dateinamen, das hier von dem, was die
+        Messung zeigt.
+        """
+        box = QtWidgets.QGroupBox(i18n.t("adv_spectrogram"))
+        lay = QtWidgets.QVBoxLayout(box)
+        lay.setSpacing(4)
+
+        self.chk_guides = QtWidgets.QCheckBox(i18n.t("opt_formant_guides"))
+        self.chk_guides.setChecked(settings.get_formant_guides())
+        lay.addWidget(self.chk_guides)
+
+        hint = QtWidgets.QLabel(i18n.t("opt_formant_guides_hint"))
+        hint.setWordWrap(True)
+        hint.setStyleSheet(f"color: {NORD['dim']}; font-size: 11px;")
+        lay.addWidget(hint)
         return box
 
     def _build_params_group(self) -> QtWidgets.QWidget:
@@ -400,6 +424,7 @@ class SettingsDialog(QtWidgets.QDialog):
         values = self._collect()
         settings.apply(values)
         settings.set_active_template(self._current_template())
+        settings.set_formant_guides(self.chk_guides.isChecked())
         settings.save()
         self._load_values(settings.snapshot())
         self.applied.emit()
@@ -416,6 +441,7 @@ class SettingsDialog(QtWidgets.QDialog):
         # deshalb wendet der Umzugsknopf seine Auswahl auch sofort an.
         settings.apply(self._before)
         settings.set_active_template(self._before_template)
+        settings.set_formant_guides(self._before_guides)
         settings.save()
         self.options.restore(self._before_storage)
         self.applied.emit()
@@ -425,6 +451,60 @@ class SettingsDialog(QtWidgets.QDialog):
 
 
 # --------------------------------------------------------- Detailansicht
+
+# Farbrolle je Linie. Dieselben Rollen wie die Kennwertkarten im
+# Livebereich: die blasse Linie im Bild und die Zahl darueber gehoeren
+# sichtbar zusammen.
+GUIDE_ROLES = {"F1": "yellow", "F2": "green", "F3": "purple"}
+
+# Ueber dem Bild (0), unter der Auswahl (10) und unter den gemessenen
+# Formantlinien des Livebereichs (MEASURED_Z). Was gemessen wurde,
+# verdeckt die Orientierung, nicht umgekehrt.
+GUIDE_Z = 5
+MEASURED_Z = 15
+
+
+def add_formant_guides(plot, top: float, visible: bool = True) -> list:
+    """Waagerechte Orientierungslinien fuer F1, F2 und F3.
+
+    Gepunktet, duenn und blass, damit sie sich von den gemessenen Linien
+    unterscheiden — vier gestrichelte Linien im selben Bild waeren nicht
+    auseinanderzuhalten.
+
+    `top` ist die obere Frequenz des Bildes. Eine Linie darueber wird
+    weggelassen statt am Rand zu kleben: bei 8 kHz Abtastrate endet das
+    Bild bei 4000 Hz, und die 2800 der F3 sind dann noch drin, bei einer
+    aelteren Aufnahme mit weniger aber nicht mehr.
+
+    ignoreBounds ist Pflicht. Ohne das zaehlt eine InfiniteLine als Inhalt,
+    und der sichtbare Bereich richtet sich beim naechsten Zurechtruecken
+    nach ihr statt nach dem Bild.
+    """
+    lines = []
+    for name, hertz in targets.FORMANT_GUIDES:
+        if hertz > top:
+            continue
+        colour = QtGui.QColor(NORD[GUIDE_ROLES.get(name, "dim")])
+        colour.setAlpha(130)
+        fill = QtGui.QColor(NORD["bg2"])
+        fill.setAlpha(190)
+        line = pg.InfiniteLine(
+            pos=hertz, angle=0, movable=False,
+            pen=pg.mkPen(colour, width=1, style=QtCore.Qt.PenStyle.DotLine),
+            label=f"{name}  {hertz:.0f} Hz",
+            # anchors: ohne das zentriert pyqtgraph die Beschriftung auf der
+            # Stelle, und bei position 0.02 haengt die Haelfte davon links
+            # aus dem Diagramm heraus. (0, …) setzt die linke Textkante auf
+            # den Punkt.
+            labelOpts={"position": 0.02, "color": NORD["dim"],
+                       "anchors": [(0, 1), (0, 0)],
+                       "fill": pg.mkBrush(fill), "border": pg.mkPen(colour)})
+        line.setZValue(GUIDE_Z)
+        line.setVisible(visible)
+        plot.addItem(line, ignoreBounds=True)
+        lines.append(line)
+    return lines
+
 
 def metric_value(entry: dict, key: str) -> float | None:
     """Kennwert aus einem Session-Eintrag, None wenn nicht vorhanden."""
@@ -468,6 +548,8 @@ class SessionDetailDialog(QtWidgets.QDialog):
         self._spectrogram_done = False
         self.wave_curve = None
         self._spec_levels = None
+        self._spec_auto_levels = None
+        self._guides: list = []
         self._spec_span = None
         self._syncing = False
         self._selection_stats = None
@@ -728,7 +810,16 @@ class SessionDetailDialog(QtWidgets.QDialog):
         self.chk_spec.setChecked(True)
         self.chk_spec.setToolTip(i18n.t("adv_spectrogram_hint"))
         self.chk_spec.toggled.connect(self._toggle_spectrogram)
+        # Der Schalter merkt sich seinen Zustand ueber Fenster hinweg: wer
+        # zwei Aufnahmen vergleicht, oeffnet zwei Detailfenster und muesste
+        # sonst in jedem einzeln umlegen — und genau dann faellt es auf,
+        # wenn eines davon vergessen wurde.
+        self.chk_fixed_scale = QtWidgets.QCheckBox(i18n.t("adv_fixed_scale"))
+        self.chk_fixed_scale.setChecked(settings.get_fixed_spec_scale())
+        self.chk_fixed_scale.setToolTip(i18n.t("adv_fixed_scale_hint"))
+        self.chk_fixed_scale.toggled.connect(self._toggle_fixed_scale)
         info.addWidget(self.range_label, 1)
+        info.addWidget(self.chk_fixed_scale)
         info.addWidget(self.chk_spec)
         lay.addLayout(info)
 
@@ -817,6 +908,29 @@ class SessionDetailDialog(QtWidgets.QDialog):
     def _spec_region_moved(self) -> None:
         self._mirror(self.spec_region, self.region)
 
+    def _levels(self) -> tuple[float, float]:
+        """Die Grenzen, mit denen das Bild gerade eingefaerbt wird.
+
+        Bei fester Skala dieselben Werte wie im Livebereich, damit zwei
+        Detailfenster nebeneinander dieselbe Helligkeit fuer denselben
+        Pegel zeigen. Sonst die einmal ueber die Aufnahme gerechnete
+        Aussteuerung.
+        """
+        if settings.get_fixed_spec_scale():
+            return (audio_mod.SPEC_FLOOR_DB, audio_mod.SPEC_CEIL_DB)
+        return self._spec_auto_levels or (audio_mod.SPEC_FLOOR_DB,
+                                          audio_mod.SPEC_CEIL_DB)
+
+    def _toggle_fixed_scale(self, on: bool) -> None:
+        settings.set_fixed_spec_scale(on)
+        if not self._spectrogram_done:
+            return
+        self._spec_levels = self._levels()
+        # Nur einfaerben, nicht neu rechnen: das Bild selbst aendert sich
+        # nicht, und _render_spectrogram wuerde bei unveraendertem
+        # Ausschnitt ohnehin abbrechen.
+        self.spec_img.setLevels(self._spec_levels)
+
     def _toggle_spectrogram(self, on: bool) -> None:
         self.spec_plot.setVisible(on)
         if on:
@@ -831,17 +945,28 @@ class SessionDetailDialog(QtWidgets.QDialog):
         if image.size == 0:
             return
 
-        # Feste Grenzen wie im Livebereich taugen hier nicht: eine leise
-        # Aufnahme waere durchgehend schwarz. Der obere Wert kommt aus dem
-        # Bild selbst, der untere 70 dB darunter. Berechnet wird er einmal
-        # ueber die ganze Aufnahme, damit die Helligkeit beim Zoomen
-        # stehenbleibt — sonst wuerde jeder Ausschnitt neu ausgesteuert und
-        # eine leise Stelle saehe aus wie eine laute.
+        # Der obere Wert kommt aus dem Bild selbst, der untere 70 dB
+        # darunter. Berechnet wird er einmal ueber die ganze Aufnahme, damit
+        # die Helligkeit beim Zoomen stehenbleibt — sonst wuerde jeder
+        # Ausschnitt neu ausgesteuert und eine leise Stelle saehe aus wie
+        # eine laute.
+        #
+        # Fuer eine einzelne Aufnahme ist das richtig; fuer zwei
+        # nebeneinander nicht, denn dann steuert sich jede fuer sich aus und
+        # der Helligkeitsunterschied zwischen ihnen verschwindet. Deshalb
+        # bleibt die gerechnete Aussteuerung hier stehen und die Anzeige
+        # entscheidet sich in _levels() erneut.
         ceiling = float(np.percentile(image, 99.5))
-        self._spec_levels = (ceiling - 70.0, ceiling)
+        self._spec_auto_levels = (ceiling - 70.0, ceiling)
+        self._spec_levels = self._levels()
         self._spec_top = top
 
         self.spec_plot.setYRange(0, top, padding=0)
+        # Erst hier und nicht in _build_spectrogram: welche der drei Linien
+        # ueberhaupt ins Bild passen, haengt an der oberen Frequenz, und die
+        # steht erst fest, wenn die Aufnahme gelesen ist.
+        self._guides = add_formant_guides(self.spec_plot, top,
+                                          settings.get_formant_guides())
         self.spec_plot.addItem(self.spec_region)
         self.spec_region.setBounds((0.0, self._duration))
         self._mirror(self.region, self.spec_region)
@@ -942,6 +1067,7 @@ class SessionDetailDialog(QtWidgets.QDialog):
         if image.size == 0:
             return
         offset = start / float(rate)
+        self._spec_levels = self._levels()
         self.spec_img.setImage(image, autoLevels=False,
                                levels=self._spec_levels)
         # Muss NACH setImage kommen, sonst kann pyqtgraph nicht skalieren.
@@ -3546,38 +3672,85 @@ class Spotlight(QtWidgets.QWidget):
                          QtCore.Qt.AlignmentFlag.AlignCenter, "i")
 
 
+class ProjectLink(NamedTuple):
+    key: str        # Beschriftung in i18n
+    url: str        # Ziel aus paths.py
+    emoji: str      # Zeichen vor der Beschriftung
+    name: str       # objectName, an dem die Farbe in theming.py haengt
+
+
 # Die drei Adressen des Projekts an einer Stelle: Infoseite und Einfuehrung
 # zeigen dieselben, und paths.py haelt sie.
 PROJECT_LINKS = (
-    ("about_source", paths.APP_URL),
-    ("about_discord", paths.DISCORD_URL),
-    ("about_kofi", paths.KOFI_URL),
+    ProjectLink("about_source", paths.APP_URL, "\U0001F4E6", "btn_link_github"),
+    ProjectLink("about_discord", paths.DISCORD_URL, "\U0001F4AC",
+                "btn_link_discord"),
+    ProjectLink("about_kofi", paths.KOFI_URL, "\u2615", "btn_link_kofi"),
 )
 
+# Schriften, die farbige Emoji mitbringen. Die Liste deckt Windows, macOS
+# und die ueblichen Linux-Desktops ab.
+EMOJI_FONTS = ("Noto Color Emoji", "Segoe UI Emoji", "Apple Color Emoji",
+               "Noto Emoji", "Twemoji", "JoyPixels", "EmojiOne Color")
 
-def link_label(label: str, url: str, parent=None) -> QtWidgets.QLabel:
-    """Anklickbarer Verweis mit der Adresse klein darunter.
+_EMOJI_OK: bool | None = None
 
-    Die Adresse steht mit dabei, damit sichtbar ist, wohin ein Klick fuehrt,
-    bevor man ihn macht.
+
+def emoji_available() -> bool:
+    """Ob das System ueberhaupt eine Emoji-Schrift hat.
+
+    Auf einem eingerichteten Desktop ja. In einer schlanken Umgebung — ein
+    AppImage auf einem Grundsystem ohne Schriftpakete, ein Container —
+    nicht, und dann stuende auf dem Knopf ein leeres Kaestchen statt eines
+    Zeichens. In dem Fall bleibt die Beschriftung ohne Emoji: schlichter,
+    aber lesbar.
+
+    Einmal geprueft und gemerkt; Schriften kommen zur Laufzeit nicht dazu.
     """
-    item = QtWidgets.QLabel(
-        f'<a href="{url}" style="color:{NORD["accent"]}; '
-        f'text-decoration:none;">{label}</a>'
-        f'<br><span style="color:{NORD["dim"]}; font-size:11px;">{url}</span>',
-        parent)
-    item.setOpenExternalLinks(True)
-    item.setTextInteractionFlags(
-        QtCore.Qt.TextInteractionFlag.TextBrowserInteraction)
-    return item
+    global _EMOJI_OK
+    if _EMOJI_OK is None:
+        families = {name.lower() for name in QtGui.QFontDatabase.families()}
+        _EMOJI_OK = any(font.lower() in families for font in EMOJI_FONTS)
+    return _EMOJI_OK
+
+
+def link_button(link: ProjectLink, parent=None) -> QtWidgets.QPushButton:
+    """Ein Knopf je Adresse, Emoji voran.
+
+    Die Adresse stand frueher klein unter dem Verweis, damit sichtbar ist,
+    wohin ein Klick fuehrt, bevor man ihn macht. Auf einem Knopf ist dafuer
+    kein Platz — sie steht jetzt im Tooltip und in der Statuszeile. Die
+    Absicht bleibt, der Platzbedarf nicht.
+    """
+    label = i18n.t(link.key)
+    button = QtWidgets.QPushButton(
+        f"{link.emoji}  {label}" if emoji_available() else label, parent)
+    button.setObjectName(link.name)
+    button.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
+    button.setToolTip(link.url)
+    button.setStatusTip(link.url)
+    url = link.url
+    button.clicked.connect(
+        lambda: QtGui.QDesktopServices.openUrl(QtCore.QUrl(url)))
+    return button
 
 
 def project_links_box() -> QtWidgets.QGroupBox:
+    """Die drei Verweise als Reihe, nicht als Liste.
+
+    Untereinander mit der Adresse darunter nahmen sie sechs Zeilen ein und
+    sahen aus wie ein Textblock, den man liest. Es sind drei Knoepfe, die
+    man drueckt.
+    """
     box = QtWidgets.QGroupBox(i18n.t("about_links"))
     box.setObjectName("projectlinks")
-    lay = QtWidgets.QVBoxLayout(box)
-    for key, url in PROJECT_LINKS:
-        lay.addWidget(link_label(i18n.t(key), url))
+    lay = QtWidgets.QHBoxLayout(box)
+    lay.setSpacing(8)
+    for link in PROJECT_LINKS:
+        lay.addWidget(link_button(link))
+    # Der Dehner haelt die Knoepfe links zusammen, statt sie ueber die
+    # ganze Breite der Infoseite auseinanderzuziehen.
+    lay.addStretch(1)
     return box
 
 

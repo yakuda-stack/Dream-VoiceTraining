@@ -45,8 +45,11 @@ STRINGS: dict[str, dict[str, str]] = {
     "zone_high": {"en": "high", "de": "hoch"},
 
     # --- Diagramme ---
-    "spectrogram": {"en": "Spectrogram  ·  dashed: F1 / F2",
-                    "de": "Spektrogramm  ·  gestrichelt: F1 / F2"},
+    "spectrogram": {
+        "en": "Spectrogram  ·  dashed: measured F1 / F2  ·  "
+              "dotted: orientation",
+        "de": "Spektrogramm  ·  gestrichelt: gemessen F1 / F2  ·  "
+              "gepunktet: Orientierung"},
     "frequency": {"en": "Frequency", "de": "Frequenz"},
     "history": {"en": "Last 30 seconds", "de": "Verlauf letzte 30 Sekunden"},
     "clear_history": {"en": "Clear history", "de": "Verlauf leeren"},
@@ -556,6 +559,44 @@ STRINGS: dict[str, dict[str, str]] = {
               "selection can be dragged in either of them.",
         "de": "Zeigt denselben Zeitraum wie die Wellenform darüber. Die "
               "Auswahl lässt sich in beiden ziehen."},
+    "adv_fixed_scale": {"en": "Fixed dB scale", "de": "Feste dB-Skala"},
+    "adv_fixed_scale_hint": {
+        "en": "Off, brightness is derived from the recording itself, so a "
+              "quiet take is lifted until it looks like a loud one — good "
+              "for a single recording, useless for a comparison. On, the "
+              "colour scale is pinned to fixed values and two recordings "
+              "can be held against each other.\n\n"
+              "These are dBFS, relative to full scale, not sound pressure: "
+              "they move with your microphone gain and your distance to it. "
+              "Only compare takes recorded with the same setup.",
+        "de": "Aus wird die Helligkeit aus der Aufnahme selbst gebildet, "
+              "eine leise wird also hochgezogen, bis sie aussieht wie eine "
+              "laute — gut für eine einzelne Aufnahme, unbrauchbar für den "
+              "Vergleich. An liegt die Farbskala auf festen Werten und zwei "
+              "Aufnahmen lassen sich nebeneinander halten.\n\n"
+              "Die Werte sind dBFS, auf Vollaussteuerung bezogen und nicht "
+              "auf Schalldruck: sie wandern mit dem Mikrofonpegel und dem "
+              "Abstand dazu. Vergleiche nur Aufnahmen mit derselben "
+              "Einstellung."},
+    "opt_formant_guides": {
+        "en": "Orientation lines for F1 / F2 / F3",
+        "de": "Orientierungslinien für F1 / F2 / F3"},
+    "opt_formant_guides_hint": {
+        "en": "Three pale dotted lines across the spectrogram at 600, 1500 "
+              "and 2800 Hz, in the live view and in the detail window. They "
+              "are population averages for held vowels — in running speech "
+              "the formants move with every sound, so a line being crossed "
+              "constantly is not a fault. They are there so you can judge "
+              "roughly how high your resonance sits and compare two "
+              "recordings, not as a target to hit.",
+        "de": "Drei blasse gepunktete Linien im Spektrogramm bei 600, 1500 "
+              "und 2800 Hz, im Livebereich und im Detailfenster. Es sind "
+              "Mittelwerte für gehaltene Vokale — in fließender Sprache "
+              "wandern die Formanten mit jedem Laut, eine ständig gerissene "
+              "Linie ist also kein Fehler. Sie stehen da, damit sich grob "
+              "abschätzen lässt, wie hoch die Resonanz liegt, und damit sich "
+              "zwei Aufnahmen vergleichen lassen — nicht als Ziel, das zu "
+              "treffen wäre."},
     "full_recording": {"en": "Whole recording", "de": "Ganze Aufnahme"},
     "play_selection": {"en": "Play selection", "de": "Auswahl abspielen"},
     "save_selection": {"en": "Save selection as session values",
@@ -1161,7 +1202,10 @@ STRINGS: dict[str, dict[str, str]] = {
         "de": "Messen, was deine Stimme tut — Tonhöhe, Resonanz, Schwere und "
               "Stimmqualität — und über Monate verfolgen."},
     "about_links": {"en": "Links", "de": "Links"},
-    "about_source": {"en": "Source code and issues", "de": "Quelltext und Fehler"},
+    # Markenname statt Beschreibung: die drei stehen als Knopfreihe
+    # nebeneinander, und "Quelltext und Fehler" waere doppelt so breit
+    # wie die beiden anderen zusammen.
+    "about_source": {"en": "GitHub", "de": "GitHub"},
     "about_discord": {"en": "Discord", "de": "Discord"},
     "about_kofi": {"en": "Support on Ko-fi", "de": "Auf Ko-fi unterstützen"},
     "about_license_head": {"en": "Licence", "de": "Lizenz"},

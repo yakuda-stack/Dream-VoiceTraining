@@ -127,6 +127,7 @@ _state = {"active_template": DEFAULT_TEMPLATE, "user_templates": {}, "device": N
           "view": {}, "user_profiles": {}, "theme": {}, "intro_done": False, "install_asked": False,
           "builtin_overrides": {},
           "warn_low_level": True, "recording_type": "reading",
+          "fixed_spec_scale": False, "formant_guides": True,
           "session_dir": None, "month_folders": False, "type_in_name": False,
           "naming": None, "name_counter": {"period": "", "value": 0},
           "practice_texts": {}, "practice_choice": "builtin",
@@ -244,6 +245,39 @@ def get_warn_low_level() -> bool:
 def set_warn_low_level(enabled: bool) -> None:
     _state["warn_low_level"] = bool(enabled)
     save()
+
+
+def get_fixed_spec_scale() -> bool:
+    """Feste dB-Farbskala im Spektrogramm der Detailansicht.
+
+    Aus ist die Voreinstellung: eine einzelne Aufnahme anzusehen ist der
+    haeufigere Fall, und dafuer ist die mitrechnende Aussteuerung besser —
+    eine leise Aufnahme waere sonst durchgehend schwarz. Wer zwei
+    Aufnahmen nebeneinander legt, schaltet um.
+    """
+    return bool(_state["fixed_spec_scale"])
+
+
+def set_fixed_spec_scale(enabled: bool) -> None:
+    if _state["fixed_spec_scale"] != bool(enabled):
+        _state["fixed_spec_scale"] = bool(enabled)
+        save()
+
+
+def get_formant_guides() -> bool:
+    """Waagerechte Orientierungslinien fuer F1/F2/F3 im Spektrogramm.
+
+    An als Voreinstellung: ohne einen Anhaltspunkt an der Frequenzachse
+    ist ein Spektrogramm fuer die meisten ein huebsches Muster, und die
+    Linien lassen sich schneller abschalten als vermissen.
+    """
+    return bool(_state["formant_guides"])
+
+
+def set_formant_guides(enabled: bool) -> None:
+    if _state["formant_guides"] != bool(enabled):
+        _state["formant_guides"] = bool(enabled)
+        save()
 
 
 def get_recording_type() -> str:
@@ -503,6 +537,8 @@ def load() -> None:
         if _state.get("profile") == "custom":
             _state["profile"] = "user:" + LEGACY_PROFILE_NAME
     _state["warn_low_level"] = bool(raw.get("warn_low_level", True))
+    _state["fixed_spec_scale"] = bool(raw.get("fixed_spec_scale", False))
+    _state["formant_guides"] = bool(raw.get("formant_guides", True))
     _state["recording_type"] = raw.get("recording_type", "reading")
     folder = raw.get("session_dir")
     _state["session_dir"] = str(folder) if folder else None
@@ -542,6 +578,8 @@ def save() -> None:
         "install_asked": _state["install_asked"],
         "builtin_overrides": _state["builtin_overrides"],
         "warn_low_level": _state["warn_low_level"],
+        "fixed_spec_scale": _state["fixed_spec_scale"],
+        "formant_guides": _state["formant_guides"],
         "recording_type": _state["recording_type"],
         "session_dir": _state["session_dir"],
         "month_folders": _state["month_folders"],

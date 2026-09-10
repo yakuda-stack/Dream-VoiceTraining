@@ -61,10 +61,12 @@ import targets
 import theming
 from theming import COLORS as NORD
 import audio as audio_mod
-from audio import DEFAULT_KEY, AudioEngine, write_wav
-from dialogs import (FilterDialog, HelpDialog, IntroDialog, MicrophonePicker,
-                     SessionDetailDialog, SettingsDialog, Spotlight,
-                     ask_export_language, export_language)
+from audio import (DEFAULT_KEY, SPEC_CEIL_DB, SPEC_FLOOR_DB, AudioEngine,
+                   write_wav)
+from dialogs import (MEASURED_Z, FilterDialog, HelpDialog, IntroDialog,
+                     MicrophonePicker, SessionDetailDialog, SettingsDialog,
+                     Spotlight, add_formant_guides, ask_export_language,
+                     export_language)
 import wininstall
 from settings import CFG
 
@@ -80,10 +82,11 @@ HOP = 1024
 SPEC_COLS = 320
 KEY_ROLE = QtCore.Qt.ItemDataRole.UserRole + 1
 MAX_FREQ = 5000.0
-SPEC_FLOOR_DB = -95.0
 LOW_LEVEL_DB = -40.0
-SPEC_CEIL_DB = -25.0
 HISTORY_SECONDS = 30.0
+# SPEC_FLOOR_DB und SPEC_CEIL_DB stehen in audio.py, damit die
+# Detailansicht dieselbe Skala verwenden kann. Der Import oben holt sie
+# unter denselben Namen hierher.
 
 
 
@@ -442,7 +445,18 @@ class MainWindow(QtWidgets.QMainWindow):
                                                     style=QtCore.Qt.PenStyle.DashLine))
         for ln in (self.line_f1, self.line_f2):
             ln.setVisible(False)
-            self.spec_plot.addItem(ln)
+            # Ueber den Orientierungslinien: der gemessene Wert ist das,
+            # was zaehlt, und darf von einem Anhaltspunkt nicht verdeckt
+            # werden, wenn beide zufaellig aufeinandertreffen.
+            ln.setZValue(MEASURED_Z)
+            self.spec_plot.addItem(ln, ignoreBounds=True)
+
+        # Die drei blassen, gepunkteten Linien darunter. MAX_FREQ begrenzt
+        # das Bild nach oben, die halbe Abtastrate ebenso — die kleinere
+        # von beiden entscheidet, welche Linie noch hineinpasst.
+        self.spec_guides = add_formant_guides(
+            self.spec_plot, min(MAX_FREQ, self.sr / 2.0),
+            settings.get_formant_guides())
 
         spec_group = QtWidgets.QGroupBox(i18n.t("spectrogram"))
         sg = QtWidgets.QVBoxLayout(spec_group)
@@ -1310,8 +1324,20 @@ class MainWindow(QtWidgets.QMainWindow):
         self._fill_types()
         self._fill_session_table()
 
+    def _show_formant_guides(self) -> None:
+        """Orientierungslinien ein- oder ausblenden.
+
+        Nur die Sichtbarkeit: die Linien neu zu bauen hiesse, sie aus dem
+        Diagramm zu nehmen und wieder hineinzuhaengen, und dabei geht die
+        Reihenfolge gegenueber Bild und Messlinien verloren.
+        """
+        visible = settings.get_formant_guides()
+        for line in self.spec_guides:
+            line.setVisible(visible)
+
     def _apply_settings(self) -> None:
         self._fill_profiles()
+        self._show_formant_guides()
         self.zone_region.setRegion((CFG.zone_low, CFG.zone_high))
         lo = min(60.0, CFG.pitch_floor)
         hi = min(CFG.pitch_ceiling, max(320.0, CFG.zone_high + 120.0))

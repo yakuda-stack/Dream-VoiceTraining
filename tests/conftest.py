@@ -80,6 +80,8 @@ def fresh_settings(tmp_path, monkeypatch):
     settings._state["practice_texts"] = {}
     settings._state["practice_choice"] = "builtin"
     settings._state["user_types"] = {}
+    settings._state["fixed_spec_scale"] = False
+    settings._state["formant_guides"] = True
     yield
 
 

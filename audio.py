@@ -36,6 +36,18 @@ BUFFER_SECONDS = 4.0
 
 DEFAULT_KEY = "__default__"
 
+# Grenzen der Farbskala im Spektrogramm, in dBFS. Sie stehen hier und
+# nicht in main.py, weil die Detailansicht in dialogs.py dieselben Werte
+# braucht: main.py importiert dialogs, ein Zugriff zurueck ergaebe einen
+# Ring. audio.py importiert keines von beiden und ist damit der Ort, an
+# dem sich beide Seiten treffen koennen.
+#
+# Die Werte sind auf Vollaussteuerung bezogen, nicht auf Schalldruck. Sie
+# taugen deshalb nur zum Vergleich von Aufnahmen mit derselben
+# Mikrofoneinstellung.
+SPEC_FLOOR_DB = -95.0
+SPEC_CEIL_DB = -25.0
+
 
 KIND_MIC = "mic"
 KIND_VIRTUAL = "virtual"

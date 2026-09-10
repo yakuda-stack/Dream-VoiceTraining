@@ -327,6 +327,19 @@ QPushButton#rowaction, QPushButton#danger {{ padding: 5px 12px; font-weight: 500
 QPushButton#stepper {{ padding: 4px 0; font-size: 15px; }}
 QPushButton#danger {{ background: {inner}; color: {c['red']}; }}
 QPushButton#danger:hover {{ background: {c['red']}; color: {c['fg']}; }}
+/* Die drei Projektverweise. Ruhend im Schema wie jeder andere Knopf, beim
+   Ueberfahren in der Hausfarbe des Dienstes — das ist die einzige Stelle,
+   an der eine Farbe von aussen ins Schema darf, und sie sagt etwas: wohin
+   der Klick fuehrt. GitHub hat keine, dort wird es einfach dunkler. */
+QPushButton#btn_link_github, QPushButton#btn_link_discord,
+QPushButton#btn_link_kofi {{ background: {card}; font-weight: 500;
+    padding: 7px 14px; border: 1px solid {c['border']}; }}
+QPushButton#btn_link_github:hover {{ background: {darken(c['bg3'], 0.30)};
+    border-color: {c['fg']}; }}
+QPushButton#btn_link_discord:hover {{ background: #5865F2; color: #FFFFFF;
+    border-color: #5865F2; }}
+QPushButton#btn_link_kofi:hover {{ background: #FF5E5B; color: #FFFFFF;
+    border-color: #FF5E5B; }}
 QPushButton#langleft, QPushButton#langright {{ padding: 8px 0; font-size: 11px;
     background: {card}; color: {c['dim']}; border-radius: 0; }}
 QPushButton#langleft {{ border-top-left-radius: 6px; border-bottom-left-radius: 6px; }}

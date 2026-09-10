@@ -4,6 +4,49 @@ Notable changes per release. Format follows
 [Keep a Changelog](https://keepachangelog.com/), versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [1.1.6] — 2026-09-10
+
+### Added
+
+- **The detail spectrogram can hold a fixed brightness scale, so two
+  recordings can be compared.** Brightness was always derived from the
+  recording itself, which is right when you look at one take — a quiet one
+  would otherwise be a black rectangle — but it means a quiet recording is
+  lifted until it looks like a loud one. Open two detail windows side by side
+  and the difference between them has been scaled away. *Fixed dB scale*, next
+  to the spectrogram switch, pins the colours to the same values the live view
+  uses. The setting is remembered across windows, because a comparison needs
+  two of them and setting it in only one is the mistake that is easy to make.
+  Two things to know: the values are dBFS, relative to full scale rather than
+  sound pressure, so they move with your microphone gain and your distance to
+  it — only takes recorded the same way can be compared. And the background
+  brightens visibly as you zoom in, because the analysis window shrinks with
+  the view and narrower frequency bins collect less noise. That was always
+  true; the adaptive scale simply hid it.
+- **Orientation lines for F1, F2 and F3 across the spectrogram.** Three pale
+  dotted lines at 600, 1500 and 2800 Hz, in the live view and in the detail
+  window, so there is something to judge resonance height against instead of
+  an unlabelled picture. They are population averages for held vowels — in
+  running speech the formants move with every sound, so a line being crossed
+  constantly is not a fault and is not a failure to hit a target. Deliberately
+  dotted, thin and faint: the measured F1 and F2 lines in the live view are
+  dashed and sit above them, and four dashed lines in one chart would be
+  impossible to tell apart. A line above the top of the image is left out
+  rather than pinned to the edge, so an 8 kHz recording shows F1 and F2 and no
+  misleading third. Switchable under *Settings → Analysis → Spectrogram*.
+
+### Changed
+
+- **The project links are three buttons in a row instead of a stack of
+  labels.** Source, Discord and Ko-fi took six lines on the info page and on
+  the last page of the tutorial, each with its address printed small
+  underneath, and the whole thing read like a block of text rather than three
+  things you click. They are buttons now, side by side, each with an icon. The
+  address is still visible before you click — it moved into the tooltip and
+  the status bar. Hovering tints each button in the colour of its service. If
+  the system has no emoji font, which can happen with an AppImage on a bare
+  install, the labels drop the icon instead of showing an empty box.
+
 ## [1.1.5] — 2026-09-09
 
 ### Added

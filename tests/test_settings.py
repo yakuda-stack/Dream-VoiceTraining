@@ -101,3 +101,20 @@ def test_frage_nach_einrichtung_wird_nur_einmal_gestellt(tmp_path, monkeypatch):
     assert settings.get_install_asked() is True
     settings.set_install_asked(False)
     settings.save()
+
+
+def test_orientierungslinien_ueberleben_abbrechen(qt_app):
+    """Abbrechen rollt auch die Schalter zurueck, nicht nur die Zahlen."""
+    import dialogs
+    import settings
+
+    settings.set_formant_guides(True)
+    dlg = dialogs.SettingsDialog()
+    try:
+        dlg.chk_guides.setChecked(False)
+        dlg._apply()
+        assert not settings.get_formant_guides()
+        dlg._reject()
+        assert settings.get_formant_guides()
+    finally:
+        dlg.close()
