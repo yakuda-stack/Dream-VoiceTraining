@@ -4,6 +4,38 @@ Notable changes per release. Format follows
 [Keep a Changelog](https://keepachangelog.com/), versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [1.1.7] — 2026-09-16
+
+### Added
+
+- **A Highlights button next to Changelog.** The changelog explains every
+  change at length, which is right for looking something up and too long for
+  seeing what is new at a glance. *Highlights* opens the same kind of window
+  with a few lines per version. They come from their own file,
+  `HIGHLIGHTS.md`, kept by hand — cutting them out of the changelog
+  automatically would weigh every entry the same. Like the changelog it is
+  loaded from GitHub when the button is pressed and falls back to the copy
+  shipped with the installation. All packages carry the file.
+
+### Changed
+
+- **Changelog and Highlights sit in the links box, as a second row.** The
+  Changelog button used to share the top row of the info page with the
+  introduction, Debug and the folder buttons — things you do. Reading the
+  version history belongs with the project links, so both buttons moved
+  under Source, Discord and Ko-fi, in the same style. The last page of the
+  introduction still shows only the three links.
+- **New Discord invite link**, in the program and in both READMEs.
+- **Source files sorted into folders.** Everything except `main.py` used to
+  sit in the top folder. The program parts now live in `core/` (paths,
+  settings, storage, language, naming), `voice/` (recording, analysis, target
+  profiles, practice texts) and `ui/` (dialogs, themes, help texts); tools go
+  in `scripts/`, including `diag.py`. Packages, AppImage and both Windows
+  installers copy the new folders. Nothing changes for users.
+- **`scripts/bump_version.py` sets the version everywhere at once** —
+  `core/paths.py`, the PKGBUILD and the download links in both READMEs.
+  `--check --expect <version>` verifies that they agree.
+
 ## [1.1.6] — 2026-09-10
 
 ### Added

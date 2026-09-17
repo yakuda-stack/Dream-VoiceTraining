@@ -28,9 +28,9 @@ import numpy as np
 import parselmouth
 from parselmouth.praat import call
 
-import debuglog
-import i18n
-from settings import CFG
+from core import debuglog
+from core import i18n
+from core.settings import CFG
 
 
 def rms(samples: np.ndarray) -> float:
@@ -371,7 +371,7 @@ def stable_span(samples: np.ndarray, sr: int,
 
 def analyse_file(path) -> dict:
     """Eine gespeicherte WAV-Datei neu auswerten."""
-    from audio import read_wav
+    from voice.audio import read_wav
 
     data, sr = read_wav(path)
     return analyse_recording(data.astype(np.float64), sr)

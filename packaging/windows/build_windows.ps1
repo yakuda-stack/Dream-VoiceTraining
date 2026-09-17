@@ -30,10 +30,10 @@ if (-not $PythonCmd) {
     throw "Python was not found. Install Python 3.10 or newer from python.org."
 }
 
-# --- Version aus paths.py lesen ----------------------------------------
+# --- Version aus core\paths.py lesen -----------------------------------
 
-$Match = Select-String -Path "paths.py" -Pattern 'APP_VERSION = "([^"]+)"'
-if (-not $Match) { throw "APP_VERSION not found in paths.py" }
+$Match = Select-String -Path "core\paths.py" -Pattern 'APP_VERSION = "([^"]+)"'
+if (-not $Match) { throw "APP_VERSION not found in core\paths.py" }
 $Version = $Match.Matches[0].Groups[1].Value
 Say "Dream-VoiceTraining $Version"
 

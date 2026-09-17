@@ -2,8 +2,13 @@
 
 Zwei Teile: **A** einmalig beim Aufsetzen, **B** bei jeder neuen Version.
 
-Version steht an genau einer Stelle: `APP_VERSION` in `paths.py`. Alles andere
-liest von dort.
+Version setzt `scripts/bump_version.py` überall gleichzeitig: `APP_VERSION` in
+`core/paths.py` (Quelle der Wahrheit), `pkgver`/`pkgrel` im PKGBUILD und die
+Download-Links in beiden READMEs.
+
+Aufbau: `main.py` im Hauptordner, Programmteile in `core/` (Pfade, Einstellungen,
+Ablage, Sprache), `voice/` (Aufnahme, Analyse, Zielprofile) und `ui/` (Dialoge,
+Designs), Werkzeuge in `scripts/`.
 
 ---
 
@@ -15,13 +20,13 @@ Eine venv überlebt kein Umbenennen oder Verschieben des Ordners, weil im
 Aktivierungsskript absolute Pfade stehen. Nach einem Umzug also neu anlegen:
 
 ```fish
-cd ~/Schreibtisch/voice-training/Dream-VoiceTraining
+cd ~/Schreibtisch/projects/voice-training/Dream-VoiceTraining
 rm -rf .venv
 python -m venv .venv
 source .venv/bin/activate.fish
 pip install -r requirements-dev.txt
 python main.py                       # startet es?
-python -m pytest tests/ -q           # 337 passed
+python -m pytest tests/ -q           # alle grün
 ```
 
 ## A2. Git und erster Push
@@ -107,7 +112,7 @@ nicht, ohne sie ist dein Paket nicht installierbar:
 cd ~/aur
 git clone ssh://aur@aur.archlinux.org/python-praat-parselmouth.git
 cd python-praat-parselmouth
-cp ~/Schreibtisch/voice-training/Dream-VoiceTraining/packaging/PKGBUILD.python-praat-parselmouth PKGBUILD
+cp ~/Schreibtisch/projects/voice-training/Dream-VoiceTraining/packaging/PKGBUILD.python-praat-parselmouth PKGBUILD
 updpkgsums                           # echte Prüfsummen eintragen
 makepkg -si                          # baut Praat mit, dauert einige Minuten
 makepkg --printsrcinfo > .SRCINFO    # Pflicht, sonst lehnt das AUR ab
@@ -123,7 +128,7 @@ findet `updpkgsums` das Archiv nicht:
 cd ~/aur
 git clone ssh://aur@aur.archlinux.org/dream-voicetraining.git
 cd dream-voicetraining
-cp ~/Schreibtisch/voice-training/Dream-VoiceTraining/packaging/PKGBUILD .
+cp ~/Schreibtisch/projects/voice-training/Dream-VoiceTraining/packaging/PKGBUILD .
 updpkgsums
 makepkg -si
 dream-voicetraining                  # startet? Icon? Name im Systemmonitor?
@@ -136,7 +141,7 @@ git push origin master
 ## A5. AppImage einmal durchlaufen lassen
 
 ```fish
-cd ~/Schreibtisch/voice-training/Dream-VoiceTraining
+cd ~/Schreibtisch/projects/voice-training/Dream-VoiceTraining
 bash packaging/build-appimage.sh
 ```
 
@@ -151,18 +156,22 @@ Python-Umgebung testen — das ist der ganze Sinn eines AppImage.
 ## B1. Vorbereiten
 
 ```fish
-cd ~/Schreibtisch/voice-training/Dream-VoiceTraining
+cd ~/Schreibtisch/projects/voice-training/Dream-VoiceTraining
 source .venv/bin/activate.fish
 ```
 
-Version anheben in `paths.py`:
+Version setzen und prüfen:
 
-```python
-APP_VERSION = "1.0.1"
+```fish
+python3 scripts/bump_version.py 1.0.1
+python3 scripts/bump_version.py --check --expect 1.0.1
 ```
 
-`CHANGELOG.md` ergänzen, zweisprachig, Überschrift von `[1.0.1] — unreleased`
-auf das Datum setzen.
+`CHANGELOG.md` ergänzen: neuer Block `## [1.0.1] — Datum` ganz oben.
+
+`HIGHLIGHTS.md` ergänzen: neuer Abschnitt `## 1.0.1 — Datum` ganz oben, nur
+die zwei, drei Punkte, die man als Nutzer bemerkt. Der Knopf *Highlights*
+unter *Einstellungen → Info* zeigt genau diese Datei.
 
 ## B2. Prüfen
 
@@ -192,7 +201,7 @@ git push origin v1.0.1
 bash packaging/build-appimage.sh
 # -> build/Dream-VoiceTraining-1.0.1-x86_64.AppImage
 
-cd ~/Schreibtisch/voice-training
+cd ~/Schreibtisch/projects/voice-training
 tar --exclude='.venv' --exclude='__pycache__' --exclude='.git' \
     -czf Dream-VoiceTraining-v1.0.1.tar.gz Dream-VoiceTraining/
 ```

@@ -28,8 +28,8 @@ Schluessel: jemand koennte seinen Text "builtin" nennen.
 
 from __future__ import annotations
 
-import i18n
-import settings
+from core import i18n
+from core import settings
 
 BUILTIN = "builtin"
 USER_PREFIX = "user:"

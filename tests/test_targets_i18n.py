@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pytest
 
-import i18n
-import settings
-import targets
+from core import i18n
+from core import settings
+from voice import targets
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -20,7 +20,7 @@ def test_jeder_text_hat_beide_sprachen():
 
 def test_alle_verwendeten_schluessel_existieren():
     used = set()
-    for path in ROOT.glob("*.py"):
+    for path in [*ROOT.glob("*.py"), *ROOT.glob("*/*.py")]:
         used |= set(re.findall(r'i18n\.t\(\s*"([a-z0-9_]+)"', path.read_text(encoding="utf-8")))
     missing = sorted(used - set(i18n.STRINGS))
     assert not missing, f"fehlende Texte: {missing}"
@@ -42,7 +42,7 @@ def test_eingebaute_vorlagen_heissen_in_beiden_sprachen_richtig():
 def test_alte_vorlagennamen_werden_uebernommen():
     """Wer von 1.0.5 kommt, hat den deutschen Namen in der Konfiguration."""
     import json
-    import paths
+    from core import paths
     paths.ensure_dirs()
     paths.CONFIG_PATH.write_text(
         json.dumps({"active_template": "Leises Mikrofon"}), encoding="utf-8")
@@ -117,7 +117,7 @@ def test_profile_sind_aufsteigend_geordnet():
 
 
 def test_spalten_haben_uebersetzte_beschriftungen():
-    import columns
+    from core import columns
     for column in columns.COLUMNS:
         assert column.label_key in i18n.STRINGS, column.key
     assert set(columns.DEFAULT_VISIBLE) <= set(columns.BY_KEY)

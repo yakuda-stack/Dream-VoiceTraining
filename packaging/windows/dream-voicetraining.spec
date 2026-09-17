@@ -16,7 +16,7 @@ ROOT = Path(SPECPATH).resolve().parents[1]
 PACKAGING = ROOT / "packaging"
 
 sys.path.insert(0, str(ROOT))
-import paths as app_paths          # noqa: E402  — nur fuer die Versionsnummer
+from core import paths as app_paths          # noqa: E402  — nur fuer die Versionsnummer
 
 # sounddevice bringt die PortAudio-DLL im Paket mit; ohne diese beiden
 # Zeilen fehlt sie im Build und das Programm findet kein Mikrofon.
@@ -33,6 +33,7 @@ datas += [
     (str(ROOT / "LICENSE"), "."),
     (str(ROOT / "THIRD_PARTY_NOTICES.md"), "."),
     (str(ROOT / "CHANGELOG.md"), "."),
+    (str(ROOT / "HIGHLIGHTS.md"), "."),
 ]
 
 # Bildschirmfotos der Einfuehrung. PyInstaller entpackt sie nach

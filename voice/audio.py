@@ -28,7 +28,7 @@ from dataclasses import dataclass
 import numpy as np
 import sounddevice as sd
 
-import i18n
+from core import i18n
 
 SAMPLE_RATE = 48000
 BLOCKSIZE = 1024

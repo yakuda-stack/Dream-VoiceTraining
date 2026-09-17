@@ -23,8 +23,8 @@ sehen, mit dem es jedes Mal die Vorlagenfarben setzte.
 
 import pytest
 
-import settings
-import theming
+from core import settings
+from ui import theming
 
 
 @pytest.fixture(autouse=True)
@@ -66,9 +66,9 @@ def test_leeres_design_raeumt_nichts_ab():
 
 def test_design_wird_erst_nach_der_konfiguration_gesetzt(monkeypatch):
     """Die Reihenfolge in load_state(), gegen einen Rueckfall abgesichert."""
-    import i18n
+    from core import i18n
     import main
-    import paths
+    from core import paths
 
     schritte = []
     monkeypatch.setattr(paths, "ensure_dirs", lambda: None)

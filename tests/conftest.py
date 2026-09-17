@@ -71,7 +71,7 @@ def fresh_settings(tmp_path, monkeypatch):
     """Jeder Test bekommt eigene Pfade und Standardeinstellungen."""
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "cfg"))
     monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "data"))
-    import settings
+    from core import settings
     settings.apply(settings.Settings())
     settings._state["user_profiles"] = {}
     settings._state["builtin_overrides"] = {}
@@ -94,7 +94,7 @@ def qt_table(monkeypatch):
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
-    import columns
+    from core import columns
 
     table = QtWidgets.QTableWidget(0, 0)
     entries = [
@@ -154,9 +154,9 @@ def intro_window(qt_app):
 @pytest.fixture
 def detail(qt_app, tmp_path, monkeypatch):
     """Detailfenster mit einer echten, zwei Sekunden langen Aufnahme."""
-    import audio
-    import storage
-    import dialogs
+    from voice import audio
+    from core import storage
+    from ui import dialogs
 
     folder = tmp_path / "sessions"
     folder.mkdir()

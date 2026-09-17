@@ -4,7 +4,7 @@ from datetime import datetime
 
 import pytest
 
-import naming
+from core import naming
 
 
 STAMP = datetime(2026, 9, 7, 14, 30, 15)      # Montag, KW 37
@@ -13,8 +13,8 @@ STAMP = datetime(2026, 9, 7, 14, 30, 15)      # Montag, KW 37
 @pytest.fixture
 def store(tmp_path, monkeypatch):
     """storage mit eigenem Standardordner und leerem Schema."""
-    import settings
-    import storage
+    from core import settings
+    from core import storage
 
     default = tmp_path / "sessions"
     default.mkdir(parents=True, exist_ok=True)
@@ -156,7 +156,7 @@ def test_kalenderwoche_benutzt_das_iso_jahr():
 
 
 def test_kalenderwoche_bleibt_bei_einem_sprachwechsel_gleich():
-    import i18n
+    from core import i18n
     week = scheme(enabled={"week": True})
     i18n.set_language("de")
     deutsch = naming.build_stem(week, STAMP)
@@ -245,7 +245,7 @@ def test_zaehler_ohne_ruecksetzen_laeuft_ueber_jahre_weiter(store):
 
 
 def test_abgeschalteter_zaehler_wird_nicht_verbraucht(store):
-    import settings
+    from core import settings
     settings._state["naming"] = scheme()          # Zaehler aus
     store.next_name(STAMP, "hum")
     store.next_name(STAMP, "hum")
@@ -253,7 +253,7 @@ def test_abgeschalteter_zaehler_wird_nicht_verbraucht(store):
 
 
 def test_next_name_folgt_dem_eingestellten_schema(store):
-    import settings
+    from core import settings
     settings._state["naming"] = scheme(
         subfolders="week", enabled={"type": True, "counter": True})
     assert store.next_name(STAMP, "vowel_i") == \
@@ -310,15 +310,15 @@ def test_leere_unterordner_werden_nach_einem_wechsel_weggeraeumt(store,
 
 @pytest.fixture
 def options(qt_app, store):
-    from dialogs import OptionsPage
+    from ui.dialogs import OptionsPage
     page = OptionsPage([])
     yield page
     page.deleteLater()
 
 
 def test_optionen_zeigen_das_gespeicherte_schema(qt_app, store):
-    import settings
-    from dialogs import OptionsPage
+    from core import settings
+    from ui.dialogs import OptionsPage
     settings._state["naming"] = scheme(subfolders="month",
                                        enabled={"type": True})
     page = OptionsPage([])
@@ -384,7 +384,7 @@ def test_bausteine_ohne_eigene_einstellung_haben_keine_nebenzeile(options):
 
 def test_erklaerungen_stecken_in_tooltips(options):
     """Kein grauer Fliesstext mehr unter den Feldern."""
-    from dialogs import PART_TIPS
+    from ui.dialogs import PART_TIPS
     for key in naming.BLOCKS:
         row = options.parts.row_for(key)
         assert row.grip.toolTip(), key
@@ -408,8 +408,8 @@ def test_pfeilknoepfe_tragen_pfeile_und_zeigen_sie_auch(qt_app, store):
     mehr.
     """
     from PySide6 import QtGui, QtWidgets
-    import theming
-    from dialogs import OptionsPage
+    from ui import theming
+    from ui.dialogs import OptionsPage
 
     qt_app.setStyleSheet(theming.stylesheet())
     page = OptionsPage([])
@@ -469,7 +469,7 @@ def drag(qt_app, page, key, ziel_index):
 
 def test_ziehen_am_griff_sortiert_um(qt_app, store):
     """Die Griffe muessen halten, was die sechs Punkte versprechen."""
-    from dialogs import OptionsPage
+    from ui.dialogs import OptionsPage
     page = OptionsPage([])
     page.resize(700, 900)
     page.show()
@@ -491,8 +491,8 @@ def test_reihenfolge_landet_im_schema(options):
 
 
 def test_reiter_stehen_in_der_gewuenschten_reihenfolge(qt_app, store):
-    from dialogs import SettingsDialog
-    import i18n
+    from ui.dialogs import SettingsDialog
+    from core import i18n
 
     dialog = SettingsDialog(entries=[])
     try:
@@ -507,8 +507,8 @@ def test_reiter_stehen_in_der_gewuenschten_reihenfolge(qt_app, store):
 
 def test_einstellungen_oeffnen_trotzdem_auf_info(qt_app, store):
     """Der Platz in der Leiste sagt nichts darueber, was zuerst zu sehen ist."""
-    from dialogs import SettingsDialog
-    import i18n
+    from ui.dialogs import SettingsDialog
+    from core import i18n
 
     dialog = SettingsDialog(entries=[])
     try:
@@ -521,7 +521,7 @@ def test_einstellungen_oeffnen_trotzdem_auf_info(qt_app, store):
 
 def test_einfuehrung_nennt_den_optionen_reiter():
     """Wer die Einfuehrung liest, soll wissen, wo die Benennung steckt."""
-    import i18n
+    from core import i18n
 
     for lang in ("en", "de"):
         i18n.set_language(lang)
@@ -534,7 +534,7 @@ def test_einfuehrung_nennt_den_optionen_reiter():
 
 
 def test_jeder_baustein_hat_eine_beschriftung():
-    import i18n
+    from core import i18n
     for key in naming.BLOCKS:
         for lang in ("en", "de"):
             i18n.set_language(lang)
@@ -543,7 +543,7 @@ def test_jeder_baustein_hat_eine_beschriftung():
 
 
 def test_jede_auswahl_hat_eine_beschriftung():
-    import i18n
+    from core import i18n
     for lang in ("en", "de"):
         i18n.set_language(lang)
         for key in naming.SUBFOLDERS:

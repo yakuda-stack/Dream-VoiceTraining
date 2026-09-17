@@ -45,13 +45,17 @@ FROZEN = getattr(sys, "frozen", False)
 # PyInstaller entpackt die Beigaben in einen temporaeren Ordner.
 BUNDLE_DIR = Path(getattr(sys, "_MEIPASS", "")) if FROZEN else None
 
+# Der Projektordner: paths.py liegt in core/, alles andere (assets,
+# packaging, CHANGELOG.md) eine Ebene darueber.
+SOURCE_DIR = Path(__file__).resolve().parents[1]
+
 APP_ID = "dream-voicetraining"
 APP_NAME = "Dream-VoiceTraining"
-APP_VERSION = "1.1.6"
+APP_VERSION = "1.1.7"
 
 APP_URL = "https://github.com/yakuda-stack/Dream-VoiceTraining"
 ISSUES_URL = APP_URL + "/issues"
-DISCORD_URL = "https://discord.gg/UkhJSz3Ctf"
+DISCORD_URL = "https://discord.gg/ShNKvvZu74"
 KOFI_URL = "https://ko-fi.com/yakuda_"
 
 # Der Changelog aus dem Netz. Zwei Zweignamen, weil ein umbenannter
@@ -60,6 +64,11 @@ KOFI_URL = "https://ko-fi.com/yakuda_"
 RAW_URL = "https://raw.githubusercontent.com/yakuda-stack/Dream-VoiceTraining"
 CHANGELOG_URLS = (f"{RAW_URL}/main/CHANGELOG.md",
                   f"{RAW_URL}/master/CHANGELOG.md")
+# Die Highlights sind eine eigene, kurze Datei: pro Version nur das, was
+# man bemerkt. Aus dem Changelog herausschneiden liesse sich das nicht
+# zuverlaessig, dort steht jede Aenderung gleich gewichtet.
+HIGHLIGHTS_URLS = (f"{RAW_URL}/main/HIGHLIGHTS.md",
+                   f"{RAW_URL}/master/HIGHLIGHTS.md")
 
 
 def set_process_name(name: str = APP_ID) -> None:
@@ -96,8 +105,8 @@ def icon_file() -> Path | None:
         candidates += [BUNDLE_DIR / f"{APP_ID}.ico",
                        BUNDLE_DIR / f"{APP_ID}.svg"]
     candidates += [
-        Path(__file__).resolve().parent / "packaging" / f"{APP_ID}.ico",
-        Path(__file__).resolve().parent / "packaging" / f"{APP_ID}.svg",
+        SOURCE_DIR / "packaging" / f"{APP_ID}.ico",
+        SOURCE_DIR / "packaging" / f"{APP_ID}.svg",
         Path(f"/usr/share/icons/hicolor/scalable/apps/{APP_ID}.svg"),
         Path.home() / ".local/share/icons/hicolor/scalable/apps" / f"{APP_ID}.svg",
     ]
@@ -131,7 +140,7 @@ def intro_folders() -> list[Path]:
     folders = []
     if BUNDLE_DIR is not None:
         folders.append(BUNDLE_DIR / "assets" / "intro")
-    folders.append(Path(__file__).resolve().parent / "assets" / "intro")
+    folders.append(SOURCE_DIR / "assets" / "intro")
     # Der Ordner des aufgerufenen Skripts und das Arbeitsverzeichnis: beides
     # trifft zu, wenn jemand das Programm aus seinem Ordner heraus startet,
     # ohne dass __file__ dorthin zeigt.
@@ -159,33 +168,45 @@ def debuglog_note(message: str) -> None:
     ein Import auf Modulebene machte daraus einen Ring.
     """
     try:
-        import debuglog
+        from core import debuglog
         debuglog.record_note("paths", message)
     except Exception:
         pass
 
 
-def changelog_file() -> Path | None:
-    """Die mitgelieferte CHANGELOG.md suchen.
+def _doc_file(name: str) -> Path | None:
+    """Eine mitgelieferte Textdatei (CHANGELOG.md, HIGHLIGHTS.md) suchen.
 
-    Der Rueckfall, wenn die Fassung im Netz nicht erreichbar ist. Liegt im
-    Quellordner, wird von den Paketen unter share/doc abgelegt und von
-    PyInstaller neben die EXE entpackt. Fehlt sie, sagt das Fenster das —
-    ein Programm, das ohne seinen Changelog laeuft, ist kein Fehlerfall.
+    Liegt im Quellordner, wird von den Paketen unter share/doc abgelegt und
+    von PyInstaller neben die EXE entpackt.
     """
     candidates = []
     if BUNDLE_DIR is not None:
-        candidates.append(BUNDLE_DIR / "CHANGELOG.md")
-    here = Path(__file__).resolve().parent
+        candidates.append(BUNDLE_DIR / name)
     candidates += [
-        here / "CHANGELOG.md",
-        Path(f"/usr/share/doc/{APP_ID}/CHANGELOG.md"),
-        Path(f"/usr/share/{APP_ID}/CHANGELOG.md"),
+        SOURCE_DIR / name,
+        Path(f"/usr/share/doc/{APP_ID}/{name}"),
+        Path(f"/usr/share/{APP_ID}/{name}"),
     ]
     for candidate in candidates:
         if candidate.is_file():
             return candidate
     return None
+
+
+def changelog_file() -> Path | None:
+    """Die mitgelieferte CHANGELOG.md suchen.
+
+    Der Rueckfall, wenn die Fassung im Netz nicht erreichbar ist. Fehlt sie,
+    sagt das Fenster das — ein Programm, das ohne seinen Changelog laeuft,
+    ist kein Fehlerfall.
+    """
+    return _doc_file("CHANGELOG.md")
+
+
+def highlights_file() -> Path | None:
+    """Die mitgelieferte HIGHLIGHTS.md suchen, gleicher Rueckfall."""
+    return _doc_file("HIGHLIGHTS.md")
 
 
 ENV_OVERRIDE = "DREAM_VOICETRAINING_HOME"

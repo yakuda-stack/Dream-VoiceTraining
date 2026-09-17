@@ -79,7 +79,7 @@ def environment() -> list[str]:
         f"Platform    {platform.platform()}",
     ]
     try:
-        import paths
+        from core import paths
         lines.append(f"Version     {paths.APP_VERSION}")
         lines.append(f"Config      {paths.CONFIG_DIR}")
         lines.append(f"Data        {paths.SESSION_DIR}")

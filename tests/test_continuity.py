@@ -49,8 +49,8 @@ def test_full_button_marks_everything(detail):
 
 def test_full_button_stays_locked_without_file(qt_app, tmp_path, monkeypatch):
     """Fehlt die Datei, bleibt der Knopf gesperrt statt ins Leere zu greifen."""
-    import storage
-    import dialogs
+    from core import storage
+    from ui import dialogs
 
     monkeypatch.setattr(storage, "root", lambda: tmp_path)
     entry = {"timestamp": "2026-09-01T10:00:00", "file": "weg.wav",

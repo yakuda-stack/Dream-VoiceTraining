@@ -13,8 +13,8 @@ def store(tmp_path, monkeypatch):
     eigenen Modulwert, und ein Neuladen von paths brachte beide fuer alle
     folgenden Tests auseinander.
     """
-    import settings
-    import storage
+    from core import settings
+    from core import storage
 
     default = tmp_path / "sessions"
     default.mkdir(parents=True, exist_ok=True)
@@ -49,8 +49,8 @@ def test_monatsordner_und_typ_im_namen(store):
 
 
 def test_typkuerzel_haengt_nicht_an_der_sprache(store):
-    import i18n
-    import rectypes
+    from core import i18n
+    from core import rectypes
     i18n.set_language("de")
     assert rectypes.slug("vowel_i") == "vowel-i"
     i18n.set_language("en")
@@ -58,7 +58,7 @@ def test_typkuerzel_haengt_nicht_an_der_sprache(store):
 
 
 def test_eigener_ordner_wird_benutzt(store, tmp_path):
-    import settings
+    from core import settings
     target = tmp_path / "Aufnahmen"
     settings._state["session_dir"] = str(target)
     assert store.root() == target
@@ -66,7 +66,7 @@ def test_eigener_ordner_wird_benutzt(store, tmp_path):
 
 
 def test_alte_dateien_bleiben_auffindbar(store):
-    import settings
+    from core import settings
     old = store.DEFAULT_ROOT / "2026-03-14_09-00-00.wav"
     old.write_bytes(b"x")
     settings._state["session_dir"] = str(store.DEFAULT_ROOT.parent / "neu")

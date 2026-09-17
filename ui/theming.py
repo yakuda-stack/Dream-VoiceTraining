@@ -25,8 +25,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-import i18n
-import paths
+from core import i18n
+from core import paths
 
 
 @dataclass(frozen=True)
@@ -332,10 +332,16 @@ QPushButton#danger:hover {{ background: {c['red']}; color: {c['fg']}; }}
    an der eine Farbe von aussen ins Schema darf, und sie sagt etwas: wohin
    der Klick fuehrt. GitHub hat keine, dort wird es einfach dunkler. */
 QPushButton#btn_link_github, QPushButton#btn_link_discord,
-QPushButton#btn_link_kofi {{ background: {card}; font-weight: 500;
+QPushButton#btn_link_kofi, QPushButton#btn_link_changelog,
+QPushButton#btn_link_highlights {{ background: {card}; font-weight: 500;
     padding: 7px 14px; border: 1px solid {c['border']}; }}
 QPushButton#btn_link_github:hover {{ background: {darken(c['bg3'], 0.30)};
     border-color: {c['fg']}; }}
+/* Changelog und Highlights fuehren in kein fremdes Haus, sie tragen beim
+   Ueberfahren die Akzentfarbe des Schemas. */
+QPushButton#btn_link_changelog:hover,
+QPushButton#btn_link_highlights:hover {{ border-color: {c['accent']};
+    color: {c['accent']}; }}
 QPushButton#btn_link_discord:hover {{ background: #5865F2; color: #FFFFFF;
     border-color: #5865F2; }}
 QPushButton#btn_link_kofi:hover {{ background: #FF5E5B; color: #FFFFFF;

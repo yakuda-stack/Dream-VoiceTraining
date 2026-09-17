@@ -20,9 +20,9 @@
 Nimmt 3 Sekunden ueber genau denselben Weg auf wie das Programm und
 zeigt, was beim FFT-Schritt tatsaechlich ankommt.
 
-    python diag.py            # Systemstandard
-    python diag.py --list     # Quellen anzeigen
-    python diag.py --device 3 # bestimmte Quelle (Nummer aus --list)
+    python scripts/diag.py            # Systemstandard
+    python scripts/diag.py --list     # Quellen anzeigen
+    python scripts/diag.py --device 3 # bestimmte Quelle (Nummer aus --list)
 """
 
 import argparse
@@ -31,9 +31,13 @@ import time
 
 import numpy as np
 
-import audio
-import settings
-from audio import BLOCKSIZE, AudioEngine
+# Liegt in scripts/, die Programmteile eine Ebene hoeher.
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from voice import audio  # noqa: E402
+from core import settings
+from voice.audio import BLOCKSIZE, AudioEngine
 
 NFFT = 2048
 HOP = 1024

@@ -36,10 +36,10 @@ $Target = Join-Path $env:LOCALAPPDATA "Programs\$AppName"
 $MinMajor = 3
 $MinMinor = 10
 
-# --- Version aus paths.py ----------------------------------------------
+# --- Version aus core\paths.py ----------------------------------------
 
-$Match = Select-String -Path "paths.py" -Pattern 'APP_VERSION = "([^"]+)"'
-if (-not $Match) { throw "APP_VERSION not found in paths.py. Wrong folder?" }
+$Match = Select-String -Path "core\paths.py" -Pattern 'APP_VERSION = "([^"]+)"'
+if (-not $Match) { throw "APP_VERSION not found in core\paths.py. Wrong folder?" }
 $Version = $Match.Matches[0].Groups[1].Value
 Say "$AppName $Version"
 
@@ -136,7 +136,10 @@ if (Test-Path $Target) {
     New-Item -ItemType Directory -Path $Target -Force | Out-Null
 }
 
-Copy-Item "$Root\*.py" $Target
+Copy-Item "$Root\main.py" $Target
+foreach ($Dir in @("core", "voice", "ui")) {
+    Copy-Item "$Root\$Dir" $Target -Recurse
+}
 Copy-Item "$Root\requirements.txt" $Target
 foreach ($Extra in @("LICENSE", "THIRD_PARTY_NOTICES.md", "README.md", "README.de.md")) {
     if (Test-Path "$Root\$Extra") { Copy-Item "$Root\$Extra" $Target }

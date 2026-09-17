@@ -5,7 +5,7 @@ import json
 
 import pytest
 
-import settings
+from core import settings
 
 
 def test_grenzen_werden_eingehalten():
@@ -26,7 +26,7 @@ def test_widerspruechliche_grenzen_werden_korrigiert():
 def test_apply_wirkt_auf_die_singleton_instanz():
     settings.apply(settings.Settings(pitch_floor=88.0))
     assert settings.CFG.pitch_floor == 88.0
-    from settings import CFG
+    from core.settings import CFG
     assert CFG.pitch_floor == 88.0
 
 
@@ -49,7 +49,7 @@ def test_eingebaute_vorlage_ist_nicht_loeschbar():
 
 def test_persistenz_ueber_einen_neustart(tmp_path, monkeypatch):
     monkeypatch.setenv("DREAM_VOICETRAINING_HOME", str(tmp_path / "home"))
-    import paths
+    from core import paths
     importlib.reload(paths)
     importlib.reload(settings)
 
@@ -77,7 +77,7 @@ def test_persistenz_ueber_einen_neustart(tmp_path, monkeypatch):
 
 def test_defekte_konfiguration_kippt_das_programm_nicht(tmp_path, monkeypatch):
     monkeypatch.setenv("DREAM_VOICETRAINING_HOME", str(tmp_path / "kaputt"))
-    import paths
+    from core import paths
     importlib.reload(paths)
     importlib.reload(settings)
     paths.ensure_dirs()
@@ -105,8 +105,8 @@ def test_frage_nach_einrichtung_wird_nur_einmal_gestellt(tmp_path, monkeypatch):
 
 def test_orientierungslinien_ueberleben_abbrechen(qt_app):
     """Abbrechen rollt auch die Schalter zurueck, nicht nur die Zahlen."""
-    import dialogs
-    import settings
+    from ui import dialogs
+    from core import settings
 
     settings.set_formant_guides(True)
     dlg = dialogs.SettingsDialog()

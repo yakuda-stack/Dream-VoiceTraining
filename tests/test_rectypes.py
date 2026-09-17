@@ -3,11 +3,11 @@
 import numpy as np
 import pytest
 
-import analysis
-import i18n
-import rectypes
-import settings
-import targets
+from voice import analysis
+from core import i18n
+from core import rectypes
+from core import settings
+from voice import targets
 
 
 def test_alle_typen_sind_uebersetzt():

@@ -6,9 +6,9 @@ an PowerShell gehen, denn dort steckt der Aerger: ein falsches
 Anfuehrungszeichen und der Befehl macht etwas anderes.
 """
 
-import paths
-import settings
-import wininstall
+from core import paths
+from core import settings
+from core import wininstall
 
 
 def test_ohne_windows_wird_nicht_gefragt(monkeypatch):

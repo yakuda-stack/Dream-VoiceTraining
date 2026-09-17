@@ -385,6 +385,16 @@ STRINGS: dict[str, dict[str, str]] = {
         "de": "# Kein Changelog gefunden\n\nDie Datei gehört nicht zu dieser "
               "Installation, und die Projektseite war nicht erreichbar. Der "
               "Knopf neben diesem Text öffnet sie im Browser."},
+    "highlights": {"en": "Highlights", "de": "Highlights"},
+    "highlights_title": {"en": "Highlights — what matters per version",
+                         "de": "Highlights — das Wichtigste je Version"},
+    "highlights_missing": {
+        "en": "# No highlights found\n\nThe file is not part of this "
+              "installation and the project page could not be reached. The "
+              "button next to this text opens it in your browser.",
+        "de": "# Keine Highlights gefunden\n\nDie Datei gehört nicht zu "
+              "dieser Installation, und die Projektseite war nicht erreichbar. "
+              "Der Knopf neben diesem Text öffnet sie im Browser."},
     "no_signal_note": {
         "en": "This recording had too little voiced material, so the metrics were "
               "deliberately not calculated.",

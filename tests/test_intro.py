@@ -2,8 +2,8 @@
 
 import importlib
 
-import i18n
-import settings
+from core import i18n
+from core import settings
 
 
 def test_erststart_wird_nur_einmal_gezeigt():
@@ -15,7 +15,7 @@ def test_erststart_wird_nur_einmal_gezeigt():
 
 def test_merker_ueberlebt_speichern(tmp_path, monkeypatch):
     monkeypatch.setenv("DREAM_VOICETRAINING_HOME", str(tmp_path / "home"))
-    import paths
+    from core import paths
     importlib.reload(paths)
     importlib.reload(settings)
 
@@ -31,7 +31,7 @@ def test_merker_ueberlebt_speichern(tmp_path, monkeypatch):
 
 
 def test_alle_seiten_sind_uebersetzt():
-    from dialogs import IntroDialog
+    from ui.dialogs import IntroDialog
     keys = ["intro_title", "intro_language", "intro_language_body",
             "intro_step", "intro_next", "intro_back", "intro_skip",
             "intro_done", "intro_restart"]
@@ -54,7 +54,7 @@ def test_sicherheitsseite_bleibt_deutlich():
 
 def test_empfehlung_fuer_die_erste_runde_bleibt_stehen():
     """Ohne den geführten Ablauf ist diese Seite die einzige Anleitung."""
-    from dialogs import IntroDialog
+    from ui.dialogs import IntroDialog
     assert ("intro_first_title", "intro_first_body") in IntroDialog.PAGES
 
     for lang, needles in (("en", ("pitch test", "/a/", "/i/", "/u/")),
@@ -66,9 +66,9 @@ def test_empfehlung_fuer_die_erste_runde_bleibt_stehen():
 
 def test_jedes_bildschirmfoto_wird_mitgeliefert():
     """Fehlt eine Datei, bleibt die Seite stumm — das soll auffallen."""
-    import dialogs
-    import paths
-    from dialogs import IntroDialog
+    from ui import dialogs
+    from core import paths
+    from ui.dialogs import IntroDialog
     body_keys = [b for _, b in IntroDialog.PAGES]
     for body_key, name in IntroDialog.SHOTS.items():
         assert body_key in body_keys, body_key
@@ -90,7 +90,7 @@ def test_jedes_bildschirmfoto_wird_mitgeliefert():
 
 def test_jede_marke_findet_ihr_bedienelement(intro_window):
     """Ein Schluessel ohne Widget waere eine Anleitung, die ins Leere zeigt."""
-    from dialogs import IntroDialog
+    from ui.dialogs import IntroDialog
     window = intro_window
     for body_key, key in IntroDialog.POINTS_AT.items():
         assert body_key in [b for _, b in IntroDialog.PAGES], body_key
@@ -105,7 +105,7 @@ def test_jede_marke_findet_ihr_bedienelement(intro_window):
 def test_sprachwahl_blaettert_von_allein_weiter(intro_window, qt_app):
     """Die erste Seite hat genau eine Aufgabe, danach geht es weiter."""
     from PySide6 import QtCore
-    from dialogs import IntroDialog
+    from ui.dialogs import IntroDialog
 
     dialog = IntroDialog(intro_window, ask_language=True)
     dialog.show()
@@ -123,7 +123,7 @@ def test_sprachwahl_blaettert_von_allein_weiter(intro_window, qt_app):
 
 
 def test_marke_folgt_den_seiten(intro_window, qt_app):
-    from dialogs import IntroDialog
+    from ui.dialogs import IntroDialog
 
     seen = []
     dialog = IntroDialog(intro_window, ask_language=False)
@@ -148,7 +148,7 @@ def test_jede_marke_ist_am_ende_auch_sichtbar(intro_window, qt_app):
     Der Einstellungsknopf liegt im Live-Reiter, die Seite davor blaettert auf
     Sessions — ohne Zurueckschalten versteckt sich die Marke.
     """
-    from dialogs import IntroDialog
+    from ui.dialogs import IntroDialog
     window = intro_window
     for key in IntroDialog.POINTS_AT.values():
         window.show_spotlight(key)
@@ -162,7 +162,7 @@ def test_portable_erkennung(tmp_path, monkeypatch):
     """Portabel heisst: Daten neben der EXE, nicht im Benutzerprofil."""
     import sys
 
-    import paths
+    from core import paths
     exe = tmp_path / "Dream-VoiceTraining-Portable.exe"
     exe.write_text("x", encoding="utf-8")
 
@@ -192,15 +192,15 @@ def test_portable_erkennung(tmp_path, monkeypatch):
 
 
 def test_ohne_pyinstaller_niemals_portabel():
-    import paths
+    from core import paths
     importlib.reload(paths)
     assert paths.PORTABLE is False
 
 
 def test_letzte_seite_bringt_die_projektverweise(qt_app):
     """Wer die Einfuehrung durch hat und haengt, soll nicht suchen muessen."""
-    import paths
-    from dialogs import IntroDialog, PROJECT_LINKS
+    from core import paths
+    from ui.dialogs import IntroDialog, PROJECT_LINKS
     from PySide6 import QtWidgets
 
     urls = [link.url for link in PROJECT_LINKS]
@@ -231,7 +231,7 @@ def test_letzte_seite_bringt_die_projektverweise(qt_app):
 def test_verweisknoepfe_tragen_ihre_kennungen(qt_app):
     """An den objectNames haengen die Hausfarben in theming.py."""
     from PySide6 import QtCore, QtWidgets
-    import dialogs
+    from ui import dialogs
 
     box = dialogs.project_links_box()
     try:
@@ -247,7 +247,7 @@ def test_verweisknoepfe_tragen_ihre_kennungen(qt_app):
 
 
 def test_hausfarben_stehen_im_stylesheet():
-    import theming
+    from ui import theming
 
     qss = theming.stylesheet()
     assert "#btn_link_discord:hover" in qss
@@ -260,7 +260,7 @@ def test_hausfarben_stehen_im_stylesheet():
 def test_ohne_emoji_schrift_bleibt_die_beschriftung_lesbar(qt_app, monkeypatch):
     """Sonst stuende auf dem Knopf ein leeres Kaestchen."""
     from PySide6 import QtWidgets
-    import dialogs
+    from ui import dialogs
 
     monkeypatch.setattr(dialogs, "_EMOJI_OK", False)
     box = dialogs.project_links_box()

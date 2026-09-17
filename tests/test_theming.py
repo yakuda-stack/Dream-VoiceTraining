@@ -1,7 +1,7 @@
 """Farbschema, Vorlagen und Stylesheet."""
 
-import i18n
-import theming
+from core import i18n
+from ui import theming
 
 
 def test_alle_vorlagen_haben_alle_rollen():
@@ -114,11 +114,11 @@ def test_versionsschild_entsteht_nur_einmal(monkeypatch, tmp_path):
     from PySide6 import QtWidgets
 
     monkeypatch.setenv("DREAM_VOICETRAINING_HOME", str(tmp_path / "home"))
-    import audio
+    from voice import audio
     monkeypatch.setattr(audio, "_run", lambda args: None)
 
     import importlib
-    import paths
+    from core import paths
     importlib.reload(paths)
     import main
 
@@ -163,7 +163,7 @@ def test_keine_verschluckten_css_klammern():
     root = pathlib.Path(__file__).resolve().parents[1]
     problems = []
 
-    for path in sorted(root.glob("*.py")):
+    for path in sorted(root.glob("*.py")) + sorted(root.glob("*/*.py")):
         tree = ast.parse(path.read_text(encoding="utf-8"))
         for node in ast.walk(tree):
             if not (isinstance(node, ast.Call)
@@ -196,13 +196,13 @@ def test_jeder_dialog_laesst_sich_bauen(monkeypatch, tmp_path):
     from PySide6 import QtWidgets
 
     monkeypatch.setenv("DREAM_VOICETRAINING_HOME", str(tmp_path / "home"))
-    import audio
+    from voice import audio
     monkeypatch.setattr(audio, "_run", lambda args: None)
 
     import importlib
-    import paths
+    from core import paths
     importlib.reload(paths)
-    import dialogs
+    from ui import dialogs
     import main
 
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
@@ -247,7 +247,7 @@ def test_keine_falsch_maskierten_klammern_in_stylesheets():
 
     root = Path(__file__).resolve().parents[1]
     broken = []
-    for name in ("main.py", "dialogs.py", "theming.py"):
+    for name in ("main.py", "ui/dialogs.py", "ui/theming.py"):
         for number, line in enumerate(
                 (root / name).read_text(encoding="utf-8").splitlines(), 1):
             for match in re.finditer(r'''[fF](["'])(.*?)\1''', line):
@@ -265,7 +265,7 @@ def test_pfeilbilder_werden_erzeugt():
     angefasst wird, und der border-Dreieck-Trick aus CSS greift dort nicht.
     Es braucht ein Bild, und dessen Farbe hängt am Thema.
     """
-    import paths
+    from core import paths
     paths.ensure_dirs()
 
     theming.use_preset("default")

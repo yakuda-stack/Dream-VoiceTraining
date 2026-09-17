@@ -8,8 +8,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-import i18n
-import rectypes
+from core import i18n
+from core import rectypes
 
 
 @dataclass(frozen=True)

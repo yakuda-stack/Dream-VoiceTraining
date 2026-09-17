@@ -36,12 +36,12 @@ os.environ["DREAM_VOICETRAINING_HOME"] = str(WORK)
 import numpy as np                                        # noqa: E402
 from PySide6 import QtCore, QtGui, QtWidgets              # noqa: E402
 
-import dialogs                                            # noqa: E402
-import i18n                                               # noqa: E402
+from ui import dialogs                                            # noqa: E402
+from core import i18n                                               # noqa: E402
 import main as app_main                                   # noqa: E402
-import paths                                              # noqa: E402
-import settings                                           # noqa: E402
-import theming                                            # noqa: E402
+from core import paths                                              # noqa: E402
+from core import settings                                           # noqa: E402
+from ui import theming                                            # noqa: E402
 
 OUT = ROOT / "assets" / "intro"
 SR = 48000

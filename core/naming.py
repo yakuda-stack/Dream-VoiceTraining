@@ -44,7 +44,7 @@ from __future__ import annotations
 import re
 from datetime import datetime, timedelta
 
-import rectypes
+from core import rectypes
 
 SEPARATOR = "_"
 

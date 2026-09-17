@@ -32,8 +32,8 @@ import sys
 import time
 from pathlib import Path
 
-import paths
-import settings
+from core import paths
+from core import settings
 
 UNINSTALL_KEY = (r"Software\Microsoft\Windows\CurrentVersion\Uninstall"
                  "\\" + paths.APP_NAME)

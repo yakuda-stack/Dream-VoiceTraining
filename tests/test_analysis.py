@@ -3,8 +3,8 @@
 import numpy as np
 import pytest
 
-import analysis
-import settings
+from voice import analysis
+from core import settings
 
 
 def test_erkennt_grundfrequenz(vowel, sr):
@@ -78,7 +78,7 @@ def test_zonen_beschriftung():
 
 
 def test_datei_auswertung(tmp_path, vowel, sr):
-    import audio
+    from voice import audio
     path = tmp_path / "probe.wav"
     audio.write_wav(path, vowel(f0=140.0, seconds=2.0).astype(np.float32), sr)
     result = analysis.analyse_file(path)
@@ -87,7 +87,7 @@ def test_datei_auswertung(tmp_path, vowel, sr):
 
 def test_voice_report_mit_zusaetzen(monkeypatch, vowel, sr):
     """Regression: Praat hängt an manche Zeilen Klammerzusätze an."""
-    import debuglog
+    from core import debuglog
     from parselmouth.praat import call as real_call
 
     REPORT = """-- Voice report --

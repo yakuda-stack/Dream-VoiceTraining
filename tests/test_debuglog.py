@@ -1,6 +1,6 @@
 """Fehlerprotokoll."""
 
-import debuglog
+from core import debuglog
 
 
 def test_ausnahme_wird_mit_traceback_festgehalten():
@@ -18,7 +18,7 @@ def test_ausnahme_wird_mit_traceback_festgehalten():
 
 def test_analyse_fehler_landen_im_protokoll(monkeypatch, vowel, sr):
     """Ein kaputter Praat-Aufruf darf die Auswertung nicht stillschweigend leeren."""
-    import analysis
+    from voice import analysis
     debuglog.clear()
 
     def boom(*args, **kwargs):

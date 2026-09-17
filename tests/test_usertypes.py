@@ -20,10 +20,10 @@ from datetime import datetime
 
 import pytest
 
-import i18n
-import naming
-import rectypes
-import settings
+from core import i18n
+from core import naming
+from core import rectypes
+from core import settings
 
 
 # ----------------------------------------------------------- Kuerzel
@@ -116,7 +116,7 @@ def test_eigenes_kuerzel_gilt_als_selbst_vergeben():
 
 @pytest.fixture
 def options(qt_app):
-    import dialogs
+    from ui import dialogs
     entries = [{"timestamp": "2026-09-01T10:00:00", "file": "a.wav",
                 "type": "user:zischen", "quality": "ok"},
                {"timestamp": "2026-09-02T10:00:00", "file": "b.wav",

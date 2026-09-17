@@ -2,13 +2,13 @@
 
 import pytest
 
-import paths
+from core import paths
 
 
 @pytest.fixture
 def kein_netz(monkeypatch):
     """Jeder Abruf scheitert — so sieht ein Rechner ohne Verbindung aus."""
-    import dialogs
+    from ui import dialogs
 
     def platzt(*args, **kwargs):
         raise OSError("kein Netz")
@@ -19,7 +19,7 @@ def kein_netz(monkeypatch):
 @pytest.fixture
 def netz(monkeypatch):
     """Ein Abruf, der eine erfundene Fassung zurueckgibt."""
-    import dialogs
+    from ui import dialogs
 
     class Antwort:
         def __init__(self, text):
@@ -56,8 +56,8 @@ def warte(qt_app, dialog, sekunden=10):
 # ------------------------------------------------------------------- Knopf
 
 def test_info_reiter_hat_einen_changelog_knopf(qt_app):
-    import i18n
-    from dialogs import InfoPage
+    from core import i18n
+    from ui.dialogs import InfoPage
 
     page = InfoPage()
     try:
@@ -72,7 +72,7 @@ def test_info_reiter_hat_einen_changelog_knopf(qt_app):
 
 def test_knopf_oeffnet_das_fenster(qt_app, kein_netz):
     """Der Knopf im Reiter muss beim Dialog ankommen, nicht nur existieren."""
-    from dialogs import ChangelogDialog, SettingsDialog
+    from ui.dialogs import ChangelogDialog, SettingsDialog
 
     dialog = SettingsDialog(entries=[])
     try:
@@ -91,8 +91,8 @@ def test_knopf_oeffnet_das_fenster(qt_app, kein_netz):
 # -------------------------------------------------------------- Herkunft
 
 def test_lokale_fassung_wenn_kein_netz_da_ist(qt_app, kein_netz):
-    import i18n
-    from dialogs import ChangelogDialog
+    from core import i18n
+    from ui.dialogs import ChangelogDialog
 
     dialog = ChangelogDialog()
     try:
@@ -106,8 +106,8 @@ def test_lokale_fassung_wenn_kein_netz_da_ist(qt_app, kein_netz):
 
 def test_netz_gewinnt_gegen_die_mitgelieferte_datei(qt_app, netz):
     """Die lokale Datei endet bei der eigenen Version, das Netz nicht."""
-    import i18n
-    from dialogs import ChangelogDialog
+    from core import i18n
+    from ui.dialogs import ChangelogDialog
 
     dialog = ChangelogDialog()
     try:
@@ -121,8 +121,8 @@ def test_netz_gewinnt_gegen_die_mitgelieferte_datei(qt_app, netz):
 
 def test_ohne_netz_und_ohne_datei_bleibt_das_fenster_stehen(qt_app, kein_netz,
                                                            monkeypatch):
-    import i18n
-    from dialogs import ChangelogDialog
+    from core import i18n
+    from ui.dialogs import ChangelogDialog
 
     monkeypatch.setattr(paths, "changelog_file", lambda: None)
     dialog = ChangelogDialog()
@@ -137,7 +137,7 @@ def test_ohne_netz_und_ohne_datei_bleibt_das_fenster_stehen(qt_app, kein_netz,
 
 def test_eine_fehlerseite_gilt_nicht_als_changelog(qt_app, monkeypatch):
     """404-Text faengt nicht mit # an und darf nicht durchgehen."""
-    import dialogs
+    from ui import dialogs
 
     class Antwort:
         def read(self, size=None):
@@ -158,7 +158,7 @@ def test_eine_fehlerseite_gilt_nicht_als_changelog(qt_app, monkeypatch):
 
 def test_markdown_wird_gesetzt_und_nicht_als_rohtext_gezeigt(qt_app,
                                                              kein_netz):
-    from dialogs import ChangelogDialog
+    from ui.dialogs import ChangelogDialog
 
     dialog = ChangelogDialog()
     try:
@@ -190,7 +190,7 @@ def test_ueberschriften_sind_groesser_als_fliesstext(qt_app, kein_netz):
     Absaetze um und tragen Listeneinzuege, da sagt die Hoehe eines Blocks
     nichts mehr ueber die Schriftgroesse.
     """
-    from dialogs import ChangelogDialog
+    from ui.dialogs import ChangelogDialog
 
     dialog = ChangelogDialog()
     dialog.resize(900, 400)
@@ -216,7 +216,7 @@ def test_ueberschriften_sind_groesser_als_fliesstext(qt_app, kein_netz):
 
 def test_das_fenster_scrollt(qt_app, kein_netz):
     """Ein Changelog ist laenger als jedes Fenster."""
-    from dialogs import ChangelogDialog
+    from ui.dialogs import ChangelogDialog
 
     dialog = ChangelogDialog()
     dialog.resize(600, 400)
@@ -243,7 +243,7 @@ def test_alle_pakete_bringen_den_changelog_mit():
     """Ein Rueckfall, der nur im Quellordner liegt, ist keiner."""
     from pathlib import Path
 
-    root = Path(paths.__file__).resolve().parent
+    root = paths.SOURCE_DIR
     for datei in ("packaging/PKGBUILD",
                   "packaging/build-appimage.sh",
                   "packaging/windows/dream-voicetraining.spec"):
@@ -259,7 +259,7 @@ def test_die_raw_adressen_zeigen_auf_das_projekt():
 
 
 def test_alle_texte_gibt_es_in_beiden_sprachen():
-    import i18n
+    from core import i18n
 
     keys = [key for key in i18n.STRINGS if key.startswith("changelog")]
     assert len(keys) >= 8

@@ -46,21 +46,21 @@ import pyqtgraph as pg
 import sounddevice as sd
 from PySide6 import QtCore, QtGui, QtWidgets
 
-import analysis
-import audio as audio_mod
-import columns
-import debuglog
-import helptext
-import i18n
-import naming
-import paths
-import rectypes
-import settings
-import storage
-import targets
-import theming
-from theming import COLORS as NORD
-from settings import PARAMS, Settings
+from voice import analysis
+from voice import audio as audio_mod
+from core import columns
+from core import debuglog
+from ui import helptext
+from core import i18n
+from core import naming
+from core import paths
+from core import rectypes
+from core import settings
+from core import storage
+from voice import targets
+from ui import theming
+from ui.theming import COLORS as NORD
+from core.settings import PARAMS, Settings
 
 # ----------------------------------------------------- Sprache beim Export
 
@@ -179,6 +179,7 @@ class SettingsDialog(QtWidgets.QDialog):
         self.info.intro_requested.connect(self.intro_requested)
         self.info.debug_requested.connect(self._open_debug)
         self.info.changelog_requested.connect(self._open_changelog)
+        self.info.highlights_requested.connect(self._open_highlights)
         self.tabs.addTab(self.info, i18n.t("tab_info"))
         # Info sitzt hinten, wird aber als erstes gezeigt: dort liegen
         # Version, Links, Debug und der Knopf, der die Einfuehrung erneut
@@ -317,6 +318,9 @@ class SettingsDialog(QtWidgets.QDialog):
 
     def _open_changelog(self) -> None:
         self._show(ChangelogDialog(self))
+
+    def _open_highlights(self) -> None:
+        self._show(HighlightsDialog(self))
 
     @staticmethod
     def _show(dialog: QtWidgets.QDialog) -> QtWidgets.QDialog:
@@ -2562,9 +2566,17 @@ class ChangelogLoader(QtCore.QThread):
     # davor, sich an einer Antwort festzulesen, die etwas ganz anderes ist.
     MAX_BYTES = 512 * 1024
 
-    def __init__(self, online: bool = True, parent=None):
+    def __init__(self, online: bool = True, parent=None, urls=None,
+                 local=None, marker: str = "#"):
         super().__init__(parent)
         self.online = online
+        # Ohne Angabe der Changelog. Die Highlights reichen ihre eigenen
+        # Adressen und ihre eigene Datei herein, der Ablauf ist derselbe.
+        # Beides wird erst beim Laden nachgeschlagen, damit ein Test oder
+        # ein Paket paths.* noch austauschen kann.
+        self._urls = urls
+        self._local = local
+        self.marker = marker
 
     def run(self) -> None:
         if self.online:
@@ -2576,7 +2588,8 @@ class ChangelogLoader(QtCore.QThread):
         self.done.emit(text, "local" if text else "")
 
     def _from_web(self) -> str:
-        for url in paths.CHANGELOG_URLS:
+        urls = self._urls() if self._urls else paths.CHANGELOG_URLS
+        for url in urls:
             try:
                 request = urllib.request.Request(
                     url, headers={"User-Agent":
@@ -2591,13 +2604,12 @@ class ChangelogLoader(QtCore.QThread):
                 continue
             text = raw.decode("utf-8", "replace").strip()
             # Ein Umleitungsziel oder eine Fehlerseite ist kein Changelog.
-            if text.startswith("#"):
+            if text.startswith(self.marker):
                 return text
         return ""
 
-    @staticmethod
-    def _from_disk() -> str:
-        path = paths.changelog_file()
+    def _from_disk(self) -> str:
+        path = self._local() if self._local else paths.changelog_file()
         if path is None:
             return ""
         try:
@@ -2616,9 +2628,22 @@ class ChangelogDialog(QtWidgets.QDialog):
     Version passiert ist, erfaehrt daraus nichts.
     """
 
+    #: Was dieses Fenster zeigt. HighlightsDialog tauscht nur diese Angaben.
+    TITLE_KEY = "changelog_title"
+    MISSING_KEY = "changelog_missing"
+    WEB_PATH = "/blob/main/CHANGELOG.md"
+
+    @staticmethod
+    def _urls():
+        return paths.CHANGELOG_URLS
+
+    @staticmethod
+    def _local():
+        return paths.changelog_file()
+
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle(i18n.t("changelog_title"))
+        self.setWindowTitle(i18n.t(self.TITLE_KEY))
         self.resize(760, 640)
         self.setMinimumSize(480, 360)
         self._loader: ChangelogLoader | None = None
@@ -2644,7 +2669,7 @@ class ChangelogDialog(QtWidgets.QDialog):
         self.btn_web = QtWidgets.QPushButton(i18n.t("changelog_open_web"))
         self.btn_web.clicked.connect(
             lambda: QtGui.QDesktopServices.openUrl(
-                QtCore.QUrl(paths.APP_URL + "/blob/main/CHANGELOG.md")))
+                QtCore.QUrl(paths.APP_URL + self.WEB_PATH)))
         row.addWidget(self.btn_web)
 
         close = QtWidgets.QPushButton(i18n.t("close"))
@@ -2665,18 +2690,22 @@ class ChangelogDialog(QtWidgets.QDialog):
         # Solange nichts da ist, schon einmal die Datei von der Platte
         # zeigen: eine leere Flaeche waehrend des Wartens sieht kaputt aus.
         if not self.view.toPlainText():
-            local = ChangelogLoader._from_disk()
+            local = self._make_loader(False)._from_disk()
             if local:
                 self.view.setMarkdown(local)
 
-        self._loader = ChangelogLoader(online, self)
+        self._loader = self._make_loader(online)
         self._loader.done.connect(self._show_text)
         self._loader.start()
+
+    def _make_loader(self, online: bool) -> ChangelogLoader:
+        return ChangelogLoader(online, self, urls=self._urls,
+                               local=self._local)
 
     def _show_text(self, text: str, origin: str) -> None:
         self.btn_reload.setEnabled(True)
         if not text:
-            self.view.setMarkdown(i18n.t("changelog_missing"))
+            self.view.setMarkdown(i18n.t(self.MISSING_KEY))
             self.source.setText(i18n.t("changelog_from_nowhere"))
             return
 
@@ -2697,6 +2726,28 @@ class ChangelogDialog(QtWidgets.QDialog):
         super().closeEvent(event)
 
 
+class HighlightsDialog(ChangelogDialog):
+    """Nur das Wichtigste je Version, aus HIGHLIGHTS.md.
+
+    Der Changelog erklaert jede Aenderung ausfuehrlich — gut zum Nachlesen,
+    zu lang, um schnell zu sehen, was neu ist. Die Highlights sind eine
+    eigene, von Hand gepflegte Datei mit ein paar Zeilen pro Version.
+    Laden, Rueckfall und Darstellung sind dieselben wie beim Changelog.
+    """
+
+    TITLE_KEY = "highlights_title"
+    MISSING_KEY = "highlights_missing"
+    WEB_PATH = "/blob/main/HIGHLIGHTS.md"
+
+    @staticmethod
+    def _urls():
+        return paths.HIGHLIGHTS_URLS
+
+    @staticmethod
+    def _local():
+        return paths.highlights_file()
+
+
 # ------------------------------------------------------------- Infofenster
 
 class InfoPage(QtWidgets.QWidget):
@@ -2713,6 +2764,7 @@ class InfoPage(QtWidgets.QWidget):
     intro_requested = QtCore.Signal()
     debug_requested = QtCore.Signal()
     changelog_requested = QtCore.Signal()
+    highlights_requested = QtCore.Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -2729,18 +2781,22 @@ class InfoPage(QtWidgets.QWidget):
         self.btn_intro.clicked.connect(self.intro_requested)
         self.btn_debug = QtWidgets.QPushButton("🐞  " + i18n.t("debug"))
         self.btn_debug.clicked.connect(self.debug_requested)
-        # Neben der Einfuehrung, weil beides dasselbe beantwortet: was kann
-        # dieses Programm, und was hat sich seit dem letzten Mal geaendert.
-        self.btn_changelog = QtWidgets.QPushButton("🗒  " + i18n.t("changelog"))
+        # Changelog und Highlights sitzen seit 1.1.7 als zweite Zeile unter
+        # den Projektverweisen (siehe _build_body): beides sind Dinge, die
+        # man nachschlaegt, keine Handlungen wie die Knoepfe hier oben.
+        self.btn_changelog = doc_button("\U0001F5D2", "changelog",
+                                        "btn_link_changelog")
         self.btn_changelog.clicked.connect(self.changelog_requested)
+        self.btn_highlights = doc_button("\u2728", "highlights",
+                                         "btn_link_highlights")
+        self.btn_highlights.clicked.connect(self.highlights_requested)
         copy = QtWidgets.QPushButton(i18n.t("copy_env"))
         copy.clicked.connect(self._copy_environment)
         folder = QtWidgets.QPushButton(i18n.t("open_folder"))
         folder.clicked.connect(
             lambda: QtGui.QDesktopServices.openUrl(
                 QtCore.QUrl.fromLocalFile(str(paths.CONFIG_DIR))))
-        for widget in (self.btn_intro, self.btn_changelog, self.btn_debug,
-                       copy, folder):
+        for widget in (self.btn_intro, self.btn_debug, copy, folder):
             actions.addWidget(widget)
         actions.addStretch(1)
         root.addLayout(actions)
@@ -2799,7 +2855,8 @@ class InfoPage(QtWidgets.QWidget):
         # Frueher stand der Stil hier direkt im f-String und enthielt ein
         # verirrtes style=f"..." — die Angabe war damit ungueltig und die
         # Verweise blieben ungefaerbt. Jetzt baut das eine Stelle.
-        lay.addWidget(project_links_box())
+        lay.addWidget(project_links_box(
+            extra=(self.btn_changelog, self.btn_highlights)))
 
         lay.addWidget(self._section(i18n.t("about_license_head"),
                                     i18n.t("about_license")))
@@ -3735,22 +3792,43 @@ def link_button(link: ProjectLink, parent=None) -> QtWidgets.QPushButton:
     return button
 
 
-def project_links_box() -> QtWidgets.QGroupBox:
+def doc_button(emoji: str, key: str, name: str,
+               parent=None) -> QtWidgets.QPushButton:
+    """Knopf fuer Changelog und Highlights, im Stil der Projektverweise."""
+    label = i18n.t(key)
+    button = QtWidgets.QPushButton(
+        f"{emoji}  {label}" if emoji_available() else label, parent)
+    button.setObjectName(name)
+    button.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
+    return button
+
+
+def project_links_box(extra=()) -> QtWidgets.QGroupBox:
     """Die drei Verweise als Reihe, nicht als Liste.
 
     Untereinander mit der Adresse darunter nahmen sie sechs Zeilen ein und
     sahen aus wie ein Textblock, den man liest. Es sind drei Knoepfe, die
     man drueckt.
+
+    ``extra`` kommt als zweite Zeile darunter — auf der Infoseite Changelog
+    und Highlights. Die Einfuehrung gibt nichts mit und zeigt nur die Links.
     """
     box = QtWidgets.QGroupBox(i18n.t("about_links"))
     box.setObjectName("projectlinks")
-    lay = QtWidgets.QHBoxLayout(box)
-    lay.setSpacing(8)
-    for link in PROJECT_LINKS:
-        lay.addWidget(link_button(link))
-    # Der Dehner haelt die Knoepfe links zusammen, statt sie ueber die
-    # ganze Breite der Infoseite auseinanderzuziehen.
-    lay.addStretch(1)
+    outer = QtWidgets.QVBoxLayout(box)
+    outer.setSpacing(8)
+    rows = [[link_button(link) for link in PROJECT_LINKS]]
+    if extra:
+        rows.append(list(extra))
+    for widgets in rows:
+        lay = QtWidgets.QHBoxLayout()
+        lay.setSpacing(8)
+        for widget in widgets:
+            lay.addWidget(widget)
+        # Der Dehner haelt die Knoepfe links zusammen, statt sie ueber die
+        # ganze Breite der Infoseite auseinanderzuziehen.
+        lay.addStretch(1)
+        outer.addLayout(lay)
     return box
 
 

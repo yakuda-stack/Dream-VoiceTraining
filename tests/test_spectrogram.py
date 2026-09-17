@@ -19,7 +19,7 @@
 import numpy as np
 import pytest
 
-import audio
+from voice import audio
 
 
 def _ton(seconds=2.0, rate=16000, freq=400.0):
@@ -132,8 +132,8 @@ def test_ganze_aufnahme_zieht_beide_auf(detail):
 
 
 def test_ohne_datei_gibt_es_kein_bild(qt_app, tmp_path, monkeypatch):
-    import dialogs
-    import storage
+    from ui import dialogs
+    from core import storage
 
     monkeypatch.setattr(storage, "root", lambda: tmp_path)
     entry = {"timestamp": "2026-09-01T10:00:00", "file": "weg.wav",
@@ -222,8 +222,8 @@ def test_wellenform_zeigt_im_zoom_die_abtastwerte(detail):
 
 def _detail_mit_pegel(tmp_path, monkeypatch, amplitude, name):
     """Ein Detailfenster ueber eine Aufnahme mit gewaehltem Pegel."""
-    import dialogs
-    import storage
+    from ui import dialogs
+    from core import storage
 
     folder = tmp_path / name
     folder.mkdir()
@@ -263,7 +263,7 @@ def test_ohne_haken_steuert_sich_jede_aufnahme_selbst_aus(qt_app, tmp_path,
 
 def test_mit_haken_bekommen_beide_dieselbe_skala(qt_app, tmp_path,
                                                  monkeypatch):
-    import settings
+    from core import settings
 
     settings.set_fixed_spec_scale(True)
     leise = _detail_mit_pegel(tmp_path, monkeypatch, 0.02, "leise")
@@ -280,7 +280,7 @@ def test_mit_haken_bekommen_beide_dieselbe_skala(qt_app, tmp_path,
 
 def test_haken_gilt_auch_im_naechsten_fenster(detail):
     """Zwei Aufnahmen vergleicht man in zwei Fenstern — der Schalter merkt sich."""
-    import settings
+    from core import settings
 
     detail._toggle_advanced(True)
     detail.chk_fixed_scale.setChecked(True)
@@ -315,7 +315,7 @@ def test_feste_skala_bleibt_beim_zoomen_stehen(detail):
 # ------------------------------------------------- die Orientierungslinien
 
 def test_drei_linien_auf_den_richtigen_frequenzen(detail):
-    import targets
+    from voice import targets
 
     detail._toggle_advanced(True)
     assert [round(line.value()) for line in detail._guides] == [600, 1500, 2800]
@@ -331,7 +331,7 @@ def test_linien_verzerren_den_frequenzbereich_nicht(detail):
 
 
 def test_linien_liegen_unter_auswahl_und_messlinien(detail):
-    import dialogs
+    from ui import dialogs
 
     detail._toggle_advanced(True)
     for line in detail._guides:
@@ -344,9 +344,9 @@ def test_linien_liegen_unter_auswahl_und_messlinien(detail):
 def test_linie_ueber_der_oberen_frequenz_faellt_weg(qt_app, tmp_path,
                                                     monkeypatch):
     """Bei 5512 Hz Abtastrate endet das Bild unter der F3."""
-    import audio as audio_mod
-    import dialogs
-    import storage
+    from voice import audio as audio_mod
+    from ui import dialogs
+    from core import storage
 
     folder = tmp_path / "schmal"
     folder.mkdir()
@@ -368,9 +368,9 @@ def test_linie_ueber_der_oberen_frequenz_faellt_weg(qt_app, tmp_path,
 
 def test_abgeschaltet_werden_keine_linien_gezeigt(qt_app, tmp_path,
                                                   monkeypatch):
-    import dialogs
-    import settings
-    import storage
+    from ui import dialogs
+    from core import settings
+    from core import storage
 
     settings.set_formant_guides(False)
     folder = tmp_path / "ohne"
@@ -405,7 +405,7 @@ def test_gepunktet_und_duenn_statt_gestrichelt(detail):
 def test_livebereich_hat_dieselben_linien(qt_app):
     """Beide Ansichten zeigen denselben Anhaltspunkt, sonst hilft er nicht."""
     import main
-    import settings
+    from core import settings
 
     window = main.MainWindow()
     try:

@@ -18,9 +18,9 @@
 
 import pytest
 
-import i18n
-import practice
-import settings
+from core import i18n
+from voice import practice
+from core import settings
 
 
 # ------------------------------------------------------------ das Modul

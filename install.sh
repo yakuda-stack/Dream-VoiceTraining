@@ -171,7 +171,8 @@ fetch_source
 say "Programmdateien nach $LIBDIR"
 rm -rf "$LIBDIR"
 mkdir -p "$LIBDIR" "$BINDIR" "$APPDIR" "$ICONBASE/scalable/apps"
-cp "$SOURCE"/*.py "$LIBDIR/"
+cp "$SOURCE/main.py" "$LIBDIR/"
+cp -r "$SOURCE/core" "$SOURCE/voice" "$SOURCE/ui" "$LIBDIR/"
 cp "$SOURCE/LICENSE" "$SOURCE/THIRD_PARTY_NOTICES.md" "$LIBDIR/" 2>/dev/null || true
 # Bildschirmfotos der Einfuehrung; ohne sie laeuft alles, nur ohne Bilder.
 if [ -d "$SOURCE/assets/intro" ]; then

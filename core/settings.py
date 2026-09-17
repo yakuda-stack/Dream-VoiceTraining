@@ -27,9 +27,9 @@ import json
 from dataclasses import asdict, dataclass, fields
 from typing import NamedTuple
 
-import i18n
-import naming
-from paths import CONFIG_PATH
+from core import i18n
+from core import naming
+from core.paths import CONFIG_PATH
 
 LEGACY_PROFILE_NAME = "My target"
 

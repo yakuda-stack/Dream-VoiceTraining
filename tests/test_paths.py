@@ -7,7 +7,7 @@ def test_folgt_der_xdg_spezifikation(tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "c"))
     monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "d"))
     monkeypatch.delenv("DREAM_VOICETRAINING_HOME", raising=False)
-    import paths
+    from core import paths
     importlib.reload(paths)
 
     assert paths.CONFIG_PATH == tmp_path / "c" / "dream-voicetraining" / "config.json"
@@ -16,7 +16,7 @@ def test_folgt_der_xdg_spezifikation(tmp_path, monkeypatch):
 
 def test_umgebungsvariable_legt_alles_zusammen(tmp_path, monkeypatch):
     monkeypatch.setenv("DREAM_VOICETRAINING_HOME", str(tmp_path / "portable"))
-    import paths
+    from core import paths
     importlib.reload(paths)
     assert paths.CONFIG_DIR == paths.DATA_DIR == tmp_path / "portable"
 
@@ -25,7 +25,7 @@ def test_uebernimmt_aus_programmordner_und_alter_app_id(tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "c"))
     monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "d"))
     monkeypatch.delenv("DREAM_VOICETRAINING_HOME", raising=False)
-    import paths
+    from core import paths
     importlib.reload(paths)
 
     program = tmp_path / "prog"
@@ -48,7 +48,7 @@ def test_vorhandene_dateien_werden_nicht_ueberschrieben(tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "c"))
     monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "d"))
     monkeypatch.delenv("DREAM_VOICETRAINING_HOME", raising=False)
-    import paths
+    from core import paths
     importlib.reload(paths)
     paths.ensure_dirs()
     paths.CONFIG_PATH.write_text("neu", encoding="utf-8")
@@ -65,7 +65,7 @@ def test_vorhandene_dateien_werden_nicht_ueberschrieben(tmp_path, monkeypatch):
 def test_windows_ablageorte(tmp_path, monkeypatch):
     """Konfiguration ins servergespeicherte Profil, Aufnahmen lokal."""
     import importlib
-    import paths
+    from core import paths
     importlib.reload(paths)
 
     monkeypatch.delenv("DREAM_VOICETRAINING_HOME", raising=False)
@@ -84,7 +84,7 @@ def test_windows_ablageorte(tmp_path, monkeypatch):
 
 def test_umgebungsvariable_schlaegt_windows(tmp_path, monkeypatch):
     import importlib
-    import paths
+    from core import paths
     importlib.reload(paths)
 
     monkeypatch.setattr(paths, "WINDOWS", True)
@@ -96,7 +96,7 @@ def test_umgebungsvariable_schlaegt_windows(tmp_path, monkeypatch):
 
 
 def test_prozessname_bricht_unter_windows_nicht(monkeypatch):
-    import paths
+    from core import paths
     monkeypatch.setattr(paths, "WINDOWS", True)
     paths.set_process_name()          # darf einfach nichts tun
 
@@ -104,14 +104,14 @@ def test_prozessname_bricht_unter_windows_nicht(monkeypatch):
 # --------------------------------------------------- Bilder der Einfuehrung
 
 def test_intro_bilder_werden_im_quellordner_gefunden():
-    import paths
+    from core import paths
     shot = paths.intro_shot("sessions.png")
     assert shot is not None and shot.is_file()
 
 
 def test_intro_suche_nennt_mehrere_orte():
     """Ein Startskript kann ein Symlink sein — dann zeigt __file__ woandershin."""
-    import paths
+    from core import paths
     folders = [str(f) for f in paths.intro_folders()]
     assert len(folders) == len(set(folders)), "Ein Ordner steht doppelt drin"
     assert any(f.endswith("assets/intro") for f in folders)
@@ -120,8 +120,8 @@ def test_intro_suche_nennt_mehrere_orte():
 
 def test_fehlendes_bild_landet_im_protokoll(monkeypatch, tmp_path):
     """Sonst bleibt "die Einfuehrung zeigt nichts" eine Ratepartie."""
-    import debuglog
-    import paths
+    from core import debuglog
+    from core import paths
 
     monkeypatch.setattr(paths, "intro_folders", lambda: [tmp_path / "nirgends"])
     debuglog.clear()

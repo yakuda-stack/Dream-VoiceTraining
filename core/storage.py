@@ -37,9 +37,9 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 
-import naming
-import paths
-import settings
+from core import naming
+from core import paths
+from core import settings
 
 DEFAULT_ROOT = paths.SESSION_DIR
 

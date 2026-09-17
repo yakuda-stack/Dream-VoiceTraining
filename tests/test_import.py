@@ -23,8 +23,8 @@ from datetime import datetime
 import numpy as np
 import pytest
 
-import audio
-import storage
+from voice import audio
+from core import storage
 
 
 @pytest.fixture
@@ -161,7 +161,7 @@ def test_zu_kurze_datei_wird_abgewiesen(intro_window, ordner):
 
 def test_import_behaelt_den_dateinamen(intro_window, ordner):
     """In der Liste soll stehen, wie die Datei vorher hiess."""
-    import columns
+    from core import columns
 
     target, source = ordner
     window = intro_window
@@ -219,7 +219,7 @@ def test_uebernommener_name_ueberlebt_einen_umzug(intro_window, ordner):
 
 
 def test_clean_stem_laesst_lesbares_stehen():
-    import naming
+    from core import naming
 
     assert naming.clean_stem("Morgen Übung 1") == "Morgen Übung 1"
     assert naming.clean_stem("abend_lesetext") == "abend_lesetext"
@@ -231,8 +231,8 @@ def test_clean_stem_laesst_lesbares_stehen():
 
 
 def test_import_nimmt_eigene_typen(intro_window, ordner):
-    import rectypes
-    import settings
+    from core import rectypes
+    from core import settings
 
     target, source = ordner
     window = intro_window
@@ -249,8 +249,8 @@ def test_import_nimmt_eigene_typen(intro_window, ordner):
 def test_typabfrage_liefert_den_schluessel(intro_window, monkeypatch):
     from PySide6 import QtWidgets
 
-    import i18n
-    import rectypes
+    from core import i18n
+    from core import rectypes
 
     window = intro_window
     monkeypatch.setattr(
@@ -284,7 +284,7 @@ def test_abbruch_im_dateidialog_importiert_nichts(intro_window, monkeypatch):
 def test_ganzer_ablauf_landet_in_der_tabelle(intro_window, ordner, monkeypatch):
     from PySide6 import QtWidgets
 
-    import i18n
+    from core import i18n
     import main
 
     target, source = ordner

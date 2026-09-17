@@ -1,7 +1,7 @@
 """Formatierung, Sortierung und Filterung der Sessionliste."""
 
-import columns
-import i18n
+from core import columns
+from core import i18n
 
 ENTRIES = [
     {"timestamp": "2026-08-30T14:46:58", "file": "a.wav", "quality": "ok",
@@ -177,12 +177,12 @@ def test_dialoge_blockieren_das_schliessen_nicht(qt_table, monkeypatch, tmp_path
 
     if "sounddevice" not in sys.modules:  # pragma: no cover
         sys.modules["sounddevice"] = types.SimpleNamespace()
-    import audio
+    from voice import audio
     monkeypatch.setattr(audio, "_run", lambda args: None)
     monkeypatch.setenv("DREAM_VOICETRAINING_HOME", str(tmp_path / "home"))
 
     import importlib
-    import paths
+    from core import paths
     importlib.reload(paths)
     import main
 

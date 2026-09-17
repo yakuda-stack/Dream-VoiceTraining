@@ -25,7 +25,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-import i18n
+from core import i18n
 
 SECTIONS = ["basics", "pitch", "resonance", "quality", "workflow", "practice"]
 

@@ -38,7 +38,7 @@ for arg in "$@"; do
     *) VERSION="$arg" ;;
   esac
 done
-[ -n "$VERSION" ] || VERSION="$(grep -oP 'APP_VERSION = "\K[^"]+' "$ROOT/paths.py")"
+[ -n "$VERSION" ] || VERSION="$(grep -oP 'APP_VERSION = "\K[^"]+' "$ROOT/core/paths.py")"
 
 say() { printf '\033[1;36m::\033[0m %s\n' "$*"; }
 
@@ -57,10 +57,12 @@ python3 -m venv "$APPDIR/usr/python"
 "$APPDIR/usr/python/bin/pip" install --quiet -r "$ROOT/requirements.txt"
 
 say "Programmdateien kopieren"
-cp "$ROOT"/*.py "$APPDIR/usr/lib/$ID/"
+cp "$ROOT/main.py" "$APPDIR/usr/lib/$ID/"
+cp -r "$ROOT/core" "$ROOT/voice" "$ROOT/ui" "$APPDIR/usr/lib/$ID/"
+find "$APPDIR/usr/lib/$ID" -name __pycache__ -type d -exec rm -rf {} +
 cp "$ROOT/LICENSE" "$ROOT/THIRD_PARTY_NOTICES.md" "$APPDIR/usr/lib/$ID/"
-# Der Rueckfall des Changelog-Fensters, wenn kein Netz da ist.
-cp "$ROOT/CHANGELOG.md" "$APPDIR/usr/lib/$ID/"
+# Der Rueckfall von Changelog- und Highlights-Fenster, wenn kein Netz da ist.
+cp "$ROOT/CHANGELOG.md" "$ROOT/HIGHLIGHTS.md" "$APPDIR/usr/lib/$ID/"
 mkdir -p "$APPDIR/usr/lib/$ID/assets/intro"
 cp "$ROOT/assets/intro"/* "$APPDIR/usr/lib/$ID/assets/intro/"
 

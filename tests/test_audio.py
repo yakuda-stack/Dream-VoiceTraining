@@ -6,7 +6,7 @@ import threading
 import numpy as np
 import pytest
 
-import audio
+from voice import audio
 
 PACTL = """Source #48
 \tName: alsa_input.usb-Foo-00.analog-stereo

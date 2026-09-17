@@ -47,28 +47,28 @@ import pyqtgraph as pg
 import sounddevice as sd
 from PySide6 import QtCore, QtGui, QtWidgets
 
-import analysis
-import columns
-import debuglog
-import i18n
-import naming
-import paths
-import practice
-import rectypes
-import settings
-import storage
-import targets
-import theming
-from theming import COLORS as NORD
-import audio as audio_mod
-from audio import (DEFAULT_KEY, SPEC_CEIL_DB, SPEC_FLOOR_DB, AudioEngine,
-                   write_wav)
-from dialogs import (MEASURED_Z, FilterDialog, HelpDialog, IntroDialog,
-                     MicrophonePicker, SessionDetailDialog, SettingsDialog,
-                     Spotlight, add_formant_guides, ask_export_language,
-                     export_language)
-import wininstall
-from settings import CFG
+from voice import analysis
+from core import columns
+from core import debuglog
+from core import i18n
+from core import naming
+from core import paths
+from voice import practice
+from core import rectypes
+from core import settings
+from core import storage
+from voice import targets
+from ui import theming
+from ui.theming import COLORS as NORD
+from voice import audio as audio_mod
+from voice.audio import (DEFAULT_KEY, SPEC_CEIL_DB, SPEC_FLOOR_DB, AudioEngine,
+                         write_wav)
+from ui.dialogs import (MEASURED_Z, FilterDialog, HelpDialog, IntroDialog,
+                        MicrophonePicker, SessionDetailDialog, SettingsDialog,
+                        Spotlight, add_formant_guides, ask_export_language,
+                        export_language)
+from core import wininstall
+from core.settings import CFG
 
 APP_DIR = Path(__file__).resolve().parent
 SESSION_DIR = paths.SESSION_DIR

@@ -2,9 +2,9 @@
 
 import re
 
-import helptext
-import i18n
-import targets
+from ui import helptext
+from core import i18n
+from voice import targets
 
 
 def test_alle_themen_in_beiden_sprachen():

@@ -27,7 +27,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-import i18n
+from core import i18n
 
 # Schluessel eigener Typen. Der Teil dahinter ist das Kuerzel, das auch im
 # Dateinamen steht — es wird einmal beim Anlegen aus dem Namen gebildet und
@@ -98,7 +98,7 @@ def _stored() -> dict[str, str]:
     Modulebene machte daraus einen Ring, der davon abhinge, wer zuerst
     geladen wird.
     """
-    import settings
+    from core import settings
     return settings.get_user_types()
 
 
