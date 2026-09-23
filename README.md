@@ -18,6 +18,9 @@ Pitch, resonance, weight, and voice quality — real-time analysis while you spe
 </div>
 
 ---
+**Kern feature sind fertig und es funktioniert bei feature anfragen werden ich drauf reagieren mit freundlichen grüßen
+The core features are complete, and it works. I will respond to any feature requests. Best regards,**
+
 
 ## ⚡ Quick Download & Installation
 

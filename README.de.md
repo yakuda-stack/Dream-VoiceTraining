@@ -18,6 +18,8 @@ Tonhöhe, Resonanz, Schwere und Stimmqualität — Live-Analyse beim Sprechen un
 </div>
 
 ---
+**Kern feature sind fertig und es funktioniert bei feature anfragen werden ich drauf reagieren mit freundlichen grüßen
+The core features are complete, and it works. I will respond to any feature requests. Best regards,**
 
 ## ⚡ Schnellstart & Download
 
