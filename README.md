@@ -108,11 +108,6 @@ Custom file naming schemes and target folders can be configured in **Settings �
 
 ---
 
-## 🤖 Note on Development & AI Tooling
-
-* **Idea, Architecture & UX/UI Design:** Conceived, designed, and architected entirely by me.
-* **Code Implementation:** Developed, generated, and refactored using Claude Code (Anthropic).
-* **Documentation & Copy:** Drafted and formatted with support from Google Gemini.
 
 ### Development Approach
 AI tools were used extensively to accelerate development and code generation. System architecture, feature decisions, code reviews, and quality control were managed directly by the developer. All code is tested and verified prior to release.
@@ -125,3 +120,8 @@ AI tools were used extensively to accelerate development and code generation. Sy
 * **Ko-fi:** [Support on Ko-fi](https://ko-fi.com/yakuda_) *(Optional — software is free and open-source)*
 * **What's new:** [Changelog](CHANGELOG.md) | [Highlights](HIGHLIGHTS.md)
 * **License:** [GPL v3](LICENSE) | [Third-Party Notices](THIRD_PARTY_NOTICES.md)
+
+---
+
+<p align="center"><sub>🤖 <b>Transparency note:</b> This project and its documentation are developed with the support of AI coding assistants (<b>Claude by Anthropic</b>). <b>Idea, architecture &amp; UX/UI design:</b> by me. The controls code comes from Yakuda Connect.</sub></p>
+<p align="center"><sub>Licensed under GPL-3.0</sub></p>
