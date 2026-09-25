@@ -107,11 +107,6 @@ Eigene Dateinamen-Schemata und Zielordner lassen sich unter **Einstellungen → 
 
 ---
 
-## 🤖 Anmerkung zur Entstehung dieses Projekts
-
-* **Idee, Architektur & Systemdesign:** Konzipiert, entworfen und strukturiert von mir.
-* **Code-Implementierung:** Geschrieben, generiert und refactort unter Einsatz von Claude Code (Anthropic).
-* **Dokumentation & Texte:** Ausformuliert und formatiert mit Unterstützung von Google Gemini.
 
 ### Entwicklungsansatz
 KI-Werkzeuge wurden intensiv genutzt, um die Entwicklung und Code-Generierung zu beschleunigen. Systemarchitektur, Feature-Entscheidungen, Code-Reviews und Qualitätskontrolle lagen direkt beim Entwickler. Der gesamte Code wird vor Veröffentlichung ausgeführt und getestet.
@@ -124,3 +119,8 @@ KI-Werkzeuge wurden intensiv genutzt, um die Entwicklung und Code-Generierung zu
 * **Ko-fi:** [Projekt auf Ko-fi unterstützen](https://ko-fi.com/yakuda_) *(Freiwillig — die Software ist und bleibt kostenlos)*
 * **Neuigkeiten:** [Changelog](CHANGELOG.md) | [Highlights](HIGHLIGHTS.md) *(auf Englisch)*
 * **Lizenz:** [GPL v3](LICENSE) | [Drittanbieter-Hinweise](THIRD_PARTY_NOTICES.md)
+
+---
+
+<p align="center"><sub>🤖 <b>Transparency note:</b> This project and its documentation are developed with the support of AI coding assistants (<b>Claude by Anthropic</b>). <b>Idea, architecture &amp; UX/UI design:</b> by me. The controls code comes from Yakuda Connect.</sub></p>
+<p align="center"><sub>Licensed under GPL-3.0</sub></p>
