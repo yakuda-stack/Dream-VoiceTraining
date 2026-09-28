@@ -4,6 +4,13 @@ Notable changes per release. Format follows
 [Keep a Changelog](https://keepachangelog.com/), versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [1.1.8] — 2026-09-28
+
+### Changed
+
+- **appiamge fix .** i replace appimage with zsync appimage
+
+
 ## [1.1.7] — 2026-09-16
 
 ### Added

@@ -1,155 +1,262 @@
-#!/usr/bin/env bash
-# Baut ein AppImage mit eigener Python-Umgebung.
+#!/bin/bash
+# Dream-VoiceTraining — AppImage Builder (bundled Python)
+# Benötigt: python3, pip (appimagetool wird automatisch geladen)
+# Verwendung:  bash packaging/build-appimage.sh   (egal von wo aus)
 #
-#   bash packaging/build-appimage.sh
-#     -> Dream-VoiceTraining-<version>-x86_64.AppImage
-#        Eine Datei fuer alles. Die Laufzeit (uruntime) nimmt FUSE 3, faellt
-#        auf FUSE 2 zurueck und entpackt sich notfalls selbst, wenn gar kein
-#        FUSE vorhanden ist.
-#
-#   bash packaging/build-appimage.sh --classic
-#     -> zusaetzlich zwei Dateien mit den offiziellen AppImage-Laufzeiten,
-#        eine fuer FUSE 3 und eine fuer FUSE 2. Nur noetig, wenn jemand die
-#        Originallaufzeit ausdruecklich verlangt.
-#
-# Voraussetzungen: python3 mit venv, curl. FUSE wird zum Bauen nicht gebraucht.
-#
-# Das AppImage bringt PySide6 und parselmouth mit und wird dadurch gross
-# (grob 250-350 MB). Was es NICHT mitbringt, sind ALSA, PulseAudio und
-# PipeWire — die kommen vom Wirtssystem, sonst funktioniert die
-# Geraeteauswahl nicht.
-set -euo pipefail
+# Ergebnis:    build/Dream-VoiceTraining-<version>-x86_64.AppImage
+#              build/ wird bei JEDEM Lauf komplett geleert — dort liegt
+#              danach nur die frische AppImage, nie ein alter Stand.
 
-APP=Dream-VoiceTraining
-ID=dream-voicetraining
-ARCH="$(uname -m)"
-URUNTIME_VERSION="v0.6.1"
+set -e
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-BUILD="$ROOT/build"
-APPDIR="$BUILD/$APP.AppDir"
-
-CLASSIC=0
-VERSION=""
-for arg in "$@"; do
-  case "$arg" in
-    --classic) CLASSIC=1 ;;
-    -h|--help) sed -n '2,20p' "$0"; exit 0 ;;
-    *) VERSION="$arg" ;;
-  esac
+# immer vom Projekt-Root aus arbeiten: erst ins Skript-Verzeichnis,
+# dann hochgehen bis core/paths.py gefunden ist
+cd "$(dirname "$0")"
+for _ in 1 2 3; do
+    [ -f core/paths.py ] && break
+    cd ..
 done
-[ -n "$VERSION" ] || VERSION="$(grep -oP 'APP_VERSION = "\K[^"]+' "$ROOT/core/paths.py")"
-
-say() { printf '\033[1;36m::\033[0m %s\n' "$*"; }
-
-mkdir -p "$BUILD"
-say "$APP $VERSION für $ARCH"
-
-# ---------------------------------------------------------------- AppDir
-
-rm -rf "$APPDIR"
-mkdir -p "$APPDIR/usr/lib/$ID" "$APPDIR/usr/share/applications" \
-         "$APPDIR/usr/share/icons/hicolor/scalable/apps"
-
-say "Python-Umgebung anlegen"
-python3 -m venv "$APPDIR/usr/python"
-"$APPDIR/usr/python/bin/pip" install --upgrade pip wheel --quiet
-"$APPDIR/usr/python/bin/pip" install --quiet -r "$ROOT/requirements.txt"
-
-say "Programmdateien kopieren"
-cp "$ROOT/main.py" "$APPDIR/usr/lib/$ID/"
-cp -r "$ROOT/core" "$ROOT/voice" "$ROOT/ui" "$APPDIR/usr/lib/$ID/"
-find "$APPDIR/usr/lib/$ID" -name __pycache__ -type d -exec rm -rf {} +
-cp "$ROOT/LICENSE" "$ROOT/THIRD_PARTY_NOTICES.md" "$APPDIR/usr/lib/$ID/"
-# Der Rueckfall von Changelog- und Highlights-Fenster, wenn kein Netz da ist.
-cp "$ROOT/CHANGELOG.md" "$ROOT/HIGHLIGHTS.md" "$APPDIR/usr/lib/$ID/"
-mkdir -p "$APPDIR/usr/lib/$ID/assets/intro"
-cp "$ROOT/assets/intro"/* "$APPDIR/usr/lib/$ID/assets/intro/"
-
-say "Metadaten"
-cp "$ROOT/packaging/$ID.desktop" "$APPDIR/usr/share/applications/$ID.desktop"
-cp "$ROOT/packaging/$ID.desktop" "$APPDIR/$ID.desktop"
-cp "$ROOT/packaging/$ID.svg" \
-   "$APPDIR/usr/share/icons/hicolor/scalable/apps/$ID.svg"
-cp "$ROOT/packaging/$ID.svg" "$APPDIR/$ID.svg"
-for size in 32 48 64 128 256; do
-  install -Dm644 "$ROOT/packaging/icons/$size.png" \
-    "$APPDIR/usr/share/icons/hicolor/${size}x${size}/apps/$ID.png"
-done
-cp "$ROOT/packaging/icons/256.png" "$APPDIR/.DirIcon"
-
-cat > "$APPDIR/AppRun" <<'RUN'
-#!/bin/sh
-HERE="$(dirname "$(readlink -f "$0")")"
-# Qt faellt unter Wayland sonst gern auf xcb zurueck
-[ -n "${QT_QPA_PLATFORM:-}" ] || {
-    [ -n "${WAYLAND_DISPLAY:-}" ] && export QT_QPA_PLATFORM=wayland
-}
-export PATH="$HERE/usr/python/bin:$PATH"
-exec "$HERE/usr/python/bin/python3" "$HERE/usr/lib/dream-voicetraining/main.py" "$@"
-RUN
-chmod +x "$APPDIR/AppRun"
-
-# Der venv zeigt auf das Python des Bauhosts; Shebangs neutralisieren.
-sed -i "1s|^#!.*python3\$|#!/usr/bin/env python3|" "$APPDIR/usr/python/bin/"* 2>/dev/null || true
-
-say "Ballast entfernen"
-find "$APPDIR/usr/python" -type d -name "__pycache__" -prune -exec rm -rf {} +
-find "$APPDIR/usr/python" -type d -name "tests" -prune -exec rm -rf {} +
-rm -rf "$APPDIR/usr/python/lib/python"*/site-packages/PySide6/Qt/qml \
-       "$APPDIR/usr/python/lib/python"*/site-packages/PySide6/Qt/translations \
-       "$APPDIR/usr/python/lib/python"*/site-packages/PySide6/examples 2>/dev/null || true
-
-# ------------------------------------------------------------ Werkzeuge
-
-fetch() {
-  local url="$1" target="$2"
-  [ -x "$target" ] && return 0
-  say "Hole $(basename "$target")"
-  curl -fsSL --retry 3 -o "$target" "$url"
-  chmod +x "$target"
-}
-
-TOOL="$BUILD/appimagetool-$ARCH.AppImage"
-fetch "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-$ARCH.AppImage" "$TOOL"
-
-# appimagetool ist selbst ein AppImage. Ohne FUSE auf dem Bauhost muss es
-# sich entpacken, sonst kommt es gar nicht erst hoch.
-TOOL_ARGS=()
-"$TOOL" --version >/dev/null 2>&1 || TOOL_ARGS=(--appimage-extract-and-run)
-
-pack() {
-  local runtime="$1" out="$2"
-  shift 2
-  say "Baue $(basename "$out")"
-  rm -f "$out"
-  ARCH="$ARCH" "$TOOL" "${TOOL_ARGS[@]}" --runtime-file "$runtime" "$@" \
-      "$APPDIR" "$out"
-  printf '   %s\n' "$(du -h "$out" | cut -f1)"
-}
-
-# ------------------------------------------------------- Hybrid (Vorgabe)
-
-URUNTIME="$BUILD/uruntime-$ARCH"
-fetch "https://github.com/VHSgunzo/uruntime/releases/download/$URUNTIME_VERSION/uruntime-appimage-squashfs-$ARCH" "$URUNTIME"
-pack "$URUNTIME" "$BUILD/$APP-$VERSION-$ARCH.AppImage"
-
-# ------------------------------------------------ Originallaufzeiten
-
-if [ "$CLASSIC" -eq 1 ]; then
-  RT3="$BUILD/runtime-fuse3-$ARCH"
-  RT2="$BUILD/runtime-fuse2-$ARCH"
-  fetch "https://github.com/AppImage/type2-runtime/releases/download/continuous/runtime-$ARCH" "$RT3"
-  fetch "https://github.com/AppImage/AppImageKit/releases/download/continuous/runtime-$ARCH" "$RT2"
-
-  pack "$RT3" "$BUILD/$APP-$VERSION-fuse3-$ARCH.AppImage"
-  # Die alte Laufzeit versteht nur xz und zlib, appimagetool packt sonst zstd.
-  pack "$RT2" "$BUILD/$APP-$VERSION-fuse2-$ARCH.AppImage" --comp xz
+if [ ! -f core/paths.py ]; then
+    echo "FEHLER: Projekt-Root nicht gefunden (core/paths.py fehlt)."
+    echo "        Bitte das Skript in den Dream-VoiceTraining-Ordner legen."
+    exit 1
 fi
 
-echo
-say "fertig:"
-ls -1 "$BUILD"/*.AppImage
-echo
-echo "   Kurztest:            ./Datei.AppImage"
-echo "   Test ohne FUSE:      ./Datei.AppImage --appimage-extract-and-run"
+APP="Dream-VoiceTraining"
+# Version automatisch aus core/paths.py lesen (APP_VERSION = "1.1.7" -> 1.1.7).
+VERSION="$(grep -oP '^APP_VERSION\s*=\s*"v?\K[^"]+' core/paths.py)"
+if [ -z "$VERSION" ]; then
+    echo "FEHLER: APP_VERSION in core/paths.py nicht gefunden."
+    exit 1
+fi
+ARCH="x86_64"
+OUT_DIR="$(pwd)/build"                              # Ziel fuer die fertige AppImage
+BUILD_DIR="$OUT_DIR/AppDir"                         # Zwischenstand, wird am Ende geloescht
+OUT="$OUT_DIR/${APP}-${VERSION}-${ARCH}.AppImage"
+LIB="$BUILD_DIR/usr/lib/dream-voicetraining"
+
+echo "=== Dream-VoiceTraining AppImage Builder ==="
+echo "Version: $VERSION"
+echo ""
+
+# Sanity-Check: Projektstruktur vorhanden?
+for f in main.py core/paths.py ui/mainwindow.py packaging/dream-voicetraining.svg \
+         CHANGELOG.md HIGHLIGHTS.md; do
+    if [ ! -e "$f" ]; then
+        echo "FEHLER: $f nicht gefunden — bitte aus dem Projekt-Root bauen."
+        exit 1
+    fi
+done
+
+# 0. build/ frisch anlegen
+echo "[0/5] Leere build/ ..."
+rm -rf "$OUT_DIR"
+rm -rf "$(pwd)/AppDir"          # Überbleibsel vom alten Build-Ort im Projekt-Root
+mkdir -p "$OUT_DIR"
+
+# 1. appimagetool besorgen
+#
+# Immer das aktuelle aus github.com/AppImage/appimagetool — NICHT das alte
+# aus AppImageKit (wird nicht mehr gepflegt) und nicht ein zufällig
+# installiertes: das aktuelle bringt zsyncmake selbst mit, erzeugt also
+# die .zsync-Datei für Delta-Updates (siehe Schritt 6) ohne dass zsync auf
+# dem System installiert sein muss. Wird einmal nach /tmp geladen.
+# Eigenes Tool erzwingen: APPIMAGETOOL=/pfad/zum/appimagetool bash ...
+if [ -z "${APPIMAGETOOL:-}" ]; then
+    APPIMAGETOOL="/tmp/appimagetool-new-${ARCH}"
+    if [ ! -s "$APPIMAGETOOL" ]; then
+        echo "[Info] Lade appimagetool (github.com/AppImage/appimagetool)..."
+        wget -q "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-${ARCH}.AppImage" \
+            -O "$APPIMAGETOOL" || {
+            echo "FEHLER: appimagetool konnte nicht geladen werden."
+            rm -f "$APPIMAGETOOL"
+            exit 1
+        }
+    fi
+    if ! head -c 4 "$APPIMAGETOOL" | grep -q "ELF"; then
+        echo "FEHLER: $APPIMAGETOOL ist keine ELF-Datei — Download kaputt."
+        rm -f "$APPIMAGETOOL"
+        exit 1
+    fi
+    chmod +x "$APPIMAGETOOL"
+fi
+
+# FUSE-Workaround: appimagetool selbst ohne FUSE ausführen
+export APPIMAGE_EXTRACT_AND_RUN=1
+
+# 1b. Runtime besorgen — WICHTIG für FUSE 2 *und* FUSE 3
+#
+# Die Runtime ist der ausführbare Kopf jeder AppImage. Die alte aus
+# AppImageKit lädt libfuse.so.2 per dlopen(). Ubuntu >= 22.04 und damit
+# Linux Mint >= 21 liefern nur noch fuse3 aus — dort scheitert der Start
+# mit "dlopen(): error loading libfuse.so.2", bevor auch nur eine Zeile
+# Python läuft.
+#
+# type2-runtime ist statisch gegen musl+libfuse gelinkt und sucht sich
+# zur Laufzeit ein passendes fusermount* im $PATH. Damit laufen dieselbe
+# Datei auf fuse2- und fuse3-Systemen, ohne dass jemand libfuse2
+# nachinstallieren muss.
+RUNTIME_URL="https://github.com/AppImage/type2-runtime/releases/download/continuous/runtime-${ARCH}"
+RUNTIME="/tmp/appimage-runtime-${ARCH}"
+if [ ! -s "$RUNTIME" ]; then
+    echo "[Info] Lade statische AppImage-Runtime (fuse2+fuse3)..."
+    wget -q "$RUNTIME_URL" -O "$RUNTIME" || {
+        echo "FEHLER: Runtime konnte nicht geladen werden ($RUNTIME_URL)."
+        exit 1
+    }
+fi
+# Sanity-Check: bei einem 404 landet sonst eine HTML-Seite in der
+# AppImage und das Ergebnis startet auf *keinem* System.
+if ! head -c 4 "$RUNTIME" | grep -q "ELF"; then
+    echo "FEHLER: $RUNTIME ist keine ELF-Datei — Download kaputt."
+    rm -f "$RUNTIME"
+    exit 1
+fi
+chmod +x "$RUNTIME"
+
+# 2. AppDir Struktur anlegen
+echo "[1/5] Erstelle AppDir Struktur..."
+mkdir -p "$BUILD_DIR/usr/bin"
+mkdir -p "$LIB"
+mkdir -p "$BUILD_DIR/usr/share/applications"
+mkdir -p "$BUILD_DIR/usr/share/icons/hicolor/scalable/apps"
+
+# 3. Programmdateien kopieren
+echo "[2/5] Kopiere Programmdateien..."
+cp main.py "$LIB/"
+cp -r core voice ui "$LIB/"
+mkdir -p "$LIB/assets"
+cp -r assets/* "$LIB/assets/"
+# Changelog- und Highlights-Fenster (ui/docviewer.py)
+cp CHANGELOG.md HIGHLIGHTS.md "$LIB/"
+
+# Python-Cache nicht mitschleppen
+find "$LIB" -name '__pycache__' -type d -exec rm -rf {} + 2>/dev/null || true
+
+# Wrapper-Script in /usr/bin
+cat > "$BUILD_DIR/usr/bin/dream-voicetraining" << 'WRAPPER'
+#!/bin/bash
+cd "$(dirname "$0")/../lib/dream-voicetraining"
+exec python3 main.py "$@"
+WRAPPER
+chmod +x "$BUILD_DIR/usr/bin/dream-voicetraining"
+
+# 4. Icon und Desktop-Datei (generiert, nicht fest)
+echo "[3/5] Setze Icon und Desktop-Eintrag..."
+cp packaging/dream-voicetraining.svg "$BUILD_DIR/usr/share/icons/hicolor/scalable/apps/dream-voicetraining.svg"
+cp packaging/dream-voicetraining.svg "$BUILD_DIR/dream-voicetraining.svg"
+
+cat > "$BUILD_DIR/usr/share/applications/dream-voicetraining.desktop" << EOF
+[Desktop Entry]
+Name=Dream-VoiceTraining
+Comment=Voice Analysis
+Exec=dream-voicetraining
+Icon=dream-voicetraining
+Terminal=false
+Type=Application
+Categories=AudioVideo;Audio;Recorder;
+StartupWMClass=Dream-VoiceTraining
+EOF
+
+cp "$BUILD_DIR/usr/share/applications/dream-voicetraining.desktop" "$BUILD_DIR/dream-voicetraining.desktop"
+
+# 5. Python-Abhängigkeiten ins AppDir bundeln
+echo "[4/5] Bundele Python-Abhängigkeiten..."
+SITE="$BUILD_DIR/usr/lib/python3"
+mkdir -p "$SITE"
+
+if python3 -m pip --version >/dev/null 2>&1; then
+    PIP=(python3 -m pip)
+else
+    PIP=(pip)
+fi
+
+"${PIP[@]}" install --quiet --no-compile --target="$SITE" -r requirements.txt || {
+    echo "FEHLER: Python-Abhängigkeiten konnten nicht installiert werden."
+    exit 1
+}
+find "$SITE" -name '__pycache__' -type d -exec rm -rf {} + 2>/dev/null || true
+
+# AppRun Script
+cat > "$BUILD_DIR/AppRun" << 'APPRUN'
+#!/bin/bash
+HERE="$(dirname "$(readlink -f "$0")")"
+export PYTHONPATH="$HERE/usr/lib/python3:$PYTHONPATH"
+export PATH="$HERE/usr/bin:$PATH"
+
+# Prüfe ob python3 vorhanden ist
+if ! command -v python3 >/dev/null 2>&1; then
+    echo "Dream-VoiceTraining: python3 nicht gefunden." >&2
+    echo "  Debian/Ubuntu/Mint:  sudo apt install python3" >&2
+    echo "  Fedora:              sudo dnf install python3" >&2
+    exit 1
+fi
+
+exec "$HERE/usr/bin/dream-voicetraining" "$@"
+APPRUN
+chmod +x "$BUILD_DIR/AppRun"
+
+# 6. AppImage bauen (mit der statischen Runtime von oben)
+#
+# Update-Information für Delta-Updates (zsync). Sie wird IN die AppImage
+# geschrieben und sagt Update-Tools (AppImageUpdate, AppImageLauncher,
+# AM, AppManager, Gear Lever ...), wo die neue Version liegt:
+#   gh-releases-zsync | Benutzer | Repo | latest | Dateimuster
+# "latest" = das neueste GitHub-Release, das KEIN Pre-release ist.
+# Daneben entsteht Dream-VoiceTraining-<version>-x86_64.AppImage.zsync: die
+# Prüfsummen der Blöcke. Ein Tool vergleicht sie mit der alten AppImage
+# und lädt nur die Blöcke, die sich geändert haben.
+# BEIDE Dateien gehören ins GitHub-Release.
+# Ohne zsync bauen: DVT_NO_ZSYNC=1 bash packaging/build-appimage.sh
+UPDATE_INFO="gh-releases-zsync|yakuda-stack|Dream-VoiceTraining|latest|Dream-VoiceTraining-*${ARCH}.AppImage.zsync"
+UPDATE_ARGS=()
+if [ -z "${DVT_NO_ZSYNC:-}" ]; then
+    UPDATE_ARGS=(-u "$UPDATE_INFO")
+fi
+echo "[5/5] Baue AppImage..."
+# im build/-Ordner aufrufen: appimagetool legt die .zsync im AKTUELLEN
+# Ordner ab, nicht neben der AppImage
+(cd "$OUT_DIR" && ARCH="$ARCH" "$APPIMAGETOOL" --runtime-file "$RUNTIME" \
+    "${UPDATE_ARGS[@]}" "$BUILD_DIR" "$OUT")
+
+# 7. Gegenprobe: die fertige Datei darf libfuse.so.2 nicht mehr brauchen.
+# Ohne diesen Check merkt man den Rückfall auf die alte Runtime erst,
+# wenn sich der erste Mint-Nutzer meldet.
+echo ""
+if head -c 400000 "$OUT" | strings | grep -q "libfuse\.so\.2"; then
+    echo "WARNUNG: Die AppImage verweist noch auf libfuse.so.2 —"
+    echo "         die statische Runtime wurde offenbar nicht benutzt."
+    echo "         Auf Mint/Ubuntu >= 22.04 startet sie so nicht."
+else
+    echo "✔ Runtime ist statisch (läuft mit fuse2 UND fuse3)"
+fi
+
+# 7b. Delta-Updates: .zsync da, Update-Info wirklich in der Datei?
+if [ -z "${DVT_NO_ZSYNC:-}" ]; then
+    # ohne APPIMAGE_EXTRACT_AND_RUN: damit würde die Runtime auspacken und
+    # die App mit diesem Argument starten, statt es selbst zu beantworten
+    EMBEDDED="$(env -u APPIMAGE_EXTRACT_AND_RUN "$OUT" \
+        --appimage-updateinformation 2>/dev/null || true)"
+    if [ "$EMBEDDED" = "$UPDATE_INFO" ]; then
+        echo "✔ Update-Info eingebettet: $EMBEDDED"
+    else
+        echo "WARNUNG: Update-Info fehlt in der AppImage (gelesen: '$EMBEDDED')."
+    fi
+    if [ -s "$OUT.zsync" ]; then
+        echo "✔ Delta-Update-Datei: build/$(basename "$OUT").zsync"
+    else
+        echo "WARNUNG: keine .zsync erzeugt — Delta-Updates gehen so nicht."
+        echo "         Eigenes appimagetool benutzt? Dann zsync installieren"
+        echo "         (pacman -S zsync) oder APPIMAGETOOL leer lassen."
+    fi
+fi
+
+# 8. AppDir wegräumen — in build/ bleiben die AppImage und ihre .zsync
+rm -rf "$BUILD_DIR"
+
+echo "✔ Fertig: build/$(basename "$OUT")"
+if [ -s "$OUT.zsync" ]; then
+    echo "   Ins GitHub-Release: $(basename "$OUT") UND $(basename "$OUT").zsync"
+fi
+echo "   Zum Starten: chmod +x \"$OUT\" && \"$OUT\""
+echo "   Ohne FUSE testen: APPIMAGE_EXTRACT_AND_RUN=1 \"$OUT\""
