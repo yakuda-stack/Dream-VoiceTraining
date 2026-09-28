@@ -8,7 +8,20 @@ Notable changes per release. Format follows
 
 ### Changed
 
-- **appiamge fix .** i replace appimage with zsync appimage
+- **The AppImage can update itself.** It now carries update information
+  pointing at the latest GitHub release, and every release ships a matching
+  `.zsync` file next to it. Tools such as AppImageUpdate, AppImageLauncher,
+  Gear Lever or AM compare the two and download only the parts that changed
+  instead of the whole file.
+- **The AppImage starts on FUSE 2 and FUSE 3 systems.** It is built with the
+  static `type2-runtime` instead of the old runtime, which needed
+  `libfuse.so.2` and failed on Ubuntu 22.04+ and Linux Mint 21+ unless
+  libfuse2 was installed by hand.
+
+### Fixed
+
+- **Desktop file passes validation again.** It declared `Version=1.5`,
+  which `desktop-file-validate` rejects; it is back to `1.4`.
 
 
 ## [1.1.7] — 2026-09-16

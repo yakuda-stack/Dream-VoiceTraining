@@ -7,6 +7,7 @@ dist/
 *.egg-info/
 .pytest_cache/
 *.AppImage
+*.zsync
 *.AppDir/
 !assets/*.png
 # Laufzeitdaten liegen unter ~/.config und ~/.local/share,

@@ -214,10 +214,25 @@ if [ -z "${DVT_NO_ZSYNC:-}" ]; then
     UPDATE_ARGS=(-u "$UPDATE_INFO")
 fi
 echo "[5/5] Baue AppImage..."
-# im build/-Ordner aufrufen: appimagetool legt die .zsync im AKTUELLEN
-# Ordner ab, nicht neben der AppImage
+# Die .zsync legt appimagetool (zsyncmake) im AKTUELLEN Ordner ab, nicht
+# neben der AppImage. Darum im build/-Ordner aufrufen und nur Dateinamen
+# übergeben. Alte .zsync-Reste aus dem Projekt-Root vorher wegräumen.
+PROJECT_DIR="$(pwd)"
+rm -f "$PROJECT_DIR"/${APP}-*-${ARCH}.AppImage.zsync
 (cd "$OUT_DIR" && ARCH="$ARCH" "$APPIMAGETOOL" --runtime-file "$RUNTIME" \
-    "${UPDATE_ARGS[@]}" "$BUILD_DIR" "$OUT")
+    "${UPDATE_ARGS[@]}" "$BUILD_DIR" "$(basename "$OUT")")
+
+# Falls ein anderes appimagetool sie doch woanders ablegt: einsammeln
+for d in "$PROJECT_DIR" "$BUILD_DIR"; do
+    if [ ! -s "$OUT.zsync" ] && [ -s "$d/$(basename "$OUT").zsync" ]; then
+        mv "$d/$(basename "$OUT").zsync" "$OUT.zsync"
+    fi
+done
+# Notfalls selbst erzeugen (braucht zsync: pacman -S zsync)
+if [ -z "${DVT_NO_ZSYNC:-}" ] && [ ! -s "$OUT.zsync" ] && command -v zsyncmake >/dev/null; then
+    echo "[Info] appimagetool hat keine .zsync gebaut — erzeuge sie mit zsyncmake..."
+    (cd "$OUT_DIR" && zsyncmake -u "$(basename "$OUT")" -o "$(basename "$OUT").zsync" "$(basename "$OUT")")
+fi
 
 # 7. Gegenprobe: die fertige Datei darf libfuse.so.2 nicht mehr brauchen.
 # Ohne diesen Check merkt man den Rückfall auf die alte Runtime erst,
@@ -237,17 +252,21 @@ if [ -z "${DVT_NO_ZSYNC:-}" ]; then
     # die App mit diesem Argument starten, statt es selbst zu beantworten
     EMBEDDED="$(env -u APPIMAGE_EXTRACT_AND_RUN "$OUT" \
         --appimage-updateinformation 2>/dev/null || true)"
+    # Beides ist PFLICHT: ohne Update-Info weiß kein Update-Tool, wo es
+    # suchen soll, ohne .zsync hat es nichts zum Vergleichen.
     if [ "$EMBEDDED" = "$UPDATE_INFO" ]; then
         echo "✔ Update-Info eingebettet: $EMBEDDED"
     else
-        echo "WARNUNG: Update-Info fehlt in der AppImage (gelesen: '$EMBEDDED')."
+        echo "FEHLER: Update-Info fehlt in der AppImage (gelesen: '$EMBEDDED')."
+        exit 1
     fi
     if [ -s "$OUT.zsync" ]; then
         echo "✔ Delta-Update-Datei: build/$(basename "$OUT").zsync"
     else
-        echo "WARNUNG: keine .zsync erzeugt — Delta-Updates gehen so nicht."
-        echo "         Eigenes appimagetool benutzt? Dann zsync installieren"
-        echo "         (pacman -S zsync) oder APPIMAGETOOL leer lassen."
+        echo "FEHLER: keine .zsync erzeugt — AppImage-Updates gehen so nicht."
+        echo "        zsync installieren (pacman -S zsync) und neu bauen,"
+        echo "        oder APPIMAGETOOL leer lassen (das mitgeladene bringt zsyncmake mit)."
+        exit 1
     fi
 fi
 

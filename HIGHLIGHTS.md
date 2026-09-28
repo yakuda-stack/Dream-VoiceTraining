@@ -5,7 +5,10 @@ every fix is in the [full changelog](https://github.com/yakuda-stack/Dream-Voice
 
 ## 1.1.8 — 2026-09-28
 
-- **appiamge fix .** i replace appimage with zsync appimage
+- **The AppImage updates itself** — only the changed parts are downloaded
+  (`.zsync` in every release).
+- **The AppImage runs on FUSE 2 and FUSE 3**, no libfuse2 needed on newer
+  Ubuntu and Mint.
 
 ## 1.1.7 — 2026-09-16
 
