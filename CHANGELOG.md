@@ -4,6 +4,24 @@ Notable changes per release. Format follows
 [Keep a Changelog](https://keepachangelog.com/), versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [1.1.9] — 2026-09-29
+
+### Fixed
+
+- **The AppImage no longer depends on the system's Python.** It used the
+  system `python3` with packages built for the Python on the build machine
+  (3.14), so it quit at once on anything else — Ubuntu 22.04 and Linux Mint
+  21 ship 3.10. It now carries its own Python 3.14 and does not need Python
+  installed at all.
+- **The AppImage starts on systems without the xcb helper libraries or
+  PortAudio.** Qt 6.5+ refuses to start without `libxcb-cursor0`, and audio
+  needs PortAudio; both are now inside the AppImage. A PortAudio installed
+  on the system is still preferred, so it keeps matching the local audio
+  setup.
+- **All files in the AppImage are readable for every user.** Some were only
+  readable by their owner, which failed as soon as another user ran it.
+
+
 ## [1.1.8] — 2026-09-28
 
 ### Changed

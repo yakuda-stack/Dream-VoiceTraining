@@ -3,6 +3,11 @@
 The most noticeable changes per release, a few lines each. Every detail and
 every fix is in the [full changelog](https://github.com/yakuda-stack/Dream-VoiceTraining/blob/main/CHANGELOG.md).
 
+
+## 1.1.9 — 2026-09-28
+
+- **The AppImage fix fix** — ubuntu
+
 ## 1.1.8 — 2026-09-28
 
 - **The AppImage updates itself** — only the changed parts are downloaded

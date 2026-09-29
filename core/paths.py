@@ -51,7 +51,7 @@ SOURCE_DIR = Path(__file__).resolve().parents[1]
 
 APP_ID = "dream-voicetraining"
 APP_NAME = "Dream-VoiceTraining"
-APP_VERSION = "1.1.8"
+APP_VERSION = "1.1.9"
 
 APP_URL = "https://github.com/yakuda-stack/Dream-VoiceTraining"
 ISSUES_URL = APP_URL + "/issues"
