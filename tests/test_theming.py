@@ -247,7 +247,9 @@ def test_keine_falsch_maskierten_klammern_in_stylesheets():
 
     root = Path(__file__).resolve().parents[1]
     broken = []
-    for name in ("main.py", "ui/dialogs.py", "ui/theming.py"):
+    names = ["main.py"] + sorted(
+        str(p.relative_to(root)) for p in (root / "ui").glob("*.py"))
+    for name in names:
         for number, line in enumerate(
                 (root / name).read_text(encoding="utf-8").splitlines(), 1):
             for match in re.finditer(r'''[fF](["'])(.*?)\1''', line):

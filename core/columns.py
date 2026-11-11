@@ -50,6 +50,7 @@ COLUMNS = [
     Column("voice_breaks_pct", "m_voice_breaks_pct", "voice_breaks_pct", "%", 1),
     Column("voice_break_count", "m_voice_break_count", "voice_break_count", "", 0),
     Column("voiced_ratio_pct", "m_voiced_ratio_pct"),
+    Column("target_hit_pct", "col_target_hit", "target_hit_pct", "%", 0),
     Column("file", "col_file", numeric=False),
 ]
 

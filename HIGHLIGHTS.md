@@ -4,6 +4,17 @@ The most noticeable changes per release, a few lines each. Every detail and
 every fix is in the [full changelog](https://github.com/yakuda-stack/Dream-VoiceTraining/blob/main/CHANGELOG.md).
 
 
+## 1.2.0 — 2026-11-11
+
+- **Progress chart** under *Sessions → Progress*, plus an *In target* share
+  per recording and live.
+- **Compare two to four recordings** side by side, and a **reference recording** to
+  play before practising.
+- **Update notice** — the version number turns yellow when a new release is
+  out; one click shows what is new and the matching download.
+- **Language dropdown** fed by the files in `locales/` — new languages need no
+  code.
+
 ## 1.1.9 — 2026-09-28
 
 - **The AppImage fix fix** — ubuntu

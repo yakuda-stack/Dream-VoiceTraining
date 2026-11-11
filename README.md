@@ -18,8 +18,8 @@ Pitch, resonance, weight, and voice quality — real-time analysis while you spe
 </div>
 
 ---
-**Kern feature sind fertig und es funktioniert bei feature anfragen werden ich drauf reagieren mit freundlichen grüßen
-The core features are complete, and it works. I will respond to any feature requests. Best regards,**
+> [!NOTE]
+> **Project status: feature-complete.** All core features are done and working. Development continues with bug fixes and maintenance — feature requests are welcome via [GitHub Issues](https://github.com/yakuda-stack/Dream-VoiceTraining/issues) or [Discord](https://discord.gg/ShNKvvZu74).
 
 
 ## ⚡ Quick Download & Installation
@@ -30,9 +30,9 @@ Native support for **Linux** and **Windows**. No setup required for portable ver
 | :--- | :--- | :--- |
 | **Linux (One-liner)** | `curl -fsSL https://raw.githubusercontent.com/yakuda-stack/Dream-VoiceTraining/main/install.sh \| bash` | Auto-installs on Arch, Ubuntu, Debian, Fedora, openSUSE |
 | **Arch / CachyOS (AUR)** | `paru -S dream-voicetraining` | Official AUR package |
-| **Linux (AppImage)** | [Download AppImage](https://github.com/yakuda-stack/Dream-VoiceTraining/releases/download/v1.1.9/Dream-VoiceTraining-1.1.9-x86_64.AppImage) | Single file execution (`chmod +x` & run) |
-| **Windows (Installer)** | [Download Setup `.exe`](https://github.com/yakuda-stack/Dream-VoiceTraining/releases/download/v1.1.9/Dream-VoiceTraining-1.1.9.exe) | Sets itself up on first run: Start Menu and Desktop shortcuts, no admin rights, uninstall via Apps & Features |
-| **Windows (Portable)** | [Download Portable `.exe`](https://github.com/yakuda-stack/Dream-VoiceTraining/releases/download/v1.1.9/Dream-VoiceTraining-1.1.9-Portable.exe) | Self-contained, stores data in local folder |
+| **Linux (AppImage)** | [Download AppImage](https://github.com/yakuda-stack/Dream-VoiceTraining/releases/download/v1.2.0/Dream-VoiceTraining-1.2.0-x86_64.AppImage) | Single file execution (`chmod +x` & run) |
+| **Windows (Installer)** | [Download Setup `.exe`](https://github.com/yakuda-stack/Dream-VoiceTraining/releases/download/v1.2.0/Dream-VoiceTraining-1.2.0.exe) | Sets itself up on first run: Start Menu and Desktop shortcuts, no admin rights, uninstall via Apps & Features |
+| **Windows (Portable)** | [Download Portable `.exe`](https://github.com/yakuda-stack/Dream-VoiceTraining/releases/download/v1.2.0/Dream-VoiceTraining-1.2.0-Portable.exe) | Self-contained, stores data in local folder |
 | **All Releases** | [GitHub Releases Overview](https://github.com/yakuda-stack/Dream-VoiceTraining/releases) | View all release history & full changelogs |
 
 ---
@@ -42,7 +42,7 @@ Native support for **Linux** and **Windows**. No setup required for portable ver
 | Live Analysis | Session Management | Detailed Metrics |
 | :---: | :---: | :---: |
 | <img src="assets/dashboard.png" width="280" alt="Live View"/> | <img src="assets/sessions.png" width="280" alt="Session List"/> | <img src="assets/details.png" width="280" alt="Detail View"/> |
-| Real-time Pitch, Formants (F1/F2), & Weight | Track recordings over time across 24 sortable, exportable columns | 18 acoustic metrics & detailed spectrogram view |
+| Real-time Pitch, Formants (F1/F2), & Weight | Track recordings over time across 25 sortable, exportable columns | 18 acoustic metrics & detailed spectrogram view |
 
 ---
 
@@ -50,11 +50,19 @@ Native support for **Linux** and **Windows**. No setup required for portable ver
 
 - **Real-Time Visual Analysis:** Pitch history, live spectrogram with F1/F2 formant tracking, pitch zone indicators, and voice weight (H1–H2).
 - **Import Existing Recordings:** Bring in WAV files from anywhere on disk — 8, 16, 24 or 32-bit, mono or stereo — and analyse them alongside your live sessions. Files are copied, never moved.
-- **Session History & Analytics:** Save recordings as WAV + JSON metrics. Filter, sort and export a table of 24 columns — 18 acoustic metrics plus date, name, type and file.
+- **Session History & Analytics:** Save recordings as WAV + JSON metrics. Filter, sort and export a table of 25 columns — 18 acoustic metrics, the in-target share, plus date, name, type and file.
 - **Advanced Region Analysis & Spectrogram:** Select steady-state vowels (e.g., `/a/`, `/i/`, `/u/`) with a dedicated spectrogram view in the details panel for precise formant & jitter tracking.
 - **Your Own Practice Texts & Recording Types:** Write and save practice texts of your own, and define recording types beyond the built-in ones — so the same material is measured the same way every session.
+- **Progress Over Time:** Plot any value across all recordings, with a rolling average and the range of any target voice as a band.
+- **In-Target Share:** See how much of a recording (and of the last 30 seconds live) stayed inside your target pitch range.
+- **Compare Recordings:** Two to four takes side by side — every value with the change from oldest to newest, all playable.
+- **Reference Recording:** Mark a take you like as reference and play it from the live view right before practising.
+- **Streak & Break Reminder:** Days in a row with a recording, and a gentle reminder to rest after 20 minutes (adjustable).
 - **Custom Target Profiles:** Compare your measurements against Masculine, Androgynous, Feminine, or custom reference ranges.
-- **100% Offline & Private:** Operates completely offline following XDG specs. No tracking, no telemetry, no cloud dependency.
+- **Update Notice:** The version number at the bottom right turns yellow when a new release is out — one click shows what is new and the right download.
+- **Private by Design:** Follows XDG specs. No tracking, no telemetry, no cloud dependency. Network requests only for the update check if you allow it (asked once) and for the changelog.
+
+**Languages:** English and German built in. Every file in [`locales/`](locales) appears in the language dropdown — copy `en.json`, set `"lang"` and `"name"` at the top and translate. Missing texts fall back to English. Own files can also go into `~/.config/dream-voicetraining/locales/`.
 
 *(Want to know what the numbers mean and how they are measured? See the [Acoustic Metrics & Methodology guide](docs/metrics.md).)*
 

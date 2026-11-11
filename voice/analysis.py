@@ -70,6 +70,13 @@ def _pitch_track(snd: parselmouth.Sound, time_step: float = 0.01) -> np.ndarray:
     return _clean_voiced(_pitch_frames(snd, time_step))
 
 
+def voiced_f0(samples: np.ndarray, sr: int) -> np.ndarray:
+    """Stimmhafte F0-Werte einer Aufnahme (10-ms-Raster), fuer den Ziel-Anteil."""
+    if samples.size < max(int(0.3 * sr), _min_window(sr)):
+        return np.zeros(0)
+    return _pitch_track(_to_sound(samples, sr), time_step=0.01)
+
+
 def _formant_medians(snd: parselmouth.Sound, time_step: float = 0.01,
                      with_f3: bool = False):
     """Median von F1/F2 (optional F3) ueber das Fenster."""

@@ -1,0 +1,22 @@
+name: Feature request
+description: Suggest an idea — the core is done, but good ideas are welcome
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The core features are complete. Requests are read and answered. English or German is fine.
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like?
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why would it help your training?
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: How do you work around it today?

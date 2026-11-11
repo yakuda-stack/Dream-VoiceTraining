@@ -18,8 +18,8 @@ Tonhöhe, Resonanz, Schwere und Stimmqualität — Live-Analyse beim Sprechen un
 </div>
 
 ---
-**Kern feature sind fertig und es funktioniert bei feature anfragen werden ich drauf reagieren mit freundlichen grüßen
-The core features are complete, and it works. I will respond to any feature requests. Best regards,**
+> [!NOTE]
+> **Projektstatus: im Grunde fertig.** Alle Kernfunktionen sind umgesetzt und laufen. Es gibt weiterhin Bugfixes und Pflege — Feature-Wünsche gerne über [GitHub Issues](https://github.com/yakuda-stack/Dream-VoiceTraining/issues) oder [Discord](https://discord.gg/ShNKvvZu74).
 
 ## ⚡ Schnellstart & Download
 
@@ -29,9 +29,9 @@ Volle Unterstützung für **Linux** und **Windows**. Portable Versionen benötig
 | :--- | :--- | :--- |
 | **Linux (Einzeiler)** | `curl -fsSL https://raw.githubusercontent.com/yakuda-stack/Dream-VoiceTraining/main/install.sh \| bash` | Automatische Installation für Arch, Ubuntu, Debian, Fedora, openSUSE |
 | **Arch / CachyOS (AUR)** | `paru -S dream-voicetraining` | Offizielles AUR-Paket |
-| **Linux (AppImage)** | [AppImage herunterladen](https://github.com/yakuda-stack/Dream-VoiceTraining/releases/download/v1.1.9/Dream-VoiceTraining-1.1.9-x86_64.AppImage) | Einzelne Datei, direkt ausführbar (`chmod +x`) |
-| **Windows (Installer)** | [Setup `.exe` herunterladen](https://github.com/yakuda-stack/Dream-VoiceTraining/releases/download/v1.1.9/Dream-VoiceTraining-1.1.9.exe) | Richtet sich beim ersten Start selbst ein: Startmenü- und Desktop-Verknüpfung, ohne Administratorrechte, Deinstallation über Apps & Features |
-| **Windows (Portable)** | [Portable `.exe` herunterladen](https://github.com/yakuda-stack/Dream-VoiceTraining/releases/download/v1.1.9/Dream-VoiceTraining-1.1.9-Portable.exe) | Ohne Installation, speichert Daten im eigenen Ordner |
+| **Linux (AppImage)** | [AppImage herunterladen](https://github.com/yakuda-stack/Dream-VoiceTraining/releases/download/v1.2.0/Dream-VoiceTraining-1.2.0-x86_64.AppImage) | Einzelne Datei, direkt ausführbar (`chmod +x`) |
+| **Windows (Installer)** | [Setup `.exe` herunterladen](https://github.com/yakuda-stack/Dream-VoiceTraining/releases/download/v1.2.0/Dream-VoiceTraining-1.2.0.exe) | Richtet sich beim ersten Start selbst ein: Startmenü- und Desktop-Verknüpfung, ohne Administratorrechte, Deinstallation über Apps & Features |
+| **Windows (Portable)** | [Portable `.exe` herunterladen](https://github.com/yakuda-stack/Dream-VoiceTraining/releases/download/v1.2.0/Dream-VoiceTraining-1.2.0-Portable.exe) | Ohne Installation, speichert Daten im eigenen Ordner |
 | **Alle Versionen** | [GitHub Releases-Übersicht](https://github.com/yakuda-stack/Dream-VoiceTraining/releases) | Übersicht aller Versionen & Veröffentlichungsnotizen |
 
 ---
@@ -41,7 +41,7 @@ Volle Unterstützung für **Linux** und **Windows**. Portable Versionen benötig
 | Live-Analyse | Session-Verwaltung | Detail-Auswertung |
 | :---: | :---: | :---: |
 | <img src="assets/dashboard.png" width="280" alt="Live-Ansicht"/> | <img src="assets/sessions.png" width="280" alt="Sessionliste"/> | <img src="assets/details.png" width="280" alt="Detailansicht"/> |
-| Echtzeit-Tonhöhe, Formanten (F1/F2) & Stimmgewicht | Verfolge Aufnahmen über Zeit in 24 sortier- und exportierbaren Spalten | 18 akustische Kennwerte & Spektrogramm-Detailansicht |
+| Echtzeit-Tonhöhe, Formanten (F1/F2) & Stimmgewicht | Verfolge Aufnahmen über Zeit in 25 sortier- und exportierbaren Spalten | 18 akustische Kennwerte & Spektrogramm-Detailansicht |
 
 ---
 
@@ -49,11 +49,19 @@ Volle Unterstützung für **Linux** und **Windows**. Portable Versionen benötig
 
 - **Echtzeit-Stimmanalyse:** Live-Spektrogramm mit Formanten-Tracking (F1/F2), Tonhöhenverlauf, Zonenanzeige und Stimmgewicht (H1–H2).
 - **Vorhandene Aufnahmen importieren:** Hol WAV-Dateien von überall auf der Platte herein — 8, 16, 24 oder 32 Bit, mono oder stereo — und werte sie neben deinen Live-Sessions aus. Die Dateien werden kopiert, nicht verschoben.
-- **Session-Verwaltung:** Speichert Takes als WAV + JSON. Sortiere, filtere und exportiere eine Tabelle mit 24 Spalten — 18 akustische Kennwerte plus Datum, Name, Typ und Datei.
+- **Session-Verwaltung:** Speichert Takes als WAV + JSON. Sortiere, filtere und exportiere eine Tabelle mit 25 Spalten — 18 akustische Kennwerte, der Anteil im Ziel plus Datum, Name, Typ und Datei.
 - **Ausschnitts-Modus & Spektrogramm:** Wähle Vokale (z. B. `/a/`, `/i/`, `/u/`) aus und analysiere sie im Detailfenster inklusive Spektrogramm-Ansicht.
 - **Eigene Übungstexte & Aufnahmetypen:** Leg eigene Übungstexte an und speichere sie, und definiere Aufnahmetypen über die eingebauten hinaus — damit jede Session dasselbe Material auf dieselbe Weise misst.
+- **Fortschritt über die Zeit:** Jeder Kennwert über alle Aufnahmen als Kurve, mit gleitendem Schnitt und dem Bereich einer wählbaren Zielstimme als Band.
+- **Anteil im Ziel:** Wie viel einer Aufnahme (und live der letzten 30 Sekunden) im Tonhöhen-Zielbereich lag.
+- **Aufnahmen vergleichen:** Zwei bis vier Aufnahmen nebeneinander — jeder Kennwert mit Veränderung von der ältesten zur neuesten, alle abspielbar.
+- **Referenz-Aufnahme:** Eine gelungene Aufnahme als Referenz markieren und in der Live-Ansicht direkt vor dem Üben anhören.
+- **Serie & Pausen-Erinnerung:** Tage am Stück mit Aufnahme und ein Hinweis auf eine Pause nach 20 Minuten (einstellbar).
 - **Anpassbare Zielprofile:** Vergleiche deine Werte mit Zielbereichen für maskuline, androgyne oder feminine Stimmlagen.
-- **100% Lokal & Datenschutzfreundlich:** Funktioniert vollständig offline nach XDG-Standards. Keine Telemetrie, kein Cloud-Zwang.
+- **Update-Hinweis:** Die Versionsnummer unten rechts leuchtet gelb, wenn es ein neues Release gibt — ein Klick zeigt, was neu ist, und den passenden Download.
+- **Datenschutzfreundlich:** Nach XDG-Standards, keine Telemetrie, kein Cloud-Zwang. Netzwerkanfragen nur für die Update-Prüfung, wenn du sie erlaubst (einmal gefragt), und für den Changelog.
+
+**Sprachen:** Englisch und Deutsch sind eingebaut. Jede Datei im Ordner [`locales/`](locales) erscheint im Sprach-Dropdown — `en.json` kopieren, oben `"lang"` und `"name"` setzen und übersetzen. Fehlende Texte fallen auf Englisch zurück. Eigene Dateien können auch nach `~/.config/dream-voicetraining/locales/`.
 
 *(Du willst wissen, was die Zahlen bedeuten und wie sie zustande kommen? Siehe [Akustik & Methodik](docs/metrics.de.md).)*
 

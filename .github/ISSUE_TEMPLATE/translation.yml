@@ -1,0 +1,21 @@
+name: New translation
+description: Add a language via a file in locales/
+labels: [translation]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Copy `locales/en.json`, rename it to your language code (e.g. `fr.json`), set `"lang"` and `"name"`
+        at the top and translate the texts. Attach the file here or open a pull request.
+        Missing texts fall back to English, so a partial translation already works.
+  - type: input
+    id: language
+    attributes:
+      label: Language
+      placeholder: "Français (FR)"
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes

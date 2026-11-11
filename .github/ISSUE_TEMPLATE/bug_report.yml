@@ -1,0 +1,47 @@
+name: Bug report
+description: Something does not work as expected
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! English or German is fine. / Englisch oder Deutsch, beides passt.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, what happened instead?
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Shown at the bottom right of the window or under Settings → Info.
+      placeholder: "1.2.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: Installed via
+      options:
+        - AUR
+        - AppImage
+        - Windows installer
+        - Windows portable
+        - install.sh
+        - From source
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: System
+      placeholder: "CachyOS, KDE Plasma 6, Wayland / Windows 11"
+  - type: textarea
+    id: log
+    attributes:
+      label: Debug log
+      description: Settings → Info → Debug, then copy the log here.
+      render: text

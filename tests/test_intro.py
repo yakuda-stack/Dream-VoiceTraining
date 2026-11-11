@@ -260,9 +260,9 @@ def test_hausfarben_stehen_im_stylesheet():
 def test_ohne_emoji_schrift_bleibt_die_beschriftung_lesbar(qt_app, monkeypatch):
     """Sonst stuende auf dem Knopf ein leeres Kaestchen."""
     from PySide6 import QtWidgets
-    from ui import dialogs
+    from ui import dialogs, links
 
-    monkeypatch.setattr(dialogs, "_EMOJI_OK", False)
+    monkeypatch.setattr(links, "_EMOJI_OK", False)
     box = dialogs.project_links_box()
     try:
         texte = [b.text() for b in box.findChildren(QtWidgets.QPushButton)]

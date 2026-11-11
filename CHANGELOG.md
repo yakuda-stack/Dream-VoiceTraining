@@ -4,6 +4,59 @@ Notable changes per release. Format follows
 [Keep a Changelog](https://keepachangelog.com/), versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [1.2.0] — 2026-11-11
+
+### Added
+
+- **Progress over time.** *Sessions → Progress* draws any value across all
+  recordings as a curve, with the average of the last five and the range of
+  a target voice as a band. Recording type and target voice can be chosen at
+  the top; the target defaults to the evaluation target.
+- **"In target" share.** Every new recording stores how much of it lay inside
+  the F0 range of the evaluation target (new column *In target*). The live
+  view has a matching card for the last 30 seconds.
+- **Compare recordings.** Select two to four rows with Ctrl+click and press
+  *Compare*: every value side by side, sorted by date, with the change from
+  the oldest to the newest, plus a play button for each.
+- **Reference recording.** Right-click a recording → *Use as reference*. The
+  new *Reference* button in the live view plays it before you start. It is
+  marked with ★ in the list.
+- **Practice streak.** The Sessions tab shows days in a row with at least one
+  recording and the number of recordings in the last seven days.
+- **Break reminder.** After 20 minutes with the microphone running (adjustable
+  under *Settings → Analysis → Training*, 0 = off) the program suggests a
+  pause, once per run.
+- **Update notice, opt-in.** On first start — and once after updating from
+  an older version — the program asks whether it may check GitHub for new
+  versions; the question has its own language dropdown, so it can be read
+  in the right language right away. Only if you agree does it ask GitHub, in the background at start,
+  for the latest release number; nothing else is sent. When a newer release
+  exists, the version number at the bottom right turns yellow
+  (*v1.2.0 · ⬆ Update x.y.z*). A click opens the release notes and the right
+  download for this installation — AppImage, Windows installer or portable
+  EXE — or the update command for the AUR. Nothing is downloaded on its own.
+  The choice can be changed under *Settings → Info*.
+- **Help topic** "Progress, comparison and reference".
+
+### Changed
+
+- **Languages come from files.** All texts, including the help, moved from
+  `core/i18n.py` and `ui/helptext.py` into `locales/<code>.json`. Each file
+  starts with `"lang"` and `"name"`; every file in the folder shows up in the
+  language dropdown, which replaces the EN/DE buttons (also in the
+  introduction). Missing texts fall back to English. Files in
+  `~/.config/dream-voicetraining/locales/` add or override languages without
+  a rebuild. All packages (AUR, AppImage, Windows, install.sh) ship the folder.
+- **Code split into modules.** `main.py` only starts the program now; the
+  window lives in `ui/main_window.py`, the tabs in `ui/live_tab.py` and
+  `ui/session_tab.py`. `ui/dialogs.py` was split into one module per dialog
+  and only re-exports them.
+- **Privacy note** under *Settings → Info* now names the two network
+  requests (update check, changelog) instead of claiming there are none.
+- **Project status** in the README: feature-complete, maintained, feature
+  requests welcome. Issue templates for bugs and feature requests.
+
+
 ## [1.1.9] — 2026-09-29
 
 ### Fixed

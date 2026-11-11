@@ -47,7 +47,7 @@ echo "Version: $VERSION"
 echo ""
 
 # Sanity-Check: Projektstruktur vorhanden?
-for f in main.py core/paths.py ui/dialogs.py voice/analysis.py packaging/dream-voicetraining.svg \
+for f in main.py core/paths.py ui/dialogs.py voice/analysis.py locales/en.json packaging/dream-voicetraining.svg \
          CHANGELOG.md HIGHLIGHTS.md; do
     if [ ! -e "$f" ]; then
         echo "FEHLER: $f nicht gefunden — bitte aus dem Projekt-Root bauen."
@@ -222,7 +222,7 @@ mkdir -p "$BUILD_DIR/usr/share/icons/hicolor/scalable/apps"
 # 3. Programmdateien kopieren
 echo "[2/5] Kopiere Programmdateien..."
 cp main.py "$LIB/"
-cp -r core voice ui "$LIB/"
+cp -r core voice ui locales "$LIB/"
 mkdir -p "$LIB/assets"
 cp -r assets/* "$LIB/assets/"
 # Changelog- und Highlights-Fenster (ui/docviewer.py)

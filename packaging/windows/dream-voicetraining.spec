@@ -36,6 +36,10 @@ datas += [
     (str(ROOT / "HIGHLIGHTS.md"), "."),
 ]
 
+# Sprachdateien. i18n sucht zuerst unter _MEIPASS/locales.
+datas += [(str(lang), "locales")
+          for lang in sorted((ROOT / "locales").glob("*.json"))]
+
 # Bildschirmfotos der Einfuehrung. PyInstaller entpackt sie nach
 # _MEIPASS/assets/intro, wo paths.intro_shot() zuerst nachsieht.
 datas += [(str(shot), "assets/intro")

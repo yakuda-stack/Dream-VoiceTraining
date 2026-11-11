@@ -131,7 +131,8 @@ _state = {"active_template": DEFAULT_TEMPLATE, "user_templates": {}, "device": N
           "session_dir": None, "month_folders": False, "type_in_name": False,
           "naming": None, "name_counter": {"period": "", "value": 0},
           "practice_texts": {}, "practice_choice": "builtin",
-          "user_types": {}}
+          "user_types": {}, "reference_file": None, "break_minutes": 20,
+          "update_check": None}
 
 
 def apply(new: Settings) -> None:
@@ -277,6 +278,56 @@ def get_formant_guides() -> bool:
 def set_formant_guides(enabled: bool) -> None:
     if _state["formant_guides"] != bool(enabled):
         _state["formant_guides"] = bool(enabled)
+        save()
+
+
+def get_reference_file() -> str | None:
+    """Aufnahme, die als Vorbild vor dem Ueben abgespielt wird.
+
+    Gespeichert ist der Name relativ zum Aufnahmeordner, wie in der
+    Sessionliste.
+    """
+    return _state["reference_file"]
+
+
+def set_reference_file(name: str | None) -> None:
+    if _state["reference_file"] != name:
+        _state["reference_file"] = name
+        save()
+
+
+BREAK_MAX = 120
+
+
+def get_update_check() -> bool | None:
+    """Beim Start bei GitHub nach einer neueren Version fragen.
+
+    None heisst: noch nicht gefragt. Dann fragt das Programm einmal nach,
+    statt ungefragt ins Netz zu gehen — auch bei allen, die von einer
+    aelteren Version ohne diese Pruefung kommen.
+    """
+    value = _state["update_check"]
+    return None if value is None else bool(value)
+
+
+def set_update_check(enabled: bool) -> None:
+    if _state["update_check"] != bool(enabled):
+        _state["update_check"] = bool(enabled)
+        save()
+
+
+def get_break_minutes() -> int:
+    """Nach so vielen Minuten Dauerlauf erinnert das Programm an eine Pause.
+
+    0 schaltet die Erinnerung ab.
+    """
+    return int(_state["break_minutes"])
+
+
+def set_break_minutes(minutes: int) -> None:
+    value = max(0, min(BREAK_MAX, int(minutes)))
+    if _state["break_minutes"] != value:
+        _state["break_minutes"] = value
         save()
 
 
@@ -561,6 +612,15 @@ def load() -> None:
     kinds = raw.get("user_types")
     _state["user_types"] = ({str(k): str(v) for k, v in kinds.items()}
                             if isinstance(kinds, dict) else {})
+    reference = raw.get("reference_file")
+    _state["reference_file"] = str(reference) if reference else None
+    try:
+        minutes = int(raw.get("break_minutes", 20))
+    except (TypeError, ValueError):
+        minutes = 20
+    _state["break_minutes"] = max(0, min(BREAK_MAX, minutes))
+    stored = raw.get("update_check")
+    _state["update_check"] = None if stored is None else bool(stored)
     i18n.set_language(_state["language"])
 
 
@@ -589,6 +649,9 @@ def save() -> None:
         "practice_texts": _state["practice_texts"],
         "practice_choice": _state["practice_choice"],
         "user_types": _state["user_types"],
+        "reference_file": _state["reference_file"],
+        "break_minutes": _state["break_minutes"],
+        "update_check": _state["update_check"],
         "values": asdict(CFG),
         "user_templates": {n: asdict(s) for n, s in _state["user_templates"].items()},
     }
